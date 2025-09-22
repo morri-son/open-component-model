@@ -396,7 +396,6 @@ Pros:
 * **Simplicity**: Git tags are Git-native and require no additional file maintenance
 * **Auditability**: Complete version history is preserved in Git repository
 * **Go Module Compatibility**: Tag naming follows Go module conventions exactly
-* **Reduced Merge Conflicts**: No version files to conflict during parallel releases
 * **Single Source of Truth**: Git tags eliminate version drift between files and actual releases
 * **OCM Native**: Component Constructor used as version matrix follows OCM specification patterns
 * **Supply Chain Security**: Immutable releases with protected tags, locked assets and signed attestations prevent tampering and ensure artifact integrity
