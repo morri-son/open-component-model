@@ -143,11 +143,10 @@ components:
 
 | Option | Description | Pros | Cons | **Recommendation** |
 |--------|-------------|------|------|-------------------|
-| **R1: Multi-Component Only** | Release individual components with lockstep versioning, no root component initially | ✅ Minimal initial complexity<br>✅ Focus on core process first | ❌ No unified product artifact<br>❌ Incomplete solution | 🟡 **Alternative** *(Incomplete)* |
-| **R2: Root Component from Start** | Implement `ocm` root component immediately with sub-component references | ✅ Complete product artifact<br>✅ Clear version matrix | ❌ High initial complexity<br>❌ Big-bang approach | 🔴 **Not Recommended** *(Against philosophy)* |
-| **R3: Phased Approach** | Start with R1, add root component after component release is stable | ✅ **Aligns with "Start Simple, Evolve"**<br>✅ Learn from initial releases<br>✅ Manageable complexity | ❌ Minor migration effort<br>❌ Delayed complete product | 🟢 **Recommended** *(Aligns with philosophy)* |
+| **R1: Root Component from Start** | Implement `ocm` root component immediately with sub-component references | ✅ Complete product artifact<br>✅ Clear version matrix | ❌ High initial complexity<br>❌ Big-bang approach | 🔴 **Not Recommended** *(Against philosophy)* |
+| **R2: Phased Approach** | Start with R1, add root component after component release is stable | ✅ **Aligns with "Start Simple, Evolve"**<br>✅ Learn from initial releases<br>✅ Manageable complexity | ❌ Minor migration effort<br>❌ Delayed complete product | 🟢 **Recommended** *(Aligns with philosophy)* |
 
-**Proposal:** Start with R3 (phased approach) - align with our "Start Simple, Evolve" philosophy by proving the multi-component release process first, then adding root component complexity.
+**Proposal:** Start with R2 (phased approach) - align with our "Start Simple, Evolve" philosophy by proving the multi-component release process first, then adding root component complexity.
 
 ---
 
@@ -222,7 +221,7 @@ ocm/v0.8.1-rc.1           ← root component references patched versions
 
 1. **Version Storage:** V1 (VERSION files) or direct V2 (Git tags)?
 2. **Branching Strategy:** B0 (unified branch) or B1 (per-component branches) or B2 (tags only)?
-3. **Implementation Timeline:** Establish root component immediately or phased approach?
+3. **Implementation Timeline:** R1 (establish root component immediately) or R2 (phased approach)?
 4. **Support Policy Details:** Confirm y-2 policy specifics, branch retirement, and EOL procedures
 
 ### Risks & Open Questions
