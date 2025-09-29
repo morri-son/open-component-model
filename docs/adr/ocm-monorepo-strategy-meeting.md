@@ -144,7 +144,7 @@ components:
 | Option | Description | Pros | Cons | **Recommendation** |
 |--------|-------------|------|------|-------------------|
 | **R1: Root Component from Start** | Implement `ocm` root component immediately with sub-component references | ✅ Complete product artifact<br>✅ Clear version matrix | ❌ High initial complexity<br>❌ Big-bang approach | 🔴 **Not Recommended** *(Against philosophy)* |
-| **R2: Phased Approach** | Start with R1, add root component after component release is stable | ✅ **Aligns with "Start Simple, Evolve"**<br>✅ Learn from initial releases<br>✅ Manageable complexity | ❌ Minor migration effort<br>❌ Delayed complete product | 🟢 **Recommended** *(Aligns with philosophy)* |
+| **R2: Phased Approach** | Start with R2, add root component after component release is stable | ✅ **Aligns with "Start Simple, Evolve"**<br>✅ Learn from initial releases<br>✅ Manageable complexity | ❌ Minor migration effort<br>❌ Delayed complete product | 🟢 **Recommended** *(Aligns with philosophy)* |
 
 **Proposal:** Start with R2 (phased approach) - align with our "Start Simple, Evolve" philosophy by proving the multi-component release process first, then adding root component complexity.
 
