@@ -104,7 +104,7 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
 | **B1: Branch per Component** | `releases/cli/0.9` `releases/kubernetes/controller/0.9` | ✅ Clear separation | ❌ More branches to manage | 🟡 **Alternative** *(If needed)* |
 | **B2: Tags Only** | Temporary branches for patches | ✅ Minimal overhead | ❌ Complex automation<br>❌ No patch baseline history | 🔴 **Not Recommended** *(Too complex)* |
 
-**Proposal:** Start with B0 (unified branch) for simplicity, reducing overhead and coordination benefits.
+**Proposal:** Start with B0 (unified branch) for simplicity, reducing overhead and coordination efforts.
 
 ---
 
@@ -172,14 +172,14 @@ kubernetes/controller/v0.8.0  ← keep same version if unaffected
 
 ## ❓ Discussion Points
 
-### Key Decisions Needed
+### Confirm Proposals
 
-1. **Version Storage:** V1 (VERSION files) or direct V2 (Git tags)?
-2. **Branching Strategy:** B0 (unified branch) or B1 (per-component branches) or B2 (tags only)?
-3. **Support Policy Details:** Confirm y-2 policy specifics, branch retirement, and other EOL procedures
+1. **Version Storage:** start with V1 (VERSION files) and implement V2 (Git tags) later
+2. **Branching Strategy:** implement B0 (unified branch) in favor of B1 (per-component branches) or B2 (tags only).
 
 ### Open Questions
 
-1. **Integration tests vs conformance tests:** Naming and scope of root component tests
+1. **Support Policy Details:** Confirm y-2 policy specifics, branch retirement, and other EOL procedures
 2. **Without integration tests:** How do we ensure component compatibility in Phase 1?
 3. **Emergency criteria:** What exactly constitutes an emergency release beyond CVSS ≥ 9?
+4. **Integration tests vs conformance tests:** Naming and scope of root component tests
