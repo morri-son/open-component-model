@@ -95,8 +95,8 @@ Integration Tests: End-to-end tests validating sub-components work together, e.g
 
 | Option | Description | Pros | Cons | **Recommendation** |
 |--------|-------------|------|------|-------------------|
-| **V1: VERSION Files** | `cli/VERSION`, `controller/VERSION` | ✅ Explicit and readable<br>✅ Faster implementation | ❌ Extra commits needed<br>❌ Potential VERSION/tag drift | 🟡 **Recommended** *(Start simple)* |
-| **V2: Git Tags only** | Only tags: `cli/v2.1.0` | ✅ Single source of truth<br>✅ No version bump commits | ❌ More complex automation<br>❌ Requires robust `git describe` | 🟢 **Target Solution** *(Long-term goal)* |
+| **V1: VERSION Files** | `cli/VERSION`, `kubernetes/controller/VERSION` | ✅ Explicit and readable<br>✅ Faster implementation | ❌ Extra commits needed<br>❌ Potential VERSION/tag drift | 🟡 **Recommended** *(Start simple)* |
+| **V2: Git Tags only** | Only tags: `cli/v0.9.0` | ✅ Single source of truth<br>✅ No version bump commits | ❌ More complex automation<br>❌ Requires robust `git describe` | 🟢 **Target Solution** *(Long-term goal)* |
 
 **Proposal:** Start with V1 for faster initial implementation, re-using principles learned in OCM v1, migrate to V2 once automation is mature.
 
@@ -104,8 +104,8 @@ Integration Tests: End-to-end tests validating sub-components work together, e.g
 
 | Option | Description | Pros | Cons | **Recommendation** |
 |--------|-------------|------|------|-------------------|
-| **B0: One Branch per Minor** | `releases/2.1` for all components | ✅ Simple coordination | ❌ Discipline required | 🟢 **Recommended** *(Best fit)* |
-| **B1: Branch per Component** | `releases/cli/2.1` `releases/controller/2.1` | ✅ Clear separation | ❌ More branches to manage | 🟡 **Alternative** *(If needed)* |
+| **B0: One Branch per Minor** | `releases/0.9` for all components | ✅ Simple coordination | ❌ Discipline required | 🟢 **Recommended** *(Best fit)* |
+| **B1: Branch per Component** | `releases/cli/0.9` `releases/kubernetes/controller/0.9` | ✅ Clear separation | ❌ More branches to manage | 🟡 **Alternative** *(If needed)* |
 | **B2: Tags Only** | Temporary branches for patches | ✅ Minimal overhead | ❌ Complex automation<br>❌ No patch baseline history | 🔴 **Not Recommended** *(Too complex)* |
 
 **Proposal:** Start with B0 (unified branch) for simplicity, reducing overhead and coordination benefits.
@@ -152,7 +152,7 @@ cli/v0.9.0
 kubernetes/controller/v0.9.0
 
 # Start next cycle - create new release branch + RCs
-releases/v0.10 → cli/v0.10.0-rc.1, controller/v0.10.0-rc.1
+releases/v0.10 → cli/v0.10.0-rc.1, kubernetes/controller/v0.10.0-rc.1
 ```
 
 **Emergency patches:** Can be released immediately with shorter RC phase as decided by Release Manager.
