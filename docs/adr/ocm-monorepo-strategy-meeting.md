@@ -74,9 +74,9 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
   
 ### 5. Release Cadence
 
-**4-Week Cycle:** 2 weeks development + 2 weeks RC testing → orchestrated release.
+**4-Week Cycle:** 2 weeks development + 2 weeks RC testing → orchestrated release.  
 **Maintenance:** y-2 policy (current + 2 previous MINOR versions) ???  
-**Emergency:** Critical fixes (CVSS ≥ 9 or business critical) can be released anytime.
+**Emergency:** Critical fixes (CVSS ≥ 9 or business critical) can be released anytime.  
 
 ### 6. Testing Strategy
 
