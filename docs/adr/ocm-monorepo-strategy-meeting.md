@@ -21,11 +21,8 @@ Quickly establish coordinated and reliable release process for multiple componen
 
 ### Solution
 
-The approach combines:
-
-**Lockstep for SemVer:** All components share MAJOR.MINOR versions, independent PATCH releases possible.  
+**Evolutionary Implementation:** Start simple with proven patterns, evolve to full scope and automation.**Lockstep for SemVer:** All components share MAJOR.MINOR versions, independent PATCH releases possible.  
 **Unified Branching:** Single release branch per MINOR version for coordinated releases.  
-**Evolutionary Implementation:** Start simple with proven patterns, evolve to full scope and automation.
 
 ---
 
@@ -39,7 +36,7 @@ The approach combines:
 
 - Focuses on ability to release existing components quickly and reliably.
 - Reduces initial complexity and implementation risk.
-- Leverages lessons learned from OCM v1 release experience.
+- Leverages patterns, workflows and lessons learned from OCM v1 release experience.
 - Allows team to focus on process before tooling complexity.
 
 ### 2. Lockstep SemVer Versioning
@@ -48,7 +45,7 @@ The approach combines:
 
 **Why lockstep?**
 
-- High likelihood of required changes across components every sprint (if not features, then dependencies).
+- High likelihood of required releases across components every sprint anyway(if not features, then dependencies).
 - Simplifies the overall release process.
 - Versioning of a later `ocm` product component is straightforward.
 
@@ -84,8 +81,8 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
 
 ### 6. Testing Strategy
 
-Component-Level Tests: Each component has individual tests running
-Integration Tests: End-to-end tests validating sub-components work together, e.g. create and transfer a component using the CLI and then deploy it using the controller.
+**Component-Level Tests**: Each component has individual tests running.  
+**Integration Tests**: End-to-end test suite validating sub-components work together, e.g. create and transfer a component using the CLI and then deploy it using the controller.
 
 ---
 
