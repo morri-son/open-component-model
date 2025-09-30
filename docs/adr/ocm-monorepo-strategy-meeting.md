@@ -91,7 +91,7 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
 
 | Option | Description | Pros | Cons | **Recommendation** |
 |--------|-------------|------|------|-------------------|
-| **V1: VERSION Files** | `cli/VERSION`, `kubernetes/controller/VERSION` | ✅ Explicit and readable<br>✅ Faster implementation | ❌ Extra commits needed<br>❌ Potential VERSION/tag drift | 🟡 **Recommended** *(Start simple)* |
+| **V1: VERSION Files** | `cli/VERSION`, `kubernetes/controller/VERSION` | ✅ Explicit and readable<br>✅ Faster implementation | ❌ Extra commits for version bumpsneeded<br>❌ Potential VERSION/tag drift | 🟡 **Recommended** *(Start simple)* |
 | **V2: Git Tags only** | Only tags: `cli/v0.9.0` | ✅ Single source of truth<br>✅ No version bump commits | ❌ More complex automation<br>❌ Requires robust `git describe` | 🟢 **Target Solution** *(Long-term goal)* |
 
 **Proposal:** Start with V1 for faster initial implementation, re-using principles learned in OCM v1, migrate to V2 once automation is mature.
@@ -110,7 +110,7 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
 
 ## 🗓️ Example Workflow: Sprint Cycle
 
-**Context:** All release operations happen in release branches (`releases/X.Y` or `releases/<component>/X.Y`, depending on decision B0/B1) and will be supported by GitHub workflows.
+**Context:** All release operations happen in release branches (`releases/X.Y` or `releases/<component>/X.Y`, depending on decision B0/B1) AND will be supported by GitHub workflows.
 
 ### Sprint N: Development Phase (2 weeks)
 
@@ -120,8 +120,7 @@ git checkout main
 git checkout -b releases/v0.9
 git push origin releases/v0.9
 
-# Create RCs for all components
-# Triggered by GitHub Actions workflow
+# Create RCs for all components on new release branch
 cli/v0.9.0-rc.1
 kubernetes/controller/v0.9.0-rc.1
 ```
@@ -131,16 +130,16 @@ kubernetes/controller/v0.9.0-rc.1
 ```bash
 # Bug found in CLI during RC testing
 git checkout releases/v0.9
-git cherry-pick <bugfix>
+git cherry-pick <bugfix>    #from main
 
-# Increment RC versions for affected components
+# Increment RC versions for affected components (trigger release workflow for new RC)
 cli/v0.9.0-rc.2                     ← RC incremented due to patch
 kubernetes/controller/v0.9.0-rc.1   ← unchanged
 ```
 
 ### Sprint N+1 End: Orchestrated Release Day
 
-**Release Manager orchestrates:** All current RCs get promoted to finals
+**Release Manager orchestrates:** ALL current RCs get promoted to finals
 
 ```bash
 # All RCs become finals simultaneously
