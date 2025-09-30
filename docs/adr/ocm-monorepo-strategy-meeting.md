@@ -17,7 +17,7 @@ We have started migrating our codebase to a monorepo. This monorepo contains mul
 
 ### Goal
 
-Establish coordinated release process for multiple components out of a monorepo with a clear strategy for versioning, branching, and releasing. Enable an `ocm` product component introduced later to be released in a straightforward manner.
+Quickly establish coordinated and reliable release process for multiple components out of a monorepo, with a clear strategy for versioning, branching, and releasing. Enable an `ocm` product component introduced LATER to be released in a straightforward manner.
 
 ### Solution
 
