@@ -64,7 +64,6 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
 
 - **RC → Release Promotion:** Release Manager decision, with maintainer sign-off.
 - **Emergency Release Approval:** Release Manager decision (critical CVSS (≥ 9) or business critical).
-- **Backport Authorization:** Maintainer approval required.
 - **Major Policy Changes:** TSC approval for e.g., changes in support policy.
 
 ### 4. Release Notes
