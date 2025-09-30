@@ -57,7 +57,7 @@ cli/v0.9.1, controller/v0.9.0, ocm/v0.9.1     ← independent patch later
 ### 3. Release Roles & Responsibilities
 
 **Release Manager:** Orchestrates sprint releases, coordinates RC promotions, decides on emergency patches.  
-**Maintainers:** Ensure component readiness, approve backports, validate release quality.  
+**Maintainers:** Ensure component readiness, validate release quality (together with PO).  
 **TSC (Technical Steering Committee):** Sign-off for high-risk changes and major decisions.
 
 **Decision Gates:**
