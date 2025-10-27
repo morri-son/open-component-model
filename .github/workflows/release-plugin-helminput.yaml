@@ -1,0 +1,271 @@
+name: Release Helm Input Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      path:
+        description: "Relative path to the Go module which provides the plugin (e.g., bindings/go/helm)"
+        required: false
+        type: string
+        default: "bindings/go/helm"
+      bump:
+        description: "Bump Mode (major, minor, patch, none)"
+        required: false
+        type: choice
+        default: "patch"
+        options: [patch, minor, major, none]
+      suffix:
+        description: "Optional suffix for the tag (e.g. beta results in vX.Y.Z-beta-1)"
+        required: false
+        type: string
+      dry_run:
+        description: "Perform a dry run without pushing tags or publishing the component"
+        required: false
+        default: true
+        type: boolean
+      repository:
+        description: "Target OCM repository (default ghcr.io/open-component-model/plugins)"
+        required: false
+        type: string
+        default: "ghcr.io/open-component-model/plugins"
+      cli_image_tag:
+        description: "OCM CLI image tag to use (ghcr.io/open-component-model/cli:<tag>, default: main)"
+        required: false
+        type: string
+        default: "main"
+
+jobs:
+  version:
+    name: Compute next version tag
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.version.outputs.new_tag }}
+      version: ${{ steps.version.outputs.version }}
+      tag_prefix: ${{ steps.get_tag.outputs.prefix }}
+    steps:
+      - name: Generate token
+        id: token
+        if: ${{ github.repository_owner == 'open-component-model' }}
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2
+        with:
+          app_id: ${{ secrets.OCMBOT_APP_ID }}
+          private_key: ${{ secrets.OCMBOT_PRIV_KEY }}
+
+# TODO: Use fork-safe token usage before merging to upstream
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ github.repository_owner == 'open-component-model' && steps.token.outputs.token || secrets.GITHUB_TOKEN }}
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Validate path exists
+        run: |
+          if [ ! -f "${{ github.event.inputs.path }}/go.mod" ]; then
+            echo "No go.mod found in ${{ github.event.inputs.path }}"
+            exit 1
+          fi
+
+      - name: Get latest tag context
+        id: get_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="${{ github.event.inputs.path }}"
+          suffix=$(basename "$path")
+          major_version=$(echo "$suffix" | sed -n 's/^v\([0-9][0-9]*\)$/\1/p')
+
+          if [ -n "$major_version" ]; then
+            tag_path="${path%/v$major_version}"
+          else
+            tag_path="$path"
+          fi
+
+          prefix="${tag_path}/v"
+          latest=$(git tag --list "${prefix}[0-9]*" | sort -V | tail -n1 || echo "")
+
+          if [ -z "$latest" ]; then
+            if [ -n "$major_version" ]; then
+              version="${major_version}.0.0"
+            else
+              version="0.0.0"
+            fi
+          else
+            version="${latest#${prefix}}"
+          fi
+
+          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+          echo "base_version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Calculate new version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ steps.get_tag.outputs.base_version }}"
+          bump="${{ github.event.inputs.bump }}"
+          suffix="${{ github.event.inputs.suffix }}"
+          prefix="${{ steps.get_tag.outputs.prefix }}"
+
+          clean_version="$(echo "$base" | sed -E 's/^v//' | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*$/\1/')"
+          major="$(echo "$clean_version" | cut -d. -f1)"; major="${major:-0}"
+          minor="$(echo "$clean_version" | cut -d. -f2)"; minor="${minor:-0}"
+          patch="$(echo "$clean_version" | cut -d. -f3)"; patch="${patch:-0}"
+
+          case "$bump" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            none) : ;;
+            *) echo "Invalid bump: $bump"; exit 1 ;;
+          esac
+
+          ver="${major}.${minor}.${patch}"
+          if [ -n "$suffix" ]; then
+            ver="${ver}-${suffix}"
+          fi
+
+          new_tag="${prefix}${ver}"
+          echo "new_tag=$new_tag" >> "$GITHUB_OUTPUT"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Dry run – would create tag:" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.version.outputs.new_tag }}" >> "$GITHUB_STEP_SUMMARY"
+
+  tag_build_publish:
+    name: Tag, Build and Publish Plugin Component
+    needs: version
+    if: ${{ inputs.dry_run == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - name: Generate token
+        id: token
+        if: ${{ github.repository_owner == 'open-component-model' }}
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2
+        with:
+          app_id: ${{ secrets.OCMBOT_APP_ID }}
+          private_key: ${{ secrets.OCMBOT_PRIV_KEY }}
+
+# Remove fork guard before merging to upstream
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ github.repository_owner == 'open-component-model' && steps.token.outputs.token || secrets.GITHUB_TOKEN }}
+
+# TODO: Remove fork guard before merging to upstream
+      - name: Guard against publishing to upstream from fork
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER="${{ github.repository_owner }}"
+          REPO_INPUT="${{ github.event.inputs.repository }}"
+          if [ "$OWNER" != "open-component-model" ] && [ "$REPO_INPUT" = "ghcr.io/open-component-model/plugins" ]; then
+            echo "Refusing to publish to ghcr.io/open-component-model/plugins from a fork (owner=$OWNER)."
+            echo "Please override 'repository' input to ghcr.io/${OWNER}/plugins for tests."
+            exit 1
+          fi
+
+# TODO: Remove if clause before merging to upstream
+      - name: Setup git config
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.repository_owner }}" = "open-component-model" ]; then
+            # Upstream: use a neutral bot identity (matches current behavior)
+            git config user.name "GitHub Actions Bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          else
+            # Fork: attribute tags to the invoking actor
+            git config user.name "${{ github.actor }}"
+            git config user.email "${{ github.actor }}@users.noreply.github.com"
+          fi
+
+      - name: Create and Push Tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ needs.version.outputs.new_tag }}"
+          title="Release Official Plugin Helminput v${{ needs.version.outputs.version }}"
+          printf "%s\n" "$title" > .tagmsg
+          git tag -a "$tag" -F .tagmsg
+          git push origin "$tag"
+
+      - name: Checkout at tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          git checkout "tags/${{ needs.version.outputs.new_tag }}" -b "build-${{ needs.version.outputs.version }}"
+
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version-file: ${{ github.event.inputs.path }}/go.mod
+          cache-dependency-path: ${{ github.event.inputs.path }}/go.sum
+
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+
+      - name: Build multi-arch binaries and generate component constructor
+        working-directory: ${{ github.event.inputs.path }}
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          task tmp
+          task build:matrix
+          task generate/component-constructor
+          test -f "./tmp/component-constructor.yaml" || (echo "component-constructor.yaml not found" && exit 1)
+
+      - name: Log in to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish OCM Component Version
+        working-directory: ${{ github.event.inputs.path }}
+        env:
+          REPOSITORY: ${{ github.event.inputs.repository }}
+          CLI_IMAGE: ghcr.io/open-component-model/cli:${{ github.event.inputs.cli_image_tag }}
+          WORKDIR: ${{ github.workspace }}/${{ github.event.inputs.path }}
+          DOCKER_CONFIG: /home/runner/.docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Mount docker auth into container to allow ocm to push to GHCR
+          docker run --rm \
+            -v "${WORKDIR}:${WORKDIR}" \
+            -v "${DOCKER_CONFIG}:/root/.docker:ro" \
+            -w "${WORKDIR}" \
+            "${CLI_IMAGE}" \
+            ocm add component-version \
+              --repository "${REPOSITORY}" \
+              --constructor "./tmp/component-constructor.yaml"
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Published Component Version" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: ${{ needs.version.outputs.new_tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: ${{ needs.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Repository: ${{ github.event.inputs.repository }}" >> "$GITHUB_STEP_SUMMARY"
