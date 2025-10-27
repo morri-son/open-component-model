@@ -53,8 +53,8 @@ tasks:
     silent: false
     prefix: '{{ .GOOS }}-{{ .GOARCH }}'
     generates:
-      - '{{ .OUTDIR }}/bin/helminput-{{ .GOOS }}-{{ .GOARCH }}'
-      - '{{ .OUTDIR }}/resources/helminput-{{ .GOOS }}-{{ .GOARCH }}.yaml'
+      - '{{ .OUTDIR }}/bin/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}'
+      - '{{ .OUTDIR }}/resources/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}.yaml'
     deps:
       - tmp
       - download/deps
@@ -62,9 +62,9 @@ tasks:
       - cmd: |
           mkdir -p {{ .OUTDIR }}/bin {{ .OUTDIR }}/resources
           GOOS={{ .GOOS }} GOARCH={{ .GOARCH }} go build \
-            -o {{ .OUTDIR }}/bin/helminput-{{ .GOOS }}-{{ .GOARCH }} ./cmd/main.go
+            -o {{ .OUTDIR }}/bin/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }} ./cmd/main.go
       - |
-        cat > {{ .OUTDIR }}/resources/helminput-{{ .GOOS }}-{{ .GOARCH }}.yaml <<EOF
+        cat > {{ .OUTDIR }}/resources/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}.yaml <<EOF
         - name: binary
           type: ocmPlugin
           version: {{ .VERSION }}
@@ -74,7 +74,7 @@ tasks:
           relation: local
           input:
             type: file
-            path: {{ .OUTDIR }}/bin/helminput-{{ .GOOS }}-{{ .GOARCH }}
+            path: {{ .OUTDIR }}/bin/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}
         EOF
 
   build:matrix:
@@ -109,7 +109,7 @@ tasks:
           - name: registry
             value: official
           - name: description
-            value: Official Helm Input plugin
+            value: Official Helm input plugin
         resources:
         EOF
       - |

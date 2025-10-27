@@ -258,7 +258,7 @@ jobs:
             -v "${DOCKER_CONFIG}:/root/.docker:ro" \
             -w "${WORKDIR}" \
             "${CLI_IMAGE}" \
-            ocm add component-version \
+            add component-version \
               --repository "${REPOSITORY}" \
               --constructor "./tmp/component-constructor.yaml"
 
