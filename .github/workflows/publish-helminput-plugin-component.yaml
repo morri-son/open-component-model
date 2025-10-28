@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: "ghcr.io/open-component-model/plugins"
+      ocm_image:
+        description: "OCM CLI image to use for publishing. Default is ghcr.io/open-component-model/cli:main"
+        required: false
+        type: string
+        default: "ghcr.io/open-component-model/cli:main"
 
 jobs:
   build_publish:
