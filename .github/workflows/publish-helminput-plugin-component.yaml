@@ -50,7 +50,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           set -euo pipefail
-          if [ -z "${{ github.event.inputs.version }}" ]; then
+          if [ "${{ github.event.inputs.version }}" == "main" ]; then
             VERSION="main"
           else          
             VERSION="${{ github.event.inputs.version }}"
