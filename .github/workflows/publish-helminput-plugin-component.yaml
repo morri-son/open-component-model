@@ -125,7 +125,7 @@ jobs:
           set -euo pipefail
           OCM_CONFIG_PATH="${RUNNER_TEMP}/.ocmconfig"
 
-          cat > "${OCM_CONFIG_PATH}" <<'OCMYAML'
+          cat > "${OCM_CONFIG_PATH}" <<OCMYAML
           type: generic.config.ocm.software/v1
           configurations:
             - type: credentials.config.ocm.software
