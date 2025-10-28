@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'bindings/go/helm/**'
     tags:
       - 'bindings/go/helm/v*'
   workflow_dispatch:
@@ -106,6 +108,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO: Pin CLI image version once released
+      # Publish component version. In case of VERSION=main, replace policy is used to update existing version.
       - name: Publish OCM Component Version
         working-directory: bindings/go/helm
         env:
@@ -116,15 +119,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Mount docker auth into container to allow ocm to push to GHCR
-          docker run --rm \
+          PUBLISH_POLICY_ARGS=""
+          if [ "${VERSION}" = "main" ]; then
+            PUBLISH_POLICY_ARGS="--component-version-conflict-policy replace"
+            echo "Publishing component version from 'main' branch (with replace policy)"
+          else
+            echo "Publishing component version for tag bindings/go/helm/'${VERSION}'"
+          fi
+            docker run --rm \
             -v "${WORKDIR}:${WORKDIR}" \
             -v "${DOCKER_CONFIG}:/root/.docker:ro" \
             -w "${WORKDIR}" \
             "${CLI_IMAGE}" \
             add component-version \
               --repository "${REPOSITORY}" \
-              --constructor "./tmp/component-constructor.yaml"
+              --constructor "./tmp/component-constructor.yaml" \
+              ${PUBLISH_POLICY_ARGS}
 
       - name: Summary
         shell: bash
