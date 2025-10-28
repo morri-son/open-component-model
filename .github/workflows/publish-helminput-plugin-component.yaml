@@ -118,32 +118,57 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # TODO: Pin CLI image version once released
-      # Publish component version. In case of VERSION=main, replace policy is used to update existing version.
+      # Generate OCM config that can be used in the container
+      - name: Generate OCM config
+        shell: bash
+        run: |
+          set -euo pipefail
+          OCM_CONFIG_PATH="${RUNNER_TEMP}/.ocmconfig"
+
+          cat > "${OCM_CONFIG_PATH}" <<'OCMYAML'
+          type: generic.config.ocm.software/v1
+          configurations:
+            - type: credentials.config.ocm.software
+              repositories:
+                - repository:
+                    type: DockerConfig/v1
+                    dockerConfigFile: /root/.docker/config.json
+                    propagateConsumerIdentity: true
+          OCMYAML
+
+          echo "OCM_CONFIG_PATH=${OCM_CONFIG_PATH}" >> "$GITHUB_ENV"
+          echo "Created ${OCM_CONFIG_PATH}"
+
+      # Publish component version using CLI image
       - name: Publish OCM Component Version
         working-directory: bindings/go/helm
         env:
           OCM_REPOSITORY: ${{ github.event.inputs.ocm_repository }}
           CLI_IMAGE: ${{ github.event.inputs.ocm_image }}
-          WORKDIR: ${{ github.workspace }}/bindings/go/helm
-          DOCKER_CONFIG: /home/runner/.docker
         shell: bash
         run: |
           set -euo pipefail
+
           PUBLISH_POLICY_ARGS=""
           if [ "${VERSION}" = "main" ]; then
             PUBLISH_POLICY_ARGS="--component-version-conflict-policy replace"
-            echo "Publishing component version from 'main' branch (with replace policy)"
+            echo "Publishing component version from 'main' branch (replace policy)"
           else
             echo "Publishing component version for tag bindings/go/helm/'${VERSION}'"
           fi
-            docker run --rm \
-            -v "${WORKDIR}:${WORKDIR}" \
-            -v "${DOCKER_CONFIG}:/root/.docker:ro" \
-            -w "${WORKDIR}" \
-            "${CLI_IMAGE}" \
+
+          docker run --rm \
+            --tmpfs /tmp:exec \
+            -e HOME=/root \
+            -e DOCKER_CONFIG=/root/.docker \
+            -v "${PWD}:${PWD}" \
+            -v "$HOME/.docker:/root/.docker:ro" \
+            -v "$OCM_CONFIG_PATH:$OCM_CONFIG_PATH:ro" \
+            -w "${PWD}" \
+            "$CLI_IMAGE" \
             add component-version \
-              --repository "${OCM_REPOSITORY}" \
+              --config "$OCM_CONFIG_PATH" \
+              --repository "$OCM_REPOSITORY" \
               --constructor "./tmp/component-constructor.yaml" \
               ${PUBLISH_POLICY_ARGS}
 
@@ -151,5 +176,5 @@ jobs:
         shell: bash
         run: |
           echo "## Published Helm input plugin component version" >> "$GITHUB_STEP_SUMMARY"
-          echo "- OCM Repository: ${{ env.OCM_REPOSITORY }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- OCM Repository: ${{ github.event.inputs.ocm_repository }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Version: ${{ env.VERSION }}" >> "$GITHUB_STEP_SUMMARY"
