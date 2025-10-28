@@ -13,6 +13,13 @@ vars:
     sh: |
       echo "0.0.0-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
   VERSION: '{{ .VERSION | default .DEFAULT_VERSION }}'
+  RESOURCE_VERSION:
+    sh: |
+      if [ "{{ .VERSION }}" = "main" ]; then
+        echo "{{ .DEFAULT_VERSION }}"
+      else
+        echo "{{ .VERSION }}"
+      fi
 
 tasks:
   tmp:
@@ -67,7 +74,7 @@ tasks:
         cat > {{ .OUTDIR }}/resources/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}.yaml <<EOF
         - name: binary
           type: ocmPlugin
-          version: {{ .VERSION }}
+          version: {{ .RESOURCE_VERSION }}
           extraIdentity:
             os: {{ .GOOS }}
             architecture: {{ .GOARCH }}
