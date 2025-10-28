@@ -132,7 +132,7 @@ jobs:
               repositories:
                 - repository:
                     type: DockerConfig/v1
-                    dockerConfigFile: /root/.docker/config.json
+                    dockerConfigFile: /config.json
                     propagateConsumerIdentity: true
           OCMYAML
 
@@ -159,15 +159,13 @@ jobs:
 
           docker run --rm \
             --tmpfs /tmp:exec \
-            -e HOME=/root \
-            -e DOCKER_CONFIG=/root/.docker \
             -v "${PWD}:${PWD}" \
-            -v "$HOME/.docker:/root/.docker:ro" \
-            -v "$OCM_CONFIG_PATH:$OCM_CONFIG_PATH:ro" \
+            -v "$HOME/.docker/config.json:/config.json:ro" \
+            -v "$OCM_CONFIG_PATH:/.ocmconfig:ro" \
             -w "${PWD}" \
             "$CLI_IMAGE" \
             add component-version \
-              --config "$OCM_CONFIG_PATH" \
+              --config "/.ocmconfig" \
               --repository "$OCM_REPOSITORY" \
               --constructor "./tmp/component-constructor.yaml" \
               ${PUBLISH_POLICY_ARGS}
