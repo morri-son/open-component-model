@@ -111,12 +111,17 @@ jobs:
           task generate/component-constructor
           test -f "./tmp/component-constructor.yaml" || (echo "component-constructor.yaml not found" && exit 1)
 
-      - name: Log in to GHCR
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Log in to GHCR
+      #   uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Docker config.json for GHCR
+        run: |
+          mkdir -p $HOME/.docker
+          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64)\"}}}" > $HOME/.docker/config.json
 
       # Generate OCM config that can be used in the container
       - name: Generate OCM config
