@@ -112,7 +112,7 @@ jobs:
       - name: Create Docker config.json for GHCR
         run: |
           mkdir -p $HOME/.docker
-          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64)\"}}}" > $HOME/.docker/config.json
+          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${{ github.actor }}:${{ secrets.TEST_TOKEN }}" | base64)\"}}}" > $HOME/.docker/config.json
 
       # Generate OCM config that can be used in the container
       - name: Generate OCM config
