@@ -111,8 +111,8 @@ jobs:
 
       - name: Create Docker config.json for GHCR
         run: |
-          mkdir -p $HOME/.docker
-          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${{ github.actor }}:${{ secrets.TEST_TOKEN }}" | base64)\"}}}" > $HOME/.docker/config.json
+          mkdir -p ${HOME}/.docker
+          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64)\"}}}" > ${HOME}/.docker/config.json
 
       # Generate OCM config that can be used in the container
       - name: Generate OCM config
@@ -133,7 +133,7 @@ jobs:
 
           echo "Created ${HOME}/.ocmconfig:"
           cat ${HOME}/.ocmconfig
-
+#TODO: Remove debug output above after verifying it works
       # Publish component version using CLI image
       - name: Publish OCM Component Version
         env:
@@ -156,14 +156,14 @@ jobs:
             -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
             -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
             -v /etc/ssl/certs/:/etc/ssl/certs/:ro \
-            -v "$WORKDIR:$WORKDIR" \
-            -w "$WORKDIR" \
+            -v "{$WORKDIR}:{$WORKDIR}" \
+            -w "${WORKDIR}" \
             "$CLI_IMAGE" \
               add component-version \
               --config "/.ocmconfig" \
-              --repository "$OCM_REPOSITORY" \
+              --repository "${OCM_REPOSITORY}" \
               --constructor "./component-constructor.yaml" \
-              --loglevel debug ${PUBLISH_POLICY_ARGS} 
+              --loglevel debug "${PUBLISH_POLICY_ARGS}" 
 
       - name: Summary
         shell: bash
