@@ -106,8 +106,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          task tmp
-          task build:matrix
           task generate/component-constructor
           test -f "./tmp/component-constructor.yaml" || (echo "component-constructor.yaml not found" && exit 1)
 
