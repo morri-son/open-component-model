@@ -132,7 +132,7 @@ jobs:
               repositories:
                 - repository:
                     type: DockerConfig/v1
-                    dockerConfigFile: /root/.docker/config.json
+                    dockerConfigFile: ${{ github.workspace }}/bindings/go/helm/config.json
                     propagateConsumerIdentity: true
           EOF
 
@@ -159,15 +159,15 @@ jobs:
 
           docker run --rm \
             -v "$WORKDIR:$WORKDIR" \
-            -v "$HOME/.docker/:/.docker/:ro" \
+            -v "$HOME/.docker/config.json:$WORKDIR/.docker/config.json:ro" \
             -v "$OCM_CONFIG_PATH:$WORKDIR/.ocmconfig:ro" \
             -w "$WORKDIR" \
             "$CLI_IMAGE" \
-            add component-version \
+              add component-version \
               --config "$WORKDIR/.ocmconfig" \
               --repository "$OCM_REPOSITORY" \
               --constructor "./tmp/component-constructor.yaml" \
-              ${PUBLISH_POLICY_ARGS}
+              ${PUBLISH_POLICY_ARGS}  
 
       - name: Summary
         shell: bash
