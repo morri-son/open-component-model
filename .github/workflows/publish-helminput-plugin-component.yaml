@@ -167,6 +167,7 @@ jobs:
               --config "$WORKDIR/.ocmconfig" \
               --repository "$OCM_REPOSITORY" \
               --constructor "./tmp/component-constructor.yaml" \
+              --loglevel debug \
               ${PUBLISH_POLICY_ARGS}  
 
       - name: Summary
