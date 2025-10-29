@@ -68,7 +68,7 @@ tasks:
     cmds:
       - cmd: |
           mkdir -p {{ .OUTDIR }}/bin {{ .OUTDIR }}/resources
-          GOOS={{ .GOOS }} GOARCH={{ .GOARCH }} go build \
+          GOOS={{ .GOOS }} GOARCH={{ .GOARCH }} go build -ldflags -s -w
             -o {{ .OUTDIR }}/bin/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }} ./cmd/main.go
       - |
         cat > {{ .OUTDIR }}/resources/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}.yaml <<EOF
