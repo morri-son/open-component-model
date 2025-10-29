@@ -67,15 +67,6 @@ tasks:
       - download/deps
     cmds:
       - cmd: |
-          set -euo pipefail
-          
-          # Validate required variables
-          : "{{ .GOOS }}" || (echo "GOOS is not set" && exit 1)
-          : "{{ .GOARCH }}" || (echo "GOARCH is not set" && exit 1)
-          
-          # Change into correct working directory
-          cd "{{ .TASKFILE_DIR }}/bindings/go/helm"
-          
           mkdir -p {{ .OUTDIR }}/bin {{ .OUTDIR }}/resources
           CGO_ENABLED=0 GOOS={{ .GOOS }} GOARCH={{ .GOARCH }} go build -ldflags "-s -w" \
             -o {{ .OUTDIR }}/bin/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }} ./cmd/main.go
