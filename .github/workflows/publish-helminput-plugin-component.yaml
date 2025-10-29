@@ -159,7 +159,7 @@ jobs:
 
           docker run --rm \
             -v "$WORKDIR:$WORKDIR" \
-            -v "$HOME/.docker/:/.docker/:ro"
+            -v "$HOME/.docker/:/.docker/:ro" \
             -v "$OCM_CONFIG_PATH:$WORKDIR/.ocmconfig:ro" \
             -w "$WORKDIR" \
             "$CLI_IMAGE" \
