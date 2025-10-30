@@ -87,6 +87,10 @@ jobs:
             VERSION="main"
           elif [[ "$GITHUB_REF" == refs/tags/bindings/go/helm/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/bindings/go/helm/v}"
+          elif [[ "$GITHUB_REF" == refs/pull/*/merge ]]; then
+            PR_NUMBER="${GITHUB_REF#refs/pull/}"
+            PR_NUMBER="${PR_NUMBER%/merge}"
+            VERSION="pr-${PR_NUMBER}"
           else
             echo "Unsupported ref: $GITHUB_REF"
             exit 1
