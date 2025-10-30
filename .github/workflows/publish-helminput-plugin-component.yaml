@@ -218,14 +218,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          PUBLISH_POLICY_ARGS=()
-          if [[ "${VERSION}" == "main" ]]; then
-            PUBLISH_POLICY_ARGS+=(--component-version-conflict-policy replace)
-            echo "Publishing component version from 'main' branch (replace policy)"
-          else
-            echo "Publishing component version for tag bindings/go/helm/'${VERSION}'"
-          fi
-
           docker run --rm \
             -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
             -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
@@ -236,7 +228,7 @@ jobs:
               add component-version \
               --config "/.ocmconfig" \
               --repository "${OCM_REPOSITORY}" \
-              --constructor "./component-constructor.yaml" "${PUBLISH_POLICY_ARGS[@]}"
+              --constructor "./component-constructor.yaml"
 
       - name: Summary
         shell: bash
