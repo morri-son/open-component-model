@@ -17,11 +17,14 @@ on:
       - '.github/workflows/publish-helminput-plugin-component.yaml'
   workflow_dispatch:
     inputs:
-      version:
-        description: "Component version, e.g., 0.0.1 or 0.0.1-alpha1. Must match existing bindings/go/helm/vX.Y.Z[-suffix] tag without the 'v'. If not set, 'main' is used."
-        required: false
-        type: string
-        default: "main"
+      mode:
+        description: "Build mode"
+        required: true
+        type: choice
+        options:
+          - "dev-version"
+          - "rerun-latest-tag"
+        default: "dev-version"
       # Add possible inputs for OCM repository and CLI image to be able to test with different repos/images
       ocm_repository:
         description: "OCM repository to publish to. Default is ghcr.io/open-component-model/plugins."
@@ -53,51 +56,54 @@ jobs:
           persist-credentials: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine version from input
-        id: version_input
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Generate development version
+        if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'dev-version') }}
+        run: |
+          current_tag=$(git tag | grep '^bindings/go/helm' | sort -V | tail -1 | sed 's#.*/v##' || echo "0.0.0")
+          DEV_VERSION="${current_tag}-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
+          echo "DEV_VERSION=$DEV_VERSION" >> "$GITHUB_ENV"
+          echo "✅ Generated development version: $DEV_VERSION"
+
+      - name: Determine final version
         run: |
           set -euo pipefail
-          if [ "${{ github.event.inputs.version }}" == "main" ]; then
-            VERSION="main"
-          else          
-            VERSION="${{ github.event.inputs.version }}"
-            # SemVer (Major.Minor.Patch + optional -suffix)
-            if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._-]+)?$ ]]; then
-              echo "❌ Invalid version format: $VERSION"
+
+          case "${{ github.event_name }}" in
+            "workflow_dispatch")
+              if [[ "${{ github.event.inputs.mode }}" == "dev-version" ]]; then
+                VERSION="$DEV_VERSION"
+              else
+                # Re-run: Nimm den letzten existierenden Tag
+                latest_tag=$(git tag | grep '^bindings/go/helm' | sort -V | tail -1 | sed 's#.*/v##')
+                if [[ -z "$latest_tag" ]]; then
+                  echo "❌ No existing tags found for re-run"
+                  exit 1
+                fi
+                VERSION="$latest_tag"
+                echo "✅ Re-run mode: Using latest tag $VERSION"
+              fi
+              ;;
+            "push")
+              if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+                VERSION="$DEV_VERSION"
+              elif [[ "$GITHUB_REF" == refs/tags/bindings/go/helm/v* ]]; then
+                VERSION="${GITHUB_REF#refs/tags/bindings/go/helm/v}"
+              else
+                echo "❌ Unsupported push ref: $GITHUB_REF"
+                exit 1
+              fi
+              ;;
+            "pull_request")
+              VERSION="$DEV_VERSION"
+              ;;
+            *)
+              echo "❌ Unsupported event: ${{ github.event_name }}"
               exit 1
-            fi
-            TAG="bindings/go/helm/v$VERSION"
-            # Check if tag exists
-            if ! git ls-remote --tags origin "refs/tags/$TAG" | grep -q "refs/tags/$TAG$"; then
-              echo "❌ Tag $TAG does not exist in the repository."
-              exit 1
-            fi
-          fi
+              ;;
+          esac
 
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "✅ VERSION resolved to: $VERSION"
-
-      - name: Determine version based on ref
-        if: ${{ github.event_name != 'workflow_dispatch' }}
-        id: version
-        run: |
-          set -euo pipefail
-          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
-            VERSION="main"
-          elif [[ "$GITHUB_REF" == refs/tags/bindings/go/helm/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/bindings/go/helm/v}"
-          elif [[ "$GITHUB_REF" == refs/pull/*/merge ]]; then
-            PR_NUMBER="${GITHUB_REF#refs/pull/}"
-            PR_NUMBER="${PR_NUMBER%/merge}"
-            VERSION="pr-${PR_NUMBER}"
-          else
-            echo "Unsupported ref: $GITHUB_REF"
-            exit 1
-          fi
-
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "✅ VERSION resolved from $GITHUB_REF to: $VERSION"
+          echo "✅ Final version: $VERSION"
 
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
@@ -218,25 +224,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          PUBLISH_POLICY_ARGS=()
-          if [[ "${VERSION}" == "main" ]]; then
-            PUBLISH_POLICY_ARGS+=(--component-version-conflict-policy replace)
-            echo "Publishing component version from 'main' branch (replace policy)"
-          else
-            echo "Publishing component version for tag bindings/go/helm/'${VERSION}'"
-          fi
-
+          echo "✅ Publishing OCM Component Version $VERSION to $OCM_REPOSITORY"
+          
+          # Keine replace-policy mehr nötig - jede Version ist eindeutig!
           docker run --rm \
             -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
             -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
-            -v /etc/ssl/certs/:/etc/ssl/certs/:ro \
+            -v /etc/ssl/certs/:/etc/ssl/certs/:ro" \
             -v "${WORKDIR}:${WORKDIR}" \
             -w "${WORKDIR}" \
             "$CLI_IMAGE" \
               add component-version \
               --config "/.ocmconfig" \
               --repository "${OCM_REPOSITORY}" \
-              --constructor "./component-constructor.yaml" "${PUBLISH_POLICY_ARGS[@]}"
+              --constructor "./component-constructor.yaml"
+          
+          echo "✅ Successfully published OCM Component $VERSION"
 
       - name: Verify OCM Component via resource download
         env:
@@ -248,12 +251,7 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Recalculate VERSION if it's "main" to use DEV_VERSION format used in plugin build
-          if [[ "${VERSION}" == "main" ]]; then
-            current_tag=$(git tag | grep '^bindings/go/helm' | sort -V | tail -1 | sed 's#.*/v##' || echo "0.0.0")
-            VERSION="${current_tag}-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
-            echo "Recalculated VERSION for 'main' branch: ${VERSION}"
-          fi
+          echo "✅ Verifying component version $VERSION"
           
           docker run --rm \
             -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \

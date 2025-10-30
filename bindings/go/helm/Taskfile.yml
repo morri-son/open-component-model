@@ -17,13 +17,6 @@ vars:
       current_tag=$(git tag | grep '^bindings/go/helm' | sort -V | tail -1 | sed 's#.*/v##' || echo "0.0.0")
       echo "${current_tag}-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
   VERSION: '{{ .VERSION | default .DEFAULT_VERSION }}'
-  COMPONENT_VERSION:
-    sh: |
-      if [ "{{ .VERSION }}" = "main" ]; then
-        echo "{{ .DEFAULT_VERSION }}"
-      else
-        echo "{{ .VERSION }}"
-      fi
 
 tasks:
   tmp:
@@ -87,7 +80,7 @@ tasks:
         cat > {{ .OUTDIR }}/resources/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}.yaml <<EOF
         - name: binary
           type: ocmPlugin
-          version: "{{ .COMPONENT_VERSION }}"
+          version: "{{ .VERSION }}"
           extraIdentity:
             os: {{ .GOOS }}
             architecture: {{ .GOARCH }}
@@ -110,7 +103,6 @@ tasks:
         vars:
           GOOS: '{{ .ITEM.GOOS }}'
           GOARCH: '{{ .ITEM.GOARCH }}'
-          COMPONENT_VERSION: '{{ .COMPONENT_VERSION }}'
 
   generate/component-constructor:
     desc: "Generate the component-constructor.yaml by aggregating all built resources"
@@ -121,10 +113,10 @@ tasks:
     silent: true
     cmds:
       - |
-        echo "Generating component constructor with version: {{ .COMPONENT_VERSION }}"
+        echo "Generating component constructor with version: {{ .VERSION }}"
         cat <<EOF > {{ .COMPONENT_CONSTRUCTOR_FILE }}
         name: {{ .PROVIDER }}/{{ .NAME }}
-        version: {{ .COMPONENT_VERSION }}
+        version: {{ .VERSION }}
         provider:
           name: {{ .PROVIDER }}
         labels:
