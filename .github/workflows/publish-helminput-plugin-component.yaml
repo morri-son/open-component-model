@@ -156,7 +156,7 @@ jobs:
             -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
             -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
             -v /etc/ssl/certs/:/etc/ssl/certs/:ro \
-            -v "{$WORKDIR}:{$WORKDIR}" \
+            -v "${WORKDIR}:${WORKDIR}" \
             -w "${WORKDIR}" \
             "$CLI_IMAGE" \
               add component-version \
