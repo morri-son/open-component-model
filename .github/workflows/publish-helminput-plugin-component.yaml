@@ -123,6 +123,14 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           subject-path: "bindings/go/helm/tmp/bin/*"
 
+      - name: Upload build artifacts
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 #v5
+        with:
+          name: helm-plugin-build-artifacts
+          path: bindings/go/helm/tmp/
+          retention-days: 1
+
       - name: Determine if eligible for publishing
         id: publish-check
         run: |
@@ -146,6 +154,27 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          sparse-checkout: |
+            bindings/go/helm
+          sparse-checkout-cone-mode: false
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 #v6
+        with:
+          name: helm-plugin-build-artifacts
+          path: bindings/go/helm/tmp/
+
+      - name: Verify artifacts
+        run: |
+          echo "✅ Verifying build artifacts..."
+          ls -la bindings/go/helm/tmp/
+          test -f bindings/go/helm/tmp/component-constructor.yaml || (echo "❌ component-constructor.yaml missing" && exit 1)
+          test -d bindings/go/helm/tmp/bin || (echo "❌ bin directory missing" && exit 1)
+          echo "✅ All required artifacts present"
+
       - name: Create Docker config.json for GHCR
         run: |
           mkdir -p ${HOME}/.docker
@@ -170,6 +199,7 @@ jobs:
 
           echo "Created ${HOME}/.ocmconfig:"
           cat ${HOME}/.ocmconfig
+
       # Publish component version using CLI image
       - name: Publish OCM Component Version
         env:
