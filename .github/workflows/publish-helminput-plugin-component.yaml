@@ -17,10 +17,10 @@ on:
         default: "main"
       # Add possible inputs for OCM repository and CLI image to be able to test with different repos/images
       ocm_repository:
-        description: "OCM repository to publish the plugin component to. Default is ghcr.io/open-component-model/plugins"
+        description: "OCM repository to publish to. Default is ghcr.io/open-component-model/plugins."
         required: false
         type: string
-        default: ""
+        default: "ghcr.io/open-component-model/plugins"
       ocm_image:
         description: "OCM CLI image to use for publishing. Default is ghcr.io/open-component-model/cli:main"
         required: false
@@ -31,8 +31,6 @@ jobs:
   build_publish:
     name: Build and Publish Plugin Component
     runs-on: ubuntu-latest
-    env:
-      OCM_REPOSITORY: ${{ inputs.ocm_repository != '' && inputs.ocm_repository || format('ghcr.io/{0}/plugins', github.repository_owner) }}
     concurrency:
       group: helm-plugin-publish-${{ github.ref }}
       cancel-in-progress: false
