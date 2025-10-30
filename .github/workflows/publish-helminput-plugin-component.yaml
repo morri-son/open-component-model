@@ -254,7 +254,7 @@ jobs:
             -v "${WORKDIR}:${WORKDIR}" \
             -w "${WORKDIR}" \
             "$CLI_IMAGE" \
-              download plugin "${OCM_REPOSITORY}//ocm.software/plugins/helminput:${VERSION} \
+              download plugin "${OCM_REPOSITORY}//ocm.software/plugins/helminput:${VERSION}" \
               --resource-name "binary" \
               --output "./downloaded-plugin-binary"
 
