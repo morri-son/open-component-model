@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'bindings/go/helm/**'
+      - '.github/workflows/publish-helminput-plugin-component.yaml'
     tags:
       - 'bindings/go/helm/v*'
   pull_request:
@@ -229,11 +230,13 @@ jobs:
               add component-version \
               --config "/.ocmconfig" \
               --repository "${OCM_REPOSITORY}" \
-              --constructor "./component-constructor.yaml" "${PUBLISH_POLICY_ARGS[@]}" 
+              --constructor "./component-constructor.yaml" "${PUBLISH_POLICY_ARGS[@]}"
+
+      #TODO: Add verify uploaded component by downloading resources
 
       - name: Summary
         shell: bash
         run: |
           echo "## Published Helm input plugin component version" >> "$GITHUB_STEP_SUMMARY"
           echo "- OCM Repository: ${{ github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Version: ${{ needs.build.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Component Version: ocm.software/plugin/helminput:${{ needs.build.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
