@@ -162,6 +162,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
         with:
+          fetch-depth: 0
           sparse-checkout: |
             bindings/go/helm
           sparse-checkout-cone-mode: false
@@ -247,9 +248,9 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Recalculate VERSION if it's "main" to use DEV_VERSION format used in plugn build
+          # Recalculate VERSION if it's "main" to use DEV_VERSION format used in plugin build
           if [[ "${VERSION}" == "main" ]]; then
-            current_tag=$(git tag --sort=-committerdate | grep "^bindings/go/helm" | head -1 | sed 's#.*/v##' || echo "0.0.0")
+            current_tag=$(git tag | grep '^bindings/go/helm' | sort -V | tail -1 | sed 's#.*/v##' || echo "0.0.0")
             VERSION="${current_tag}-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
             echo "Recalculated VERSION for 'main' branch: ${VERSION}"
           fi

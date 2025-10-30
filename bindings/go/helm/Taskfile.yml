@@ -14,7 +14,7 @@ vars:
   # This is used when VERSION is not explicitly set or when building from 'main' branch.
   DEFAULT_VERSION:
     sh: |
-      current_tag=$(git tag --sort=-committerdate | grep "^bindings/go/helm" | head -1 | sed 's#.*/v##' || echo "0.0.0")
+      current_tag=$(git tag | grep '^bindings/go/helm' | sort -V | tail -1 | sed 's#.*/v##' || echo "0.0.0")
       echo "${current_tag}-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
   VERSION: '{{ .VERSION | default .DEFAULT_VERSION }}'
   COMPONENT_VERSION:
