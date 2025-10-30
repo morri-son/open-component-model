@@ -210,7 +210,7 @@ jobs:
         env:
           #TODO: Remove the special case for the feature branch after testing
           VERSION: ${{ needs.build.outputs.version }}
-          OCM_REPOSITORY: ${{ github.ref_name == 'feat/#695-helm-input-plugin-release' && 'ghcr.io/morrison/open-component-model/plugins' || github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}
+          OCM_REPOSITORY: ${{ github.ref_name == 'feat/#695-helm-input-plugin-release' && 'ghcr.io/morri-son/open-component-model/plugins' || github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}
           CLI_IMAGE: ${{ github.event.inputs.ocm_image || 'ghcr.io/open-component-model/cli:main' }}
           WORKDIR: ${{ github.workspace }}/bindings/go/helm/tmp
         shell: bash
@@ -276,5 +276,5 @@ jobs:
         shell: bash
         run: |
           echo "## Published Helm input plugin component version" >> "$GITHUB_STEP_SUMMARY"
-          echo "- OCM Repository: ${{ github.ref_name == 'feat/#695-helm-input-plugin-release' && 'ghcr.io/morrison/open-component-model/plugins' || github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- OCM Repository: ${{ github.ref_name == 'feat/#695-helm-input-plugin-release' && 'ghcr.io/morri-son/open-component-model/plugins' || github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Component Version: ocm.software/plugin/helminput:${{ needs.build.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
