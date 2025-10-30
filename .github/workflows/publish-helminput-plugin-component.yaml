@@ -144,8 +144,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          PUBLISH_POLICY_ARGS=""
-          if [ "${VERSION}" = "main" ]; then
+          PUBLISH_POLICY_ARGS=()
+          if [[ "${VERSION}" == "main" ]]; then
             PUBLISH_POLICY_ARGS+=(--component-version-conflict-policy replace)
             echo "Publishing component version from 'main' branch (replace policy)"
           else
