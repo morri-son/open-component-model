@@ -236,7 +236,33 @@ jobs:
               --repository "${OCM_REPOSITORY}" \
               --constructor "./component-constructor.yaml" "${PUBLISH_POLICY_ARGS[@]}"
 
-      #TODO: Add verify uploaded component by downloading resources
+      - name: Verify OCM Component via resource download
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          OCM_REPOSITORY: ${{ github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}
+          CLI_IMAGE: ${{ github.event.inputs.ocm_image || 'ghcr.io/open-component-model/cli:main' }}
+          WORKDIR: ${{ github.workspace }}/bindings/go/helm/tmp
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker run --rm \
+            -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
+            -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
+            -v /etc/ssl/certs/:/etc/ssl/certs/:ro \
+            -v "${WORKDIR}:${WORKDIR}" \
+            -w "${WORKDIR}" \
+            "$CLI_IMAGE" \
+              download plugin "${OCM_REPOSITORY}//ocm.software/plugins/helminput:${VERSION} \
+              --resource-name "binary" \
+              --output "./downloaded-plugin-binary"
+
+          if [ ! -f "./downloaded-plugin-binary" ]; then
+            echo "❌ Verification failed: Not able to download plugin resource from published component version"
+            exit 1
+          else
+            echo "✅ Verification successful: Plugin resource successfully downloaded from published component version"
+          fi
 
       - name: Summary
         shell: bash
