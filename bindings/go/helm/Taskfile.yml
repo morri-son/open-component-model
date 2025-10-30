@@ -87,7 +87,7 @@ tasks:
         cat > {{ .OUTDIR }}/resources/helminput-plugin-{{ .GOOS }}-{{ .GOARCH }}.yaml <<EOF
         - name: binary
           type: ocmPlugin
-          version: {{ .COMPONENT_VERSION }}
+          version: "{{ .COMPONENT_VERSION }}"
           extraIdentity:
             os: {{ .GOOS }}
             architecture: {{ .GOARCH }}
@@ -110,6 +110,7 @@ tasks:
         vars:
           GOOS: '{{ .ITEM.GOOS }}'
           GOARCH: '{{ .ITEM.GOARCH }}'
+          COMPONENT_VERSION: '{{ .COMPONENT_VERSION }}'
 
   generate/component-constructor:
     desc: "Generate the component-constructor.yaml by aggregating all built resources"
@@ -120,6 +121,7 @@ tasks:
     silent: true
     cmds:
       - |
+        echo "Generating component constructor with version: {{ .COMPONENT_VERSION }}"
         cat <<EOF > {{ .COMPONENT_CONSTRUCTOR_FILE }}
         name: {{ .PROVIDER }}/{{ .NAME }}
         version: {{ .COMPONENT_VERSION }}
