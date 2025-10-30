@@ -20,7 +20,7 @@ on:
         description: "OCM repository to publish the plugin component to. Default is ghcr.io/open-component-model/plugins"
         required: false
         type: string
-        default: "ghcr.io/open-component-model/plugins"
+        default: "ghcr.io/${{ github.repository_owner }}/plugins"
       ocm_image:
         description: "OCM CLI image to use for publishing. Default is ghcr.io/open-component-model/cli:main"
         required: false
