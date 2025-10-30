@@ -246,7 +246,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
+          
+          # Recalculate VERSION if it's "main" to use DEV_VERSION format used in plugn build
+          if [[ "${VERSION}" == "main" ]]; then
+            current_tag=$(git tag --sort=-committerdate | grep "^bindings/go/helm" | head -1 | sed 's#.*/v##' || echo "0.0.0")
+            VERSION="${current_tag}-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
+            echo "Recalculated VERSION for 'main' branch: ${VERSION}"
+          fi
+          
           docker run --rm \
             -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
             -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
