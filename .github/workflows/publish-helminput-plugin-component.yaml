@@ -111,7 +111,6 @@ jobs:
       image: ghcr.io/open-component-model/cli:main
       volumes:
         - /etc/ssl/certs:/etc/ssl/certs
-      options: --user root
     concurrency:
       group: helm-plugin-publish-${{ github.ref }}
       cancel-in-progress: false
