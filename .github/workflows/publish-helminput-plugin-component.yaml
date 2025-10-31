@@ -107,6 +107,11 @@ jobs:
     needs: build
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/open-component-model/cli:main
+      volumes:
+        - /etc/ssl/certs:/etc/ssl/certs
+      options: --user root
     concurrency:
       group: helm-plugin-publish-${{ github.ref }}
       cancel-in-progress: false
@@ -118,101 +123,102 @@ jobs:
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 #v6
         with:
           name: helm-plugin-build-artifacts
-          path: bindings/go/helm/tmp/
+          path: /workspace/bindings/go/helm/tmp/
 
       - name: Verify artifacts
         run: |
           echo "✅ Verifying build artifacts..."
-          ls -la bindings/go/helm/tmp/
-          test -f bindings/go/helm/tmp/component-constructor.yaml || (echo "❌ component-constructor.yaml missing" && exit 1)
-          test -d bindings/go/helm/tmp/bin || (echo "❌ bin directory missing" && exit 1)
+          ls -la /workspace/bindings/go/helm/tmp/
+          test -f /workspace/bindings/go/helm/tmp/component-constructor.yaml || (echo "❌ component-constructor.yaml missing" && exit 1)
+          test -d /workspace/bindings/go/helm/tmp/bin || (echo "❌ bin directory missing" && exit 1)
           echo "✅ All required artifacts present"
 
-      - name: Create Docker config.json for GHCR
-        run: |
-          mkdir -p ${HOME}/.docker
-          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64)\"}}}" > ${HOME}/.docker/config.json
-
-      # Generate OCM config that can be used in the container
-      - name: Generate OCM config
+      - name: Create Docker config.json
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
+          
+          # Create secure temporary directory
+          mkdir -p /tmp/ocm-credentials/.docker
+          chmod 700 /tmp/ocm-credentials
+          
+          # Create Docker config.json with secure permissions in the temp directory
+          echo "{\"auths\": {\"ghcr.io\": {\"auth\": \"$(echo -n "${GITHUB_ACTOR}:${GITHUB_TOKEN}" | base64)\"}}}" > /tmp/ocm-credentials/.docker/config.json
+          chmod 600 /tmp/ocm-credentials/.docker/config.json
+          
+          echo "✅ Docker config.json created"
 
-          cat > ${HOME}/.ocmconfig <<EOF
+      - name: Create OCM config
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Create OCM config referencing the docker config
+          cat > /tmp/ocm-credentials/.ocmconfig <<EOF
           type: generic.config.ocm.software/v1
           configurations:
             - type: credentials.config.ocm.software
               repositories:
                 - repository:
                     type: DockerConfig/v1
-                    dockerConfigFile: /.docker/config.json
+                    dockerConfigFile: /tmp/ocm-credentials/.docker/config.json
                     propagateConsumerIdentity: true
           EOF
+          chmod 600 /tmp/ocm-credentials/.ocmconfig
+          
+          echo "✅ OCM config created"
 
-          echo "Created ${HOME}/.ocmconfig:"
-          cat ${HOME}/.ocmconfig
-
-      # Publish component version using CLI image
-      # TODO: replace with github action workflow call so it runs in a container.
       - name: Publish OCM Component Version
         env:
           VERSION: ${{ needs.build.outputs.version }}
           OCM_REPOSITORY: ghcr.io/${{ github.repository_owner }}/plugins
-          CLI_IMAGE: ghcr.io/open-component-model/cli:main
-          WORKDIR: ${{ github.workspace }}/bindings/go/helm/tmp
+        working-directory: /workspace/bindings/go/helm/tmp
         shell: bash
         run: |
           set -euo pipefail
+          
+          echo "Publishing OCM component version ${VERSION}..."
+          ocm add component-version \
+            --config "/tmp/ocm-credentials/.ocmconfig" \
+            --repository "${OCM_REPOSITORY}" \
+            --constructor "./component-constructor.yaml"
+          
+          echo "✅ Component version ${VERSION} published successfully"
 
-          docker run --rm \
-            -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
-            -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
-            -v /etc/ssl/certs/:/etc/ssl/certs/:ro \
-            -v "${WORKDIR}:${WORKDIR}" \
-            -w "${WORKDIR}" \
-            "$CLI_IMAGE" \
-              add component-version \
-              --config "/.ocmconfig" \
-              --repository "${OCM_REPOSITORY}" \
-              --constructor "./component-constructor.yaml"
-
-      # Verify that the plugin exists.
-      - name: Verify uploaded plugin.
+      - name: Verify uploaded plugin
         env:
           VERSION: ${{ needs.build.outputs.version }}
           OCM_REPOSITORY: ghcr.io/${{ github.repository_owner }}/plugins
-          CLI_IMAGE: ghcr.io/open-component-model/cli:main
-          WORKDIR: ${{ github.workspace }}/bindings/go/helm/tmp
         shell: bash
         run: |
           set -euo pipefail
+          
+          echo "Verifying uploaded plugin..."
+          ocm download plugin \
+            "${OCM_REPOSITORY}//ocm.software/plugins/helminput:${VERSION}" \
+            --output /tmp/plugin \
+            --config "/tmp/ocm-credentials/.ocmconfig" \
+            --resource-name binary
+          
+          echo "✅ Plugin verification successful"
 
-          docker run --rm \
-            -v "${HOME}/.docker/config.json:/.docker/config.json:ro" \
-            -v "${HOME}/.ocmconfig:/.ocmconfig:ro" \
-            -v /etc/ssl/certs/:/etc/ssl/certs/:ro \
-            -v "${WORKDIR}:${WORKDIR}" \
-            -w "${WORKDIR}" \
-            "$CLI_IMAGE" \
-              download plugin \
-              ${OCM_REPOSITORY}//ocm.software/plugins/helminput:${VERSION} \
-              --output /tmp/plugin \
-              --config "/.ocmconfig" \
-              --resource-name binary
+      - name: Cleanup credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -rf /tmp/ocm-credentials || true
+          echo "✅ Credentials cleaned up"
 
       - name: Summary
         env:
           VERSION: ${{ needs.build.outputs.version }}
-          OCM_REPOSITORY: ${{ github.event.inputs.ocm_repository || 'ghcr.io/open-component-model/plugins' }}
+          OCM_REPOSITORY: ghcr.io/${{ github.repository_owner }}/plugins
         shell: bash
         run: |
           echo "## Published Helm input plugin component version" >> "$GITHUB_STEP_SUMMARY"
           echo "- OCM Repository: ${OCM_REPOSITORY}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Component Name: ocm.software/plugins/helminput" >> "$GITHUB_STEP_SUMMARY"
           echo "- Component Version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Cleanup
-        if: always()
-        run: |
-          rm ${HOME}/.docker/config.json || true
