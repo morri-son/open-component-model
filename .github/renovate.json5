@@ -38,6 +38,7 @@
       rangeStrategy: "bump",
       groupName: "Golang versions",
       groupSlug: "golang-versions",
+      minimumReleaseAge: null,
       schedule: ['* * * * 0'] // At every minute on Sunday it is allowed to create branches
     },
     {
