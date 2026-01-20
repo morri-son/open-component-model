@@ -1,0 +1,823 @@
+[34mDEBUG[39m: Using RE2 regex engine
+[34mDEBUG[39m: Parsing configs
+[34mDEBUG[39m: No config file found on disk - skipping
+[34mDEBUG[39m: No additional config file found specified - skipping
+[34mDEBUG[39m: File config
+       "config": {}
+[34mDEBUG[39m: Additional file config
+       "config": {}
+[34mDEBUG[39m: CLI config
+       "config": {"repositories": ["morri-son/open-component-model"], "dryRun": "full"}
+[34mDEBUG[39m: Env config
+       "config": {"hostRules": [], "token": "***********"}
+[34mDEBUG[39m: Resolved global extends
+       "config": undefined
+[34mDEBUG[39m: Combined config
+       "config": {
+         "hostRules": [],
+         "token": "***********",
+         "repositories": ["morri-son/open-component-model"],
+         "dryRun": "full"
+       }
+[34mDEBUG[39m: Enabling forkProcessing while in non-autodiscover mode
+[34mDEBUG[39m: Enabling onboardingNoDeps while in non-autodiscover mode
+[34mDEBUG[39m: Found valid git version: 2.52.0
+[34mDEBUG[39m: Setting global hostRules
+[34mDEBUG[39m: Using default github endpoint: https://api.github.com/
+[34mDEBUG[39m: hostRules: authentication already set for api.github.com
+[34mDEBUG[39m: Using queue: host=api.github.com, concurrency=16
+(node:9) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[34mDEBUG[39m: GET https://api.github.com/user/emails = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=167)
+[34mDEBUG[39m: Cannot read user/emails endpoint on GitHub to retrieve gitAuthor
+[34mDEBUG[39m: Platform config
+       "platformConfig": {
+         "hostType": "github",
+         "endpoint": "https://api.github.com/",
+         "isGHApp": false,
+         "isGhe": false,
+         "userDetails": {
+           "username": "morri-son",
+           "name": "Gerald Morrison",
+           "id": 67469729
+         },
+         "userEmail": null
+       },
+       "renovateUsername": "morri-son"
+[34mDEBUG[39m: Adding token authentication for api.github.com (hostType=github) to hostRules
+[34mDEBUG[39m: Using baseDir: /tmp/renovate
+[34mDEBUG[39m: Using cacheDir: /tmp/renovate/cache
+[34mDEBUG[39m: Using containerbaseDir: /tmp/renovate/cache/containerbase
+[34mDEBUG[39m: Initializing Renovate internal cache into /tmp/renovate/cache/renovate/renovate-cache-v1
+[34mDEBUG[39m: Commits limit = null
+[34mDEBUG[39m: Setting global hostRules
+[34mDEBUG[39m: Adding token authentication for api.github.com (hostType=github) to hostRules
+[34mDEBUG[39m: validatePresets()
+[34mDEBUG[39m: Reinitializing hostRules for repo
+[34mDEBUG[39m: Clearing hostRules
+[34mDEBUG[39m: Adding token authentication for api.github.com (hostType=github) to hostRules
+[32m INFO[39m: Repository started[90m (repository=morri-son/open-component-model)[39m
+       "renovateVersion": "42.86.0"
+[34mDEBUG[39m: Using localDir: /tmp/renovate/repos/github/morri-son/open-component-model[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: PackageFiles.clear() - Package files deleted[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: initRepo("morri-son/open-component-model")[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: hostRules: authentication already set for api.github.com[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=api.github.com, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: morri-son/open-component-model default branch = feat/#695-helm-input-plugin-release[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Issues cache: Adding 0 issues to reconcile queue[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using personal access token for git init[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: fetchBranchCommits(): url=https://**redacted**@github.com/morri-son/open-component-model.git[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Resetting npmrc[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Resetting npmrc[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: checkOnboarding()[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: isOnboarded()[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: findPr(renovate/configure, Configure Renovate, !open)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: PR cache: cached data not found, creating new cache[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: PR cache: initial fetch[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://api.github.com/repos/morri-son/open-component-model/pulls?per_page=100&state=all&sort=updated&direction=desc&page=1 (etag="353b69f241b2674c6f8a2016160df9edd44e5e1b264568372946734042713389", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: PR cache: Filtered 0 PRs to 0 (user=morri-son)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: PR cache: getPrList success[90m (repository=morri-son/open-component-model)[39m
+       "pullsTotal": 0,
+       "requestsTotal": 1,
+       "apiQuotaAffected": true
+[34mDEBUG[39m: findPr(renovate/configure, chore: Configure Renovate, !open)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: findFile(renovate.json)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: syncGit(): Initializing git repository into /tmp/renovate/repos/github/morri-son/open-component-model[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Performing blobless clone[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: git clone completed[90m (repository=morri-son/open-component-model)[39m
+       "durationMs": 1752
+[34mDEBUG[39m: latest repository commit[90m (repository=morri-son/open-component-model)[39m
+       "latestCommit": {
+         "hash": "2ffe513ac4d4a9ff8a264edd81ba4f57845c1422",
+         "date": "2025-11-04T08:50:16+01:00",
+         "message": "Merge branch 'main' into feat/#695-helm-input-plugin-release",
+         "refs": "HEAD -> feat/#695-helm-input-plugin-release, origin/feat/#695-helm-input-plugin-release, origin/HEAD",
+         "body": "",
+         "author_name": "Gergely Brautigam",
+         "author_email": "gergely.brautigam@sap.com"
+       }
+[34mDEBUG[39m: Current branch SHA: 2ffe513ac4d4a9ff8a264edd81ba4f57845c1422[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: findFile(renovate.json5)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: findFile(.github/renovate.json)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: findFile(.github/renovate.json5)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Config file exists, fileName: .github/renovate.json5[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Repo is onboarded[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found .github/renovate.json5 config file[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Repository config[90m (repository=morri-son/open-component-model)[39m
+       "fileName": ".github/renovate.json5",
+       "config": {
+         "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+         "extends": [
+           "config:recommended",
+           "config:best-practices",
+           "docker:pinDigests",
+           "group:kubernetes",
+           "group:goOpenapi",
+           "helpers:pinGitHubActionDigests",
+           "security:openssf-scorecard",
+           ":dependencyDashboard",
+           ":rebaseStalePrs"
+         ],
+         "git-submodules": {"enabled": true},
+         "schedule": ["* * * * 0"],
+         "updateNotScheduled": true,
+         "minimumReleaseAge": "28 days",
+         "branchPrefix": "renovate/",
+         "gitAuthor": "ocmbot[bot] <125909804+ocmbot[bot]@users.noreply.github.com>",
+         "gitIgnoredAuthors": ["125909804+ocmbot[bot]@users.noreply.github.com"],
+         "prConcurrentLimit": 0,
+         "prHourlyLimit": 0,
+         "automerge": true,
+         "automergeType": "pr",
+         "separateMinorPatch": true,
+         "separateMultipleMajor": true,
+         "packageRules": [
+           {
+             "matchManagers": ["gomod", "custom.regex"],
+             "matchPackageNames": [
+               "sigs.k8s.io/controller-runtime",
+               "sigs.k8s.io/controller-tools",
+               "k8s.io/*",
+               "envtest"
+             ],
+             "groupName": "Kubernetes dependencies",
+             "groupSlug": "kubernetes-deps"
+           },
+           {
+             "groupName": "Docker dependencies",
+             "groupSlug": "docker-deps",
+             "matchPackageNames": ["github.com/docker/{/,}**"]
+           },
+           {
+             "groupName": "Golang X Repositories",
+             "groupSlug": "golang-x-repos",
+             "matchPackageNames": ["golang.org/x/{/,}**"]
+           },
+           {
+             "groupName": "Google Golang Repositories",
+             "groupSlug": "google-golang-repos",
+             "matchPackageNames": ["google.golang.org/{/,}**"]
+           },
+           {
+             "groupName": "Sigstore Repositories",
+             "groupSlug": "sigstore",
+             "matchPackageNames": ["github.com/sigstore/{/,}**"]
+           },
+           {
+             "groupName": "spf13 repositories",
+             "groupSlug": "spf13",
+             "matchPackageNames": ["github.com/spf13/{/,}**"]
+           },
+           {
+             "matchCategories": ["golang"],
+             "postUpdateOptions": ["gomodTidy"],
+             "enabled": true
+           },
+           {
+             "matchManagers": ["gomod"],
+             "matchDepTypes": ["indirect"],
+             "matchUpdateTypes": ["major"],
+             "enabled": false
+           },
+           {
+             "matchManagers": ["gomod"],
+             "groupName": "OCM Monorepo Go Module Dependencies",
+             "groupSlug": "ocm-monorepo",
+             "matchPackageNames": ["ocm.software/open-component-model/**"]
+           }
+         ],
+         "customDatasources": {
+           "envtest": {
+             "defaultRegistryUrlTemplate": "https://raw.githubusercontent.com/kubernetes-sigs/controller-tools/master/envtest-releases.yaml",
+             "format": "yaml",
+             "transformTemplates": [
+               "{ \"releases\": $map($distinct($keys($.releases)), function($v){ {\"version\": $replace($v, /^v/, \"\")} }) }"
+             ]
+           }
+         },
+         "customManagers": [
+           {
+             "customType": "regex",
+             "managerFilePatterns": ["/(^|/)\\.env(\\.local)?$/"],
+             "matchStrings": [
+               "# renovate: datasource=custom.envtest depName=envtest\\s+ENVTEST_K8S_VERSION=v?(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+             ],
+             "datasourceTemplate": "custom.envtest",
+             "depNameTemplate": "envtest",
+             "versioningTemplate": "semver"
+           },
+           {
+             "customType": "regex",
+             "managerFilePatterns": ["/(^|/)\\.env(\\.local)?$/"],
+             "matchStrings": [
+               "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+.*?_VERSION=v?(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+             ],
+             "versioningTemplate": "semver"
+           }
+         ],
+         "postUpgradeTasks": {
+           "commands": [
+             "command -v go >/dev/null 2>&1 || exit 0; find . -name \"go.mod\" -type f -path '*/integration/*' -exec dirname {} \\; | while read dir; do echo \"Running explicit go mod tidy for integration test in $dir\"; cd \"$dir\" && go mod tidy && cd - > /dev/null; done"
+           ],
+           "fileFilters": ["**/go.mod", "**/go.sum"],
+           "executionMode": "branch"
+         }
+       }
+[34mDEBUG[39m: migrateAndValidate()[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: No config migration necessary[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found repo ignorePaths[90m (repository=morri-son/open-component-model)[39m
+       "ignorePaths": [
+         "**/node_modules/**",
+         "**/bower_components/**",
+         "**/vendor/**",
+         "**/examples/**",
+         "**/__tests__/**",
+         "**/test/**",
+         "**/tests/**",
+         "**/__fixtures__/**"
+       ]
+[34mDEBUG[39m: No vulnerability alerts enabled for repo[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: No vulnerability alerts found[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: findIssue(Dependency Dashboard)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: No baseBranches[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: extract()[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Setting current branch to feat/#695-helm-input-plugin-release[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: latest commit[90m (repository=morri-son/open-component-model)[39m
+       "branchName": "feat/#695-helm-input-plugin-release",
+       "latestCommitDate": "2025-11-04T08:50:16+01:00",
+       "sha": "2ffe513ac4d4a9ff8a264edd81ba4f57845c1422"
+[34mDEBUG[39m: Using file pattern: /(^|/)tasks/[^/]+\.ya?ml$/ for manager ansible[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)(galaxy|requirements)(\.ansible)?\.ya?ml$/ for manager ansible-galaxy[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.tool-versions$/ for manager asdf[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/).azuredevops/.+\.ya?ml$/ for manager azure-pipelines[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /azure.*pipelines?.*\.ya?ml$/ for manager azure-pipelines[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)batect(-bundle)?\.ya?ml$/ for manager batect[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)batect$/ for manager batect-wrapper[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)WORKSPACE(|\.bazel|\.bzlmod)$/ for manager bazel[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.WORKSPACE\.bazel$/ for manager bazel[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.bzl$/ for manager bazel[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/|\.)MODULE\.bazel$/ for manager bazel-module[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.bazelversion$/ for manager bazelisk[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.bicep$/ for manager bicep[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.?bitbucket-pipelines\.ya?ml$/ for manager bitbucket-pipelines[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)bitrise\.ya?ml$/ for manager bitrise[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /buildkite\.ya?ml/ for manager buildkite[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.buildkite/.+\.ya?ml$/ for manager buildkite[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)project\.toml$/ for manager buildpacks[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)bun\.lockb?$/ for manager bun[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)package\.json$/ for manager bun[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.bun-version$/ for manager bun-version[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Gemfile$/ for manager bundler[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.cake$/ for manager cake[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Cargo\.toml$/ for manager cargo[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.circleci/.+\.ya?ml$/ for manager circleci[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)cloudbuild\.ya?ml/ for manager cloudbuild[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Podfile$/ for manager cocoapods[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)([\w-]*)composer\.json$/ for manager composer[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)conanfile\.(txt|py)$/ for manager conan[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.copier-answers(\..+)?\.ya?ml/ for manager copier[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)cpanfile$/ for manager cpanfile[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^\.crow(?:/[^/]+)?\.ya?ml$/ for manager crow[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)(?:deps|bb)\.edn$/ for manager deps-edn[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)devbox\.json$/ for manager devbox[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^.devcontainer/devcontainer.json$/ for manager devcontainer[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^.devcontainer.json$/ for manager devcontainer[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)(?:docker-)?compose[^/]*\.ya?ml$/ for manager docker-compose[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/|\.)([Dd]ocker|[Cc]ontainer)file$/ for manager dockerfile[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)([Dd]ocker|[Cc]ontainer)file[^/]*$/ for manager dockerfile[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.drone\.yml$/ for manager droneci[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)fleet\.ya?ml/ for manager fleet[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(?:^|/)gotk-components\.ya?ml$/ for manager flux[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.fvm/fvm_config\.json$/ for manager fvm[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.fvmrc$/ for manager fvm[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.gitmodules$/ for manager git-submodules[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)(workflow-templates|\.(?:github|gitea|forgejo)/(?:workflows|actions))/.+\.ya?ml$/ for manager github-actions[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)action\.ya?ml$/ for manager github-actions[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.gitlab-ci\.ya?ml$/ for manager gitlabci[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.gitlab-ci\.ya?ml$/ for manager gitlabci-include[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)gleam.toml$/ for manager gleam[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)go\.mod$/ for manager gomod[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.gradle(\.kts)?$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)gradle\.properties$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)gradle/.+\.toml$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)buildSrc/.+\.kt$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.versions\.toml$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)versions.props$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)versions.lock$/ for manager gradle[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)gradle/wrapper/gradle-wrapper\.properties$/ for manager gradle-wrapper[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.cabal$/ for manager haskell-cabal[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)requirements\.ya?ml$/ for manager helm-requirements[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)values\.ya?ml$/ for manager helm-values[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)helmfile\.ya?ml(?:\.gotmpl)?$/ for manager helmfile[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)helmfile\.d/.+\.ya?ml(?:\.gotmpl)?$/ for manager helmfile[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Chart\.ya?ml$/ for manager helmv3[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)bin/hermit$/ for manager hermit[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^Formula/[^/]+[.]rb$/ for manager homebrew[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.html?$/ for manager html[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)plugins\.(txt|ya?ml)$/ for manager jenkins[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)jsonnetfile\.json$/ for manager jsonnet-bundler[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^.+\.main\.kts$/ for manager kotlin-script[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)kustomization\.ya?ml$/ for manager kustomize[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)project\.clj$/ for manager leiningen[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/|\.)pom\.xml$/ for manager maven[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^(((\.mvn)|(\.m2))/)?settings\.xml$/ for manager maven[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.mvn/extensions\.xml$/ for manager maven[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|\/).mvn/wrapper/maven-wrapper.properties$/ for manager maven-wrapper[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|\/)mvnw(.cmd)?$/ for manager maven-wrapper[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)package\.js$/ for manager meteor[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Mintfile$/ for manager mint[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.?mise\.toml$/ for manager mise[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.?mise/config\.toml$/ for manager mise[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)mix\.exs$/ for manager mix[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)flake\.nix$/ for manager nix[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.node-version$/ for manager nodenv[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)package\.json$/ for manager npm[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)pnpm-workspace\.yaml$/ for manager npm[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.yarnrc\.yml$/ for manager npm[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.(?:cs|fs|vb)proj$/ for manager nuget[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.(?:props|targets)$/ for manager nuget[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)dotnet-tools\.json$/ for manager nuget[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)global\.json$/ for manager nuget[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.nvmrc$/ for manager nvm[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)src/main/features/.+\.json$/ for manager osgi[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)pyproject\.toml$/ for manager pep621[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)[\w-]*requirements([-.]\w+)?\.(txt|pip)$/ for manager pip_requirements[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)setup\.py$/ for manager pip_setup[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Pipfile$/ for manager pipenv[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)pyproject\.toml$/ for manager pixi[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)pixi\.toml$/ for manager pixi[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)pyproject\.toml$/ for manager poetry[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.pre-commit-config\.ya?ml$/ for manager pre-commit[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)pubspec\.ya?ml$/ for manager pub[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Puppetfile$/ for manager puppet[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.python-version$/ for manager pyenv[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /.+\.container$/ for manager quadlet[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /.+\.image$/ for manager quadlet[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /.+\.volume$/ for manager quadlet[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: renovate.json for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: renovate.json5 for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .github/renovate.json for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .github/renovate.json5 for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .gitlab/renovate.json for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .gitlab/renovate.json5 for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .renovaterc for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .renovaterc.json for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: .renovaterc.json5 for manager renovate-config-presets[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.ruby-version$/ for manager ruby-version[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)runtime.txt$/ for manager runtime-version[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.sbt$/ for manager sbt[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /project/[^/]*\.scala$/ for manager sbt[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /project/build\.properties$/ for manager sbt[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)repositories$/ for manager sbt[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.scalafmt.conf$/ for manager scalafmt[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)setup\.cfg$/ for manager setup-cfg[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)Package\.swift/ for manager swift[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/*.tf for manager terraform[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/*.tofu for manager terraform[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.terraform-version$/ for manager terraform-version[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)terragrunt\.hcl$/ for manager terragrunt[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.terragrunt-version$/ for manager terragrunt-version[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.tflint\.hcl$/ for manager tflint-plugin[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^\.travis\.ya?ml$/ for manager travis[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /\.typ$/ for manager typst[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/ProjectSettings/ProjectVersion.txt for manager unity3d[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.vela\.ya?ml$/ for manager velaci[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)vendir\.yml$/ for manager vendir[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /^\.woodpecker(?:/[^/]+)?\.ya?ml$/ for manager woodpecker[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/tsconfig.json for manager regex[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/tsconfig.*.json for manager regex[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/tsconfig.json for manager regex[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: **/tsconfig.*.json for manager regex[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.env(\.local)?$/ for manager regex[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using file pattern: /(^|/)\.env(\.local)?$/ for manager regex[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 1 file(s) for manager bun: .github/scripts/package.json[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: No bun lockfiles found[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 3 file(s) for manager dockerfile: cli/Containerfile, kubernetes/controller/Dockerfile, kubernetes/controller/tilt.dockerfile[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 16 file(s) for manager github-actions: .github/workflows/auto-label-ipcei.yaml, .github/workflows/ci.yml, .github/workflows/cli-release.yml, .github/workflows/cli.yml, .github/workflows/kubernetes-controller.yml, .github/workflows/markdown.yml, .github/workflows/openssf-scorecard.yml, .github/workflows/publish-helminput-plugin-component.yaml, .github/workflows/pull-request.yaml, .github/workflows/release-branch.yml, .github/workflows/release-candidate-version.yml, .github/workflows/release-go-submodule.yaml, .github/workflows/renovate.yml, .github/workflows/reuse_helper_tool.yaml, .github/workflows/stale.yaml, .github/workflows/trigger-blackduck-scan.yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 24 file(s) for manager gomod: bindings/go/blob/go.mod, bindings/go/configuration/go.mod, bindings/go/constructor/go.mod, bindings/go/credentials/go.mod, bindings/go/ctf/go.mod, bindings/go/dag/go.mod, bindings/go/descriptor/normalisation/go.mod, bindings/go/descriptor/runtime/go.mod, bindings/go/descriptor/v2/go.mod, bindings/go/generator/go.mod, bindings/go/helm/go.mod, bindings/go/input/dir/go.mod, bindings/go/input/file/go.mod, bindings/go/input/utf8/go.mod, bindings/go/oci/go.mod, bindings/go/oci/integration/go.mod, bindings/go/plugin/go.mod, bindings/go/repository/go.mod, bindings/go/rsa/go.mod, bindings/go/runtime/go.mod, bindings/go/signing/go.mod, cli/go.mod, cli/integration/go.mod, kubernetes/controller/go.mod[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 2 file(s) for manager helm-values: bindings/go/helm/input/testdata/badchart/values.yaml, bindings/go/helm/input/testdata/mychart/values.yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 2 file(s) for manager helmv3: bindings/go/helm/input/testdata/badchart/Chart.yaml, bindings/go/helm/input/testdata/mychart/Chart.yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 6 file(s) for manager kustomize: kubernetes/controller/config/crd/kustomization.yaml, kubernetes/controller/config/default/kustomization.yaml, kubernetes/controller/config/manager/kustomization.yaml, kubernetes/controller/config/prometheus/kustomization.yaml, kubernetes/controller/config/rbac/kustomization.yaml, kubernetes/controller/config/samples/kustomization.yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 1 file(s) for manager npm: .github/scripts/package.json[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 1 file(s) for manager renovate-config-presets: .github/renovate.json5[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 1 file(s) for manager regex: .env[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Matched 1 file(s) for manager regex: .env[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found a multistage build stage name: certs[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: RollingReleasesData - data written[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Skipping scratch[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Skipping alias COPY --from[90m (repository=morri-son/open-component-model)[39m
+       "image": "certs"
+[34mDEBUG[39m: bindings/go/helm/input/testdata/badchart/values.yaml has no content[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Failed to find required fields in Chart.yaml[90m (repository=morri-son/open-component-model, packageFile=bindings/go/helm/input/testdata/badchart/Chart.yaml)[39m
+[34mDEBUG[39m: npm file .github/scripts/package.json has name undefined[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found a multistage build stage name: builder[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Skipping alias COPY --from[90m (repository=morri-son/open-component-model)[39m
+       "image": "builder"
+[34mDEBUG[39m: bindings/go/helm/input/testdata/mychart/values.yaml has no content[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Failed to find required fields in Chart.yaml[90m (repository=morri-son/open-component-model, packageFile=bindings/go/helm/input/testdata/mychart/Chart.yaml)[39m
+[34mDEBUG[39m: Detecting pnpm Workspaces[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Detecting workspaces[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Finding locked versions[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: manager extract durations (ms)[90m (repository=morri-son/open-component-model)[39m
+       "managers": {
+         "bun": 3,
+         "renovate-config-presets": 16,
+         "regex": 17,
+         "helm-values": 34,
+         "helmv3": 37,
+         "dockerfile": 40,
+         "npm": 53,
+         "kustomize": 55,
+         "github-actions": 76,
+         "gomod": 87
+       }
+[34mDEBUG[39m: Found dockerfile package files[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found github-actions package files[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found gomod package files[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found npm package files[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found regex package files[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found regex package files[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Found 46 package file(s)[90m (repository=morri-son/open-component-model)[39m
+[32m INFO[39m: Dependency extraction complete[90m (repository=morri-son/open-component-model, baseBranch=feat/#695-helm-input-plugin-release)[39m
+       "stats": {
+         "managers": {
+           "dockerfile": {"fileCount": 3, "depCount": 4},
+           "github-actions": {"fileCount": 16, "depCount": 119},
+           "gomod": {"fileCount": 24, "depCount": 1163},
+           "npm": {"fileCount": 1, "depCount": 1},
+           "regex": {"fileCount": 2, "depCount": 6}
+         },
+         "total": {"fileCount": 46, "depCount": 1293}
+       }
+[34mDEBUG[39m: hostRules: no authentication for raw.githubusercontent.com[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=raw.githubusercontent.com, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Dependency debian has unsupported/unversioned value bookworm-slim (versioning=docker)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Dependency gcr.io/distroless/static has unsupported/unversioned value nonroot (versioning=docker)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getDigest(https://index.docker.io, library/debian, bookworm-slim)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getDigest(https://gcr.io, distroless/static, nonroot)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getDigest(https://index.docker.io, library/alpine, undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=proxy.golang.org, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://index.docker.io, library/debian, sha256:78d2f66e0fec9e5a39fb2c72ea5e052b548df75602b5215ed01a17171529f706, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=index.docker.io, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://gcr.io, distroless/static, sha256:e8a4044e0b4ae4257efa45fc026c0bc30ad320d43bd4c1a7d5271bd241e386d0, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=gcr.io, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://index.docker.io, library/alpine, sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=hub.docker.com, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Marking 1 release(s) as pending, as they do not have a releaseTimestamp and we're running with minimumReleaseAgeBehaviour=timestamp-required[90m (repository=morri-son/open-component-model)[39m
+       "depName": "envtest",
+       "versions": ["1.35.0"],
+       "check": "minimumReleaseAge"
+[34mDEBUG[39m: hostRules: google auth for https://gcr.io[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=sigs.k8s.io, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not get Google access token, using no auth[90m (repository=morri-son/open-component-model)[39m
+       "registryHost": "https://gcr.io",
+       "dockerRepository": "distroless/static"
+(node:9) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/santhosh-tekuri/jsonschema/v6/@v/v6.0.0-alpha.1.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=17)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/bahlo/generic-list-go/@v/v0.1.0.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=111)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://gcr.io/v2/token?scope=repository%3Adistroless%2Fstatic%3Apull&service=gcr.io (etag=undefined, lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/santhosh-tekuri/jsonschema/v7/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=33)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/kubernetes-sigs/kustomize for module sigs.k8s.io/kustomize/kustomize[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/buger/jsonparser/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=62)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/bahlo/generic-list-go/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=55)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://gcr.io/v2/distroless/static/manifests/sha256:e8a4044e0b4ae4257efa45fc026c0bc30ad320d43bd4c1a7d5271bd241e386d0 (etag=undefined, lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: sigs.k8s.io/kustomize/kustomize (go) - most recent release: 2019-10-24T00:03:01.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/opencontainers/go-digest/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=141)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=auth.docker.io, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://gcr.io, distroless/static, nonroot, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: dorny/paths-filter (github-tags) - most recent release: 2024-03-02T22:11:12.000Z[90m (repository=morri-son/open-component-model)[39m
+(node:9) MetadataLookupWarning: received unexpected error = All promises were rejected code = UNKNOWN
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: http cache: saving https://gcr.io/v2/distroless/static/manifests/nonroot (etag=undefined, lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Got docker digest sha256:cba10d7abd3e203428e86f5b2d7fd5eb7d8987c387864ae4996cf97191b33764[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://auth.docker.io/token?scope=repository%3Alibrary%2Falpine%3Apull&service=registry.docker.io (etag=undefined, lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://auth.docker.io/token?scope=repository%3Alibrary%2Fdebian%3Apull&service=registry.docker.io (etag=undefined, lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/davecgh/go-spew/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=112)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/opencontainers/image-spec/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=113)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/kr/text/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=112)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=ocm.software, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/stretchr/testify/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=130)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://index.docker.io/v2/library/alpine/manifests/sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412 (etag="sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://index.docker.io/v2/library/debian/manifests/sha256:78d2f66e0fec9e5a39fb2c72ea5e052b548df75602b5215ed01a17171529f706 (etag="sha256:78d2f66e0fec9e5a39fb2c72ea5e052b548df75602b5215ed01a17171529f706", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://index.docker.io, library/alpine, latest, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/kr/text (go) - most recent release: 2020-02-14T20:31:06.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/kr/text (go) - most recent release: 2020-02-14T20:31:06.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/kr/text (go) - most recent release: 2020-02-14T20:31:06.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://index.docker.io, library/debian, bookworm-slim, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: open-component-model/ocm-setup-action (github-tags) - most recent release: 2023-09-25T13:13:06.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/invopop/jsonschema/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=128)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://index.docker.io/v2/library/alpine/manifests/latest (etag="sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662dff6da4eb62", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Got docker digest sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662dff6da4eb62[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://api.github.com/repos/davecgh/go-spew/commits?per_page=1 (etag=W/"467b3d75a8bc596e800ca88149cd9ef5a01d59f028c522c8ed39291231385ad5", lastModified=Thu, 30 Aug 2018 19:11:38 GMT)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/pmezard/go-difflib/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=113)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/golang.org/x/sync/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=121)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=golang.org, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/nlepage/go-tarfs/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1486)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/descriptor/normalisation[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://index.docker.io/v2/library/debian/manifests/bookworm-slim (etag="sha256:56ff6d36d4eb3db13a741b342ec466f121480b5edded42e4b7ee850ce7a418ee", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Got docker digest sha256:56ff6d36d4eb3db13a741b342ec466f121480b5edded42e4b7ee850ce7a418ee[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/mailru/easyjson/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=42)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/nlepage/go-tarfs (go) - most recent release: 2023-08-15T07:44:37.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/descriptor/runtime[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/blob/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1606)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/stretchr/objx/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=189)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/go.yaml.in/yaml/v2/@v/v2.0.0.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=188)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/wk8/go-ordered-map/v3/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=190)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://api.github.com/repos/pmezard/go-difflib/commits?per_page=1 (etag=W/"a71be28fe288d9ceec99ad3786c5ea59b60546a0e795338f3ba4980434f93380", lastModified=Wed, 26 Dec 2018 10:54:42 GMT)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go module: golang.org/x/sync lookup import url https://go.googlesource.com/sync[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: GET https://proxy.golang.org/gopkg.in/yaml.v4/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=97)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/sigs.k8s.io/controller-tools/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=96)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/go.yaml.in/yaml/v2/@v/v2.1.0.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=97)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/blob[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/kubernetes-sigs/controller-tools for module sigs.k8s.io/controller-tools[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: arduino/setup-task (github-tags) - most recent release: 2024-02-06T10:21:35.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v2 not found for arduino/setup-task[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "arduino/setup-task",
+       "currentValue": "v2",
+       "datasource": "github-tags",
+       "newValue": "v2",
+       "bucket": undefined
+[34mDEBUG[39m: Dependency agilepathway/pull-request-label-checker has unsupported/unversioned value latest (versioning=docker)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getDigest(https://index.docker.io, agilepathway/pull-request-label-checker, latest)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://index.docker.io, agilepathway/pull-request-label-checker, sha256:14f5f3dfda922496d07d53494e2d2b42885165f90677a1c03d600059b7706a61, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/runtime/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1520)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://auth.docker.io/token?scope=repository%3Aagilepathway%2Fpull-request-label-checker%3Apull&service=registry.docker.io (etag=undefined, lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/dag/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1747)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/runtime[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://index.docker.io/v2/agilepathway/pull-request-label-checker/manifests/sha256:14f5f3dfda922496d07d53494e2d2b42885165f90677a1c03d600059b7706a61 (etag="sha256:14f5f3dfda922496d07d53494e2d2b42885165f90677a1c03d600059b7706a61", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/dag[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: getManifestResponse(https://index.docker.io, agilepathway/pull-request-label-checker, latest, head)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/go.yaml.in/yaml/v5/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=59)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=go.yaml.in, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/check.v1 (go) - most recent release: 2020-11-30T13:44:42.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/sigs.k8s.io/yaml/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=30)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/kr/pretty/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=31)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/kr/pretty (go) - most recent release: 2022-08-29T23:03:05.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/kubernetes-sigs/yaml for module sigs.k8s.io/yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://index.docker.io/v2/agilepathway/pull-request-label-checker/manifests/latest (etag="sha256:14f5f3dfda922496d07d53494e2d2b42885165f90677a1c03d600059b7706a61", lastModified=undefined)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Got docker digest sha256:14f5f3dfda922496d07d53494e2d2b42885165f90677a1c03d600059b7706a61[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/golang.org/x/sys/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=109)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/!masterminds/semver/v3/@v/v3.0.0.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=40)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url _ for module go.yaml.in/yaml/v2[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go module: go.yaml.in/yaml/v2 lookup import url https://github.com/yaml/go-yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/descriptor/v3/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1499)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go module: golang.org/x/sys lookup import url https://go.googlesource.com/sys[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url _ for module go.yaml.in/yaml/v3[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go module: go.yaml.in/yaml/v3 lookup import url https://github.com/yaml/go-yaml[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/!masterminds/semver/v4/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=353)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/descriptor/v2[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/kr/text (go) - most recent release: 2020-02-14T20:31:06.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/rogpeppe/go-internal/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=698)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/repository/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1552)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/oci/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1497)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/repository[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/oci[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/nlepage/go-tarfs (go) - most recent release: 2023-08-15T07:44:37.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/kr/text (go) - most recent release: 2020-02-14T20:31:06.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/dlclark/regexp2/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=481)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/dlclark/regexp2 (go) - most recent release: 2024-12-31T19:52:57.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Dependency open-component-model/.github has unsupported/unversioned value main (versioning=docker)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/helm.sh/helm/v3/@v/v3.0.0-beta.1.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=18)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/veqryn/slog-context/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=31)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/golang.org/x/text/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=53)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/helm.sh/helm/v3/@v/v3.0.0-beta.2.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=20)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/go-logr/logr/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=55)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/helm.sh/helm/v3/@v/v3.0.0-alpha.2.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=20)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go module: golang.org/x/text lookup import url https://go.googlesource.com/text[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=oras.land, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/constructor/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=2278)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/configuration/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=2163)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/plugin/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=2147)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/ocm.software/open-component-model/bindings/go/ctf/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=2082)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/helm.sh/helm/v3/@v/v3.0.0-beta.3.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=40)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/configuration[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/constructor[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/constructor[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/ctf[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Go lookup source url https://github.com/open-component-model/open-component-model for module ocm.software/open-component-model/bindings/go/plugin[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: http cache: saving https://api.github.com/repos/open-component-model/.github/commits?per_page=1 (etag=W/"d2c2328c0833ae14874018f3f1ef9f0be02152be0bf53779e747bd0c0e49db0b", lastModified=Wed, 17 Dec 2025 10:23:38 GMT)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/Azure/go-ansiterm (go) - most recent release: 2025-01-02T03:35:03.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag(): No tags found for open-component-model/.github[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag main not found for open-component-model/.github[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "open-component-model/.github",
+       "currentValue": "main",
+       "datasource": "github-tags",
+       "newValue": "main",
+       "bucket": undefined
+[34mDEBUG[39m: GET https://proxy.golang.org/helm.sh/helm/v3/@v/v3.0.0-alpha.1.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=17)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/!make!now!just/heredoc/v2/@v/v2.0.0.info = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=36)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/blang/semver/v5/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=54)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/blang/semver/v4 (go) - most recent release: 2020-05-24T15:15:11.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/gabriel-vasile/mimetype/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=42)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/!make!now!just/heredoc/v3/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=36)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/MakeNowJust/heredoc (go) - most recent release: 2019-08-26T12:03:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/nlepage/go-tarfs (go) - most recent release: 2023-08-15T07:44:37.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/bahlo/generic-list-go (go) - most recent release: 2022-02-08T09:33:24.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/buger/jsonparser (go) - most recent release: 2021-01-08T09:37:36.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/cyberphone/json-canonicalization (go) - most recent release: 2024-12-13T10:21:44.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/davecgh/go-spew (go) - most recent release: 2018-02-21T23:26:28.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/dlclark/regexp2 (go) - most recent release: 2024-12-31T19:52:57.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/invopop/jsonschema (go) - most recent release: 2024-12-31T18:23:34.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/pmezard/go-difflib (go) - most recent release: 2016-01-10T10:55:54.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/wk8/go-ordered-map/v2 (go) - most recent release: 2023-06-27T17:54:31.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: gopkg.in/yaml.v3 (go) - most recent release: 2022-05-27T08:35:30.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/nlepage/go-tarfs (go) - most recent release: 2023-08-15T07:44:37.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/opencontainers/go-digest (go) - most recent release: 2020-05-14T01:46:00.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/Azure/go-ansiterm (go) - most recent release: 2025-01-02T03:35:03.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/helm.sh/helm/v5/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=55)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using queue: host=helm.sh, concurrency=16[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/containerd/errdefs/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=67)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/containerd/errdefs (go) - most recent release: 2024-10-08T13:10:09.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Using the `tag_last_pushed` to determine the age of a release from Docker Hub. If this is a digest update, it may lead to inconsistent behaviour, showing the digest as newer than it actually is[90m (repository=morri-son/open-component-model)[39m
+       "documentationUrl": "https://github.com/renovatebot/renovate/issues/38659"
+[34mDEBUG[39m: getLabels(https://index.docker.io, library/golang, latest)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Docker Hub library image - skipping label lookup[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: GET https://proxy.golang.org/github.com/chai2010/gettext-go/v2/@v/list = (code=ERR_NON_2XX_3XX_RESPONSE, statusCode=404 retryCount=0, duration=1518)[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Package abandonment detected: github.com/chai2010/gettext-go (go) - most recent release: 2024-04-10T05:39:05.000Z[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: github/tags.findCommitOfTag: Tag v0.0.4 not found for open-component-model/open-component-model[90m (repository=morri-son/open-component-model)[39m
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "ocm.software/open-component-model/bindings/go/constructor",
+       "currentValue": "v0.0.0-20251024100521-a7be1bf5ce0d",
+       "datasource": "go",
+       "newValue": "v0.0.4",
+       "bucket": "patch"
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "ocm.software/open-component-model/bindings/go/constructor",
+       "currentValue": "v0.0.0-20251024100521-a7be1bf5ce0d",
+       "datasource": "go",
+       "newValue": "v0.0.4",
+       "bucket": "patch"
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "ocm.software/open-component-model/bindings/go/constructor",
+       "currentValue": "v0.0.0-20251024100521-a7be1bf5ce0d",
+       "datasource": "go",
+       "newValue": "v0.0.4",
+       "bucket": "patch"
+[34mDEBUG[39m: Could not determine new digest for update.[90m (repository=morri-son/open-component-model)[39m
+       "packageName": "ocm.software/open-component-model/bindings/go/constructor",
+       "currentValue": "v0.0.0-20251024100521-a7be1bf5ce0d",
+       "datasource": "go",
+       "newValue": "v0.0.4",
+       "bucket": "patch"
+^C

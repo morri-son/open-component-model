@@ -14,7 +14,7 @@
   'git-submodules': {
     enabled: true,
   },
-  'updateNotScheduled': true, // Update branches that have already been created
+  'updateNotScheduled': false, // Update branches that have already been created
   'minimumReleaseAge': '28 days',
   'branchPrefix': 'renovate/',
   'gitAuthor': 'ocmbot[bot] <125909804+ocmbot[bot]@users.noreply.github.com>',
@@ -40,7 +40,6 @@
       groupName: "Golang versions",
       groupSlug: "golang-versions",
       minimumReleaseAge: null,
-      schedule: ['* * * * 0'] // At every minute on Sunday it is allowed to create branches
     },
     {
       matchManagers: [
