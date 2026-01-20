@@ -33,8 +33,16 @@
       automerge: true,
     },
     {
-      matchManagers: ["dockerfile", "gomod"],
-      matchPackagePatterns: ["^go$", "^golang$"],
+      matchManagers: ["gomod"],
+      matchDepTypes: ["golang"],
+      matchUpdateTypes: ["patch"],
+      groupName: "Golang versions",
+      groupSlug: "golang-versions",
+      minimumReleaseAge: null,
+    },
+    {
+      matchManagers: ["dockerfile"],
+      matchPackageNames: ["golang"],
       matchUpdateTypes: ["patch"],
       groupName: "Golang versions",
       groupSlug: "golang-versions",
