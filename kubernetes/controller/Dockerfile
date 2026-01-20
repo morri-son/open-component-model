@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=${BUILDPLATFORM} golang:1.25.5 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25.5@sha256:0e82796be275aefaf73c5abe3d3646c09b557aba982e87a42b2e3ceccf0e0e75 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
