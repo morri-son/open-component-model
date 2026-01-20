@@ -112,6 +112,10 @@
       matchCategories: [
         'golang',
       ],
+      excludePackageNames: [
+        'go',
+        'golang'
+      ],
       postUpdateOptions: [
         'gomodTidy',
       ],
