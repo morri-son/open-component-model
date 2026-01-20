@@ -14,38 +14,47 @@
   'git-submodules': {
     enabled: true,
   },
-  'updateNotScheduled': false, // Update branches that have already been created
-  'minimumReleaseAge': '28 days',
-  'branchPrefix': 'renovate/',
-  'gitAuthor': 'ocmbot[bot] <125909804+ocmbot[bot]@users.noreply.github.com>',
-  'gitIgnoredAuthors': [
+  updateNotScheduled: false,
+  minimumReleaseAge: '28 days',
+  branchPrefix: 'renovate/',
+  gitAuthor: 'ocmbot[bot] <125909804+ocmbot[bot]@users.noreply.github.com>',
+  gitIgnoredAuthors: [
     '125909804+ocmbot[bot]@users.noreply.github.com',
   ],
   prConcurrentLimit: 0,
   prHourlyLimit: 0,
   automerge: false,
-  automergeType: "pr",
+  automergeType: 'pr',
   separateMinorPatch: true,
   separateMultipleMajor: true,
   packageRules: [
     {
-      matchUpdateTypes: ['minor','patch'],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
       automerge: true,
     },
     {
-      matchManagers: ["gomod"],
-      matchDepTypes: ["golang"],
-      matchUpdateTypes: ["patch"],
-      groupName: "Golang versions",
-      groupSlug: "golang-versions",
+      description: 'Group golang versions (go directive from go.mod)',
+      matchDatasources: [
+        'golang-version',
+      ],
+      rangeStrategy: 'bump',
+      groupName: 'Golang versions',
+      groupSlug: 'golang-versions',
       minimumReleaseAge: null,
     },
     {
-      matchManagers: ["dockerfile"],
-      matchPackageNames: ["golang"],
-      matchUpdateTypes: ["patch"],
-      groupName: "Golang versions",
-      groupSlug: "golang-versions",
+      description: 'Group golang Docker image updates',
+      matchManagers: [
+        'dockerfile',
+      ],
+      matchPackageNames: [
+        'golang',
+      ],
+      groupName: 'Golang versions',
+      groupSlug: 'golang-versions',
       minimumReleaseAge: null,
     },
     {
@@ -62,8 +71,8 @@
       groupName: 'Kubernetes dependencies',
       groupSlug: 'kubernetes-deps',
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       groupName: 'Docker dependencies',
@@ -72,64 +81,64 @@
         'github.com/docker/{/,}**',
       ],
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       groupName: 'Golang X Repositories',
       groupSlug: 'golang-x-repos',
       matchPackageNames: [
-        'golang.org/x/{/,}**'
+        'golang.org/x/{/,}**',
       ],
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       groupName: 'Google Golang Repositories',
       groupSlug: 'google-golang-repos',
       matchPackageNames: [
-        'google.golang.org/{/,}**'
+        'google.golang.org/{/,}**',
       ],
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       groupName: 'Sigstore Repositories',
       groupSlug: 'sigstore',
       matchPackageNames: [
-        'github.com/sigstore/{/,}**'
+        'github.com/sigstore/{/,}**',
       ],
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       groupName: 'spf13 repositories',
       groupSlug: 'spf13',
       matchPackageNames: [
-        'github.com/spf13/{/,}**'
+        'github.com/spf13/{/,}**',
       ],
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       matchCategories: [
         'golang',
-      ],
-      excludePackageNames: [
-        'go',
-        'golang'
       ],
       postUpdateOptions: [
         'gomodTidy',
       ],
       enabled: true,
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
+      matchPackageNames: [
+        '!go',
+        '!golang',
+      ],
     },
     {
       matchManagers: [
@@ -143,8 +152,8 @@
       ],
       enabled: false,
       schedule: [
-        '* * * * 0' // At every minute on Sunday it is allowed to create branches
-      ]
+        '* * * * 0',
+      ],
     },
     {
       matchManagers: [
@@ -155,8 +164,8 @@
       matchPackageNames: [
         'ocm.software/open-component-model/**',
       ],
-      'schedule': [
-        '* 22,0-6 * * *' // At every minute past hour 22 and every hour from 0 through 6.
+      schedule: [
+        '* 22,0-6 * * *',
       ],
       minimumReleaseAge: null,
     },
