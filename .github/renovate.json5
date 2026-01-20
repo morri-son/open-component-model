@@ -35,7 +35,7 @@
     {
       matchDatasources: ["golang-version", "docker"],
       matchManagers: ["dockerfile", "gomod"],
-      matchDepNames: ["go", "golang", "library/golang"],
+      matchPackageNames: ["go", "golang"],
       rangeStrategy: "bump",
       groupName: "Golang versions",
       groupSlug: "golang-versions",
