@@ -112,7 +112,7 @@ jobs:
       contents: write
     environment:
       name: cli/release-candidate
-      url: ${{ steps.create_release.outputs.html_url }}
+      url: ${{ steps.release.outputs.html_url }}
     steps:
       # Recreate changelog file from base64 string for release body
       - name: Decode changelog to file
@@ -127,7 +127,6 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
 
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           name: CLI ${{ needs.prepare.outputs.new_version }}
