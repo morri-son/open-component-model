@@ -11,7 +11,8 @@ require (
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/registry v0.40.0
 	golang.org/x/crypto v0.46.0
-	helm.sh/helm/v3 v3.19.4
+	helm.sh/helm/v3 v3.20.0
+	helm.sh/helm/v4 v4.0.4
 	ocm.software/open-component-model/bindings/go/blob v0.0.10
 	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260121092455-5a30258635be
 	ocm.software/open-component-model/bindings/go/descriptor/v2 v2.0.1-alpha9
@@ -100,7 +101,7 @@ require (
 	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
