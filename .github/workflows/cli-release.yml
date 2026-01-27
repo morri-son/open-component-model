@@ -112,7 +112,7 @@ jobs:
       contents: write
     environment:
       name: cli/release-candidate
-      url: ${{ steps.release.outputs.html_url }}
+      url: ${{ format('{0}/{1}/releases/tag/{2}', github.server_url, github.repository, needs.prepare.outputs.new_tag) }}
     steps:
       # Recreate changelog file from base64 string for release body
       - name: Decode changelog to file
