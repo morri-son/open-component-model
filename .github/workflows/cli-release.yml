@@ -303,6 +303,18 @@ jobs:
             execSync(`oras tag "${targetRepo}:${rcVersion}" "${finalVersion}" "latest"`, { stdio: 'inherit' });
             core.info(`✅ Promoted ${targetRepo}:${rcVersion} to :${finalVersion} and :latest`);
 
+            const attestationUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/attestations`;
+            await core.summary
+              .addHeading('OCI Promotion')
+              .addTable([
+                [{data: 'Field', header: true}, {data: 'Value', header: true}],
+                ['Source Image', `${targetRepo}:${rcVersion}`],
+                ['Promoted Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
+              ])
+              .addHeading('Attestations')
+              .addLink('Repository Attestations', attestationUrl)
+              .write();
+
   # --------------------------------------------------------
   # 8. Release Final: Create GitHub final release from RC assets
   # --------------------------------------------------------
@@ -347,8 +359,11 @@ jobs:
       - name: Publish final release with RC assets
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
+          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
+          RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
           FINAL_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.latest_promotion_version }}
+          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
           DOWNLOAD_DIR: ${{ runner.temp }}/rc-assets
           NOTES_FILE: ${{ runner.temp }}/RELEASE_NOTES.md
         with:
@@ -359,9 +374,21 @@ jobs:
 
             const finalTag = process.env.FINAL_TAG;
             const finalVersion = process.env.FINAL_VERSION;
+            const rcTag = process.env.RC_TAG;
+            const rcVersion = process.env.RC_VERSION;
+            const targetRepo = process.env.TARGET_REPO;
             const downloadDir = process.env.DOWNLOAD_DIR;
             const notesFile = process.env.NOTES_FILE;
-            const notes = fs.existsSync(notesFile) ? fs.readFileSync(notesFile, 'utf8') : '';
+
+            const rawNotes = fs.existsSync(notesFile) ? fs.readFileSync(notesFile, 'utf8') : '';
+            const today = new Date().toISOString().slice(0, 10);
+            const stripped = rawNotes
+              .replace(/^\s*##\s*\[[^\]]+\]\s*-\s*\d{4}-\d{2}-\d{2}\s*\n+/m, '')
+              .trim();
+            const promotedHeader = rcTag
+              ? `## Promoted from [${rcTag}] - ${today}`
+              : `## Promoted from RC - ${today}`;
+            const notes = stripped ? `${promotedHeader}\n\n${stripped}` : promotedHeader;
 
             const created = await github.rest.repos.createRelease({
               owner: context.repo.owner,
@@ -386,3 +413,19 @@ jobs:
                 data,
               });
             }
+
+            const releaseUrl = created.data.html_url;
+            const attestationUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/attestations`;
+            await core.summary
+              .addHeading('Final Release Published')
+              .addTable([
+                [{data: 'Field', header: true}, {data: 'Value', header: true}],
+                ['Final Tag', finalTag],
+                ['Release URL', releaseUrl],
+                ['Promoted from RC', rcTag || 'n/a'],
+                ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest (from ${rcVersion || 'n/a'})`],
+                ['Uploaded Assets', String(files.length)],
+              ])
+              .addHeading('Attestations')
+              .addLink('Repository Attestations', attestationUrl)
+              .write();
