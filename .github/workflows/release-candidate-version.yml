@@ -139,7 +139,8 @@ jobs:
 
             if (releaseUrl) {
               await core.summary
-                .addHeading(`Release Notes - [${headingText}](${releaseUrl})`)
+                .addHeading(`Release Notes - ${headingText}`)
+                .addRaw(`${releaseUrl}\n\n`)
                 .addRaw(log)
                 .write();
             } else {
