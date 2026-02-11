@@ -171,7 +171,7 @@ jobs:
 
             if (!rcTag || !repo) {
               await core.summary
-                .addHeading("Promotion Source Release Notes")
+                .addHeading("Final Release Notes (promoted from RC)")
                 .addRaw("No RC source tag available.")
                 .write();
               return;
@@ -179,6 +179,6 @@ jobs:
 
             const releaseUrl = `https://github.com/${repo}/releases/tag/${encodeURIComponent(rcTag)}`;
             await core.summary
-              .addHeading(`Promotion Source Release Notes - ${rcTag}`)
+              .addHeading(`Final Release Notes (promoted from ${rcTag})`)
               .addLink(releaseUrl, releaseUrl)
               .write();
