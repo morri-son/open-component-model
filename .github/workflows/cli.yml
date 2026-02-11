@@ -34,6 +34,12 @@ on:
       artifact_id:
         description: "The artifact id that was built."
         value: ${{ jobs.build.outputs.artifact_id }}
+      binary_attestation_url:
+        description: "Attestation URL for built binaries (if created)."
+        value: ${{ jobs.build.outputs.binary_attestation_url }}
+      oci_attestation_url:
+        description: "Attestation URL for OCI image (if created)."
+        value: ${{ jobs.publish.outputs.oci_attestation_url }}
 
 env:
   LOCATION: "cli"                       # Folder containing the CLI source
@@ -56,6 +62,7 @@ jobs:
       artifact_name: ${{ env.ARTIFACT_NAME }}
       artifact_id: ${{ steps.upload-artifacts.outputs.artifact_id }}
       should_push_oci_image: ${{ steps.branch-check.outputs.should_push_oci_image }}  # Used by publish job
+      binary_attestation_url: ${{ steps.attest_binaries.outputs.attestation-url }}
     permissions:
       contents: read
       id-token: write         # Needed for provenance attestations
@@ -110,10 +117,23 @@ jobs:
       # Attest built binaries with provenance metadata, but only if we're not on a PR
       - name: Attest binaries
         if: ${{ github.event_name != 'pull_request' }}
+        id: attest_binaries
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           subject-path: "${{ env.LOCATION }}/tmp/bin/ocm-*"
+
+      - name: Summarize binary attestation
+        if: ${{ github.event_name != 'pull_request' && steps.attest_binaries.outputs.attestation-url != '' }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          ATTESTATION_URL: ${{ steps.attest_binaries.outputs.attestation-url }}
+        with:
+          script: |
+            await core.summary
+              .addHeading('Attestation created')
+              .addLink(process.env.ATTESTATION_URL, process.env.ATTESTATION_URL)
+              .write();
 
       # Determine if this branch is eligible for publishing, but only if we're not on a PR
       - name: Determine if this is a push-eligible branch
@@ -153,6 +173,8 @@ jobs:
       packages: write         # Needed for pushing OCI images and provenance layers
       id-token: write         # Needed for provenance attestation identity
       attestations: write     # Allows storing provenance attestation
+    outputs:
+      oci_attestation_url: ${{ steps.attest_oci.outputs.attestation-url }}
     steps:
       # Retrieve artifacts produced by the build job
       - name: Download build artifacts
@@ -205,9 +227,22 @@ jobs:
         id: digest
         run: echo "digest=$(oras resolve ${TARGET_REPO}:${TAG})" >> "$GITHUB_OUTPUT"
       - name: Attest OCI image
+        id: attest_oci
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           subject-digest: ${{ steps.digest.outputs.digest }}
           subject-name: ${{ env.TARGET_REPO }}
           push-to-registry: true
+
+      - name: Summarize OCI attestation
+        if: ${{ steps.attest_oci.outputs.attestation-url != '' }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          ATTESTATION_URL: ${{ steps.attest_oci.outputs.attestation-url }}
+        with:
+          script: |
+            await core.summary
+              .addHeading('Attestation created')
+              .addLink(process.env.ATTESTATION_URL, process.env.ATTESTATION_URL)
+              .write();
