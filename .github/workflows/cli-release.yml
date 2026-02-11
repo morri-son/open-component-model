@@ -60,7 +60,7 @@ jobs:
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       # Determine committer and set up git identity
       - id: committer
@@ -82,7 +82,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.new_tag }}
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const { execSync } = require("child_process");
             const tag = process.env.TAG;
@@ -183,7 +183,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      workflows: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -191,7 +190,7 @@ jobs:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       # Determine committer and set up git identity
       - id: committer
@@ -211,7 +210,7 @@ jobs:
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           FINAL_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const { execSync } = require("child_process");
             const rcTag = process.env.RC_TAG;
