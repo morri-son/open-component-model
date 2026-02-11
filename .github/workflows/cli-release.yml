@@ -143,19 +143,6 @@ jobs:
           repository: ${{ github.repository }}
           name: ${{ needs.build.outputs.artifact_name }}
 
-      - name: Append attestation references to RC notes
-        run: |
-          {
-            echo ""
-            echo "## Build Metadata"
-            if [ -n "${{ needs.build.outputs.binary_attestation_url }}" ]; then
-              echo "- Attestation created (binaries): ${{ needs.build.outputs.binary_attestation_url }}"
-            fi
-            if [ -n "${{ needs.build.outputs.oci_attestation_url }}" ]; then
-              echo "- Attestation created (oci): ${{ needs.build.outputs.oci_attestation_url }}"
-            fi
-          } >> "${{ runner.temp }}/CHANGELOG.md"
-
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
@@ -195,49 +182,6 @@ jobs:
             if (!process.env.LATEST_PROMOTION_TAG) {
               core.setFailed('Missing latest_promotion_tag output');
               return;
-            }
-
-  # ----------------------------------------------------------------
-  # 5b. Resolve RC metadata used for final summaries
-  # ----------------------------------------------------------------
-  resolve_rc_metadata:
-    name: Resolve RC Metadata for Final Summaries
-    if: ${{ github.event.inputs.release_candidate == 'false' }}
-    needs: [prepare, validate_final]
-    runs-on: ubuntu-latest
-    outputs:
-      rc_binary_attestation_url: ${{ steps.resolve.outputs.rc_binary_attestation_url }}
-      rc_oci_attestation_url: ${{ steps.resolve.outputs.rc_oci_attestation_url }}
-    steps:
-      - name: Resolve attestation links from RC release body
-        id: resolve
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const tag = process.env.RC_TAG;
-            if (!tag) {
-              core.setFailed('Missing RC_TAG');
-              return;
-            }
-
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag,
-            });
-
-            const body = release.data.body || '';
-            const binary = body.match(/Attestation created \(binaries\):\s*(https:\/\/github\.com\/[^\s]+)/i);
-            const oci = body.match(/Attestation created \(oci\):\s*(https:\/\/github\.com\/[^\s]+)/i);
-
-            core.setOutput('rc_binary_attestation_url', binary ? binary[1] : '');
-            core.setOutput('rc_oci_attestation_url', oci ? oci[1] : '');
-
-            if (!binary && !oci) {
-              core.warning(`No dedicated attestation links found in RC release body for tag ${tag}`);
             }
 
   # --------------------------------------------------------
@@ -320,7 +264,7 @@ jobs:
   promote_image:
     name: Promote OCI Image to Final and Latest
     if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
-    needs: [prepare, validate_final, resolve_rc_metadata, tag_final]
+    needs: [prepare, validate_final, tag_final]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -342,14 +286,12 @@ jobs:
           RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
           FINAL_VERSION: ${{ needs.prepare.outputs.latest_promotion_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          RC_OCI_ATTESTATION_URL: ${{ needs.resolve_rc_metadata.outputs.rc_oci_attestation_url }}
         with:
           script: |
             const { execSync } = require('child_process');
             const rcVersion = process.env.RC_VERSION;
             const finalVersion = process.env.FINAL_VERSION;
             const targetRepo = process.env.TARGET_REPO;
-            const rcOciAttestationUrl = process.env.RC_OCI_ATTESTATION_URL;
             if (!rcVersion) {
               core.setFailed('Missing RC_VERSION');
               return;
@@ -368,18 +310,7 @@ jobs:
                 ['Source Tag', `${targetRepo}:${rcVersion}`],
                 ['Promoted Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
               ])
-              .addHeading('Attestation');
-
-            if (rcOciAttestationUrl) {
-              await core.summary
-                .addLink(rcOciAttestationUrl, rcOciAttestationUrl)
-                .write();
-            } else {
-              await core.summary
-                .addRaw('No dedicated RC OCI attestation URL found in RC release notes.')
-                .addEOL()
-                .write();
-            }
+              .write();
 
   # --------------------------------------------------------
   # 8. Release Final: Create GitHub final release from RC assets
@@ -387,7 +318,7 @@ jobs:
   release_final:
     name: Create Final Release from RC
     if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
-    needs: [prepare, validate_final, resolve_rc_metadata, tag_final, promote_image]
+    needs: [prepare, validate_final, tag_final, promote_image]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -427,8 +358,6 @@ jobs:
         env:
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
-          RC_BINARY_ATTESTATION_URL: ${{ needs.resolve_rc_metadata.outputs.rc_binary_attestation_url }}
-          RC_OCI_ATTESTATION_URL: ${{ needs.resolve_rc_metadata.outputs.rc_oci_attestation_url }}
           FINAL_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.latest_promotion_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
@@ -444,8 +373,6 @@ jobs:
             const finalVersion = process.env.FINAL_VERSION;
             const rcTag = process.env.RC_TAG;
             const rcVersion = process.env.RC_VERSION;
-            const rcBinaryAttestationUrl = process.env.RC_BINARY_ATTESTATION_URL;
-            const rcOciAttestationUrl = process.env.RC_OCI_ATTESTATION_URL;
             const targetRepo = process.env.TARGET_REPO;
             const downloadDir = process.env.DOWNLOAD_DIR;
             const notesFile = process.env.NOTES_FILE;
@@ -498,27 +425,4 @@ jobs:
                 ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest (from ${rcVersion || 'n/a'})`],
                 ['Uploaded Assets', String(files.length)],
               ])
-              .addHeading('Attestation');
-
-            if (rcOciAttestationUrl) {
-              await core.summary
-                .addRaw('OCI: ')
-                .addLink(rcOciAttestationUrl, rcOciAttestationUrl)
-                .addEOL()
-                .write();
-            }
-
-            if (rcBinaryAttestationUrl) {
-              await core.summary
-                .addRaw('Binaries: ')
-                .addLink(rcBinaryAttestationUrl, rcBinaryAttestationUrl)
-                .addEOL()
-                .write();
-            }
-
-            if (!rcOciAttestationUrl && !rcBinaryAttestationUrl) {
-              await core.summary
-                .addRaw('No dedicated RC attestation URL found in RC release notes.')
-                .addEOL()
-                .write();
-            }
+              .write();
