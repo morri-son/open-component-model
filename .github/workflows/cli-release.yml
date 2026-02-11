@@ -38,6 +38,7 @@ jobs:
     with:
       branch: ${{ github.event.inputs.branch }}
       component_path: cli # cannot use env here
+      release_candidate: ${{ github.event.inputs.release_candidate }}
     secrets: inherit
 
   # --------------------------------------------------------
@@ -182,6 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      workflows: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
