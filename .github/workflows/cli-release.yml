@@ -54,13 +54,22 @@ jobs:
     outputs:
       pushed: ${{ steps.tag.outputs.pushed }}
     steps:
+      - name: Generate App Token
+        id: get_token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.OCMBOT_APP_ID }}
+          private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
+          permission-contents: write
+          permission-workflows: write
+
       # Checkout repository for tagging
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.get_token.outputs.token }}
 
       # Determine committer and set up git identity
       - id: committer
@@ -82,7 +91,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.new_tag }}
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         with:
-          github-token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.get_token.outputs.token }}
           script: |
             const { execSync } = require("child_process");
             const tag = process.env.TAG;
@@ -184,13 +193,22 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Generate App Token
+        id: get_token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.OCMBOT_APP_ID }}
+          private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
+          permission-contents: write
+          permission-workflows: write
+
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.get_token.outputs.token }}
 
       # Determine committer and set up git identity
       - id: committer
@@ -210,7 +228,7 @@ jobs:
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           FINAL_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
         with:
-          github-token: ${{ secrets.TAG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.get_token.outputs.token }}
           script: |
             const { execSync } = require("child_process");
             const rcTag = process.env.RC_TAG;
