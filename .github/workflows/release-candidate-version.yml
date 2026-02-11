@@ -65,6 +65,7 @@ jobs:
           sparse-checkout: |
             ${{ inputs.component_path }}
             .github/scripts
+          sparse-checkout-cone-mode: false
           fetch-depth: 0
           ref: ${{ inputs.branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +79,7 @@ jobs:
           COMPONENT_PATH: ${{ inputs.component_path }}
         with:
           script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/compute-rc-version.js');
+            const script = await import('file://${{ github.workspace }}/.github/scripts/compute-rc-version.js');
             await script.default({ core, github, context });
 
       - name: Resolve latest existing RC on branch
@@ -89,7 +90,7 @@ jobs:
           COMPONENT_PATH: ${{ inputs.component_path }}
         with:
           script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/resolve-latest-rc.js');
+            const script = await import('file://${{ github.workspace }}/.github/scripts/resolve-latest-rc.js');
             await script.default({ core, github, context });
 
       - name: Resolve latest existing RC on branch
