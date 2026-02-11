@@ -177,8 +177,7 @@ jobs:
               return;
             }
 
-            const releaseUrl = `https://github.com/${repo}/releases/tag/${encodeURIComponent(rcTag)}`;
             await core.summary
               .addHeading(`Final Release Notes (promoted from ${rcTag})`)
-              .addLink(releaseUrl, releaseUrl)
+              .addRaw('Final release URL will be added in the release publication step.')
               .write();
