@@ -11,6 +11,11 @@ on:
         required: true
         type: string
         description: "Path to the CLI component, e.g. cli"
+      release_candidate:
+        required: false
+        default: true
+        type: boolean
+        description: "If true, prepare next RC metadata. If false, prepare final promotion metadata from latest RC."
     outputs:
       new_tag:
         description: "New RC tag name (e.g. cli/v0.1.0-rc.3)"
@@ -92,6 +97,7 @@ jobs:
             await script.default({ core, github, context });
 
       - name: Generate changelog with git-cliff
+        if: ${{ inputs.release_candidate == true }}
         uses: orhun/git-cliff-action@e16f179f0be49ecdfe63753837f20b9531642772 # v4
         id: git-cliff
         with:
@@ -107,6 +113,7 @@ jobs:
             --latest
 
       - name: Summarize changelog
+        if: ${{ inputs.release_candidate == true }}
         id: summarize
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
@@ -140,7 +147,9 @@ jobs:
             if (releaseUrl) {
               await core.summary
                 .addHeading(`Release Notes - ${headingText}`)
-                .addRaw(`${releaseUrl}\n\n`)
+                .addLink(releaseUrl, releaseUrl)
+                .addEOL()
+                .addEOL()
                 .addRaw(log)
                 .write();
             } else {
@@ -149,3 +158,27 @@ jobs:
                 .addRaw(log)
                 .write();
             }
+
+      - name: Summarize promotion source release notes
+        if: ${{ inputs.release_candidate == false }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          RC_TAG: ${{ steps.latest_rc.outputs.latest_rc_tag }}
+        with:
+          script: |
+            const rcTag = process.env.RC_TAG || "";
+            const repo = process.env.GITHUB_REPOSITORY || "";
+
+            if (!rcTag || !repo) {
+              await core.summary
+                .addHeading("Promotion Source Release Notes")
+                .addRaw("No RC source tag available.")
+                .write();
+              return;
+            }
+
+            const releaseUrl = `https://github.com/${repo}/releases/tag/${encodeURIComponent(rcTag)}`;
+            await core.summary
+              .addHeading(`Promotion Source Release Notes - ${rcTag}`)
+              .addLink(releaseUrl, releaseUrl)
+              .write();
