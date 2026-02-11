@@ -10,12 +10,12 @@ on:
         required: true
         type: string
       release_candidate:
-        description: "If true create a release candidate, if false promote latest RC on branch to final"
+        description: "If set, create a release candidate. If not set, promote latest RC on branch to final."
         required: false
         default: true
         type: boolean
       dry_run:
-        description: "Perform dry run without pushing tags"
+        description: "Perform dry run without pushing tags."
         required: false
         default: true
         type: boolean
