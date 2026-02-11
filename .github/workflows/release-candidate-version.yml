@@ -1,4 +1,4 @@
-
+name: Release Candidate Version
 
 on:
   workflow_call:
@@ -39,6 +39,7 @@ on:
       changelog_b64:
         description: "Changelog encoded in base64 for release body"
         value: ${{ jobs.prepare.outputs.changelog_b64 }}
+  workflow_dispatch:
 
 jobs:
   prepare:
