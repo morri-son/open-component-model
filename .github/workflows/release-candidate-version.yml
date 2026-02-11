@@ -118,6 +118,33 @@ jobs:
             const log = fs.existsSync(process.env.CHANGELOG_FILE)
               ? fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim()
               : "No changelog.";
+
+            const tag = process.env.TAG || "";
+            const repo = process.env.GITHUB_REPOSITORY || "";
+            const firstNonEmptyLine = log.split("\n").find((line) => line.trim().length > 0) || "";
+            const sectionTitle = firstNonEmptyLine.replace(/^#+\s*/, "").trim();
+
+            let headingText = tag || "release";
+            if (sectionTitle) {
+              const m = sectionTitle.match(/^\[(.+?)\]\s*-\s*(.+)$/);
+              headingText = m ? `${m[1]} - ${m[2]}` : sectionTitle;
+            }
+
+            const releaseUrl = repo && tag
+              ? `https://github.com/${repo}/releases/tag/${encodeURIComponent(tag)}`
+              : "";
+
             const encoded = Buffer.from(log).toString("base64");
             core.setOutput("changelog_b64", encoded);
-            await core.summary.addRaw(log).write();
+
+            if (releaseUrl) {
+              await core.summary
+                .addHeading(`Release Notes - [${headingText}](${releaseUrl})`)
+                .addRaw(log)
+                .write();
+            } else {
+              await core.summary
+                .addHeading(`Release Notes - ${headingText}`)
+                .addRaw(log)
+                .write();
+            }
