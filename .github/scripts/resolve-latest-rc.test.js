@@ -17,7 +17,6 @@ assert.deepStrictEqual(withRc, {
   latestRcVersion: "0.3.1-rc.4",
   latestPromotionVersion: "0.3.1",
   latestPromotionTag: "cli/v0.3.1",
-  latestRcExists: "true",
 });
 
 const withoutRc = deriveLatestRcMetadata("", "cli");
@@ -26,7 +25,6 @@ assert.deepStrictEqual(withoutRc, {
   latestRcVersion: "",
   latestPromotionVersion: "",
   latestPromotionTag: "",
-  latestRcExists: "false",
 });
 
 const nestedComponent = deriveLatestRcMetadata("kubernetes/controller/v0.8.2-rc.1", "kubernetes/controller");
@@ -35,7 +33,6 @@ assert.deepStrictEqual(nestedComponent, {
   latestRcVersion: "0.8.2-rc.1",
   latestPromotionVersion: "0.8.2",
   latestPromotionTag: "kubernetes/controller/v0.8.2",
-  latestRcExists: "true",
 });
 
 console.log("✅ All resolve-latest-rc tests passed.");

@@ -20,12 +20,11 @@ export function parseReleaseBranch(branch) {
  * @param {string} componentPath
  */
 export function deriveLatestRcMetadata(latestRcTag, componentPath) {
-  const latestRcExists = latestRcTag ? "true" : "false";
   const latestRcVersion = latestRcTag ? latestRcTag.replace(`${componentPath}/v`, "") : "";
   const latestPromotionVersion = latestRcVersion ? latestRcVersion.replace(/-rc\.\d+$/, "") : "";
   const latestPromotionTag = latestRcTag
     ? `${componentPath}/v${latestPromotionVersion}`
     : "";
 
-  return { latestRcTag, latestRcVersion, latestPromotionVersion, latestPromotionTag, latestRcExists };
+  return { latestRcTag, latestRcVersion, latestPromotionVersion, latestPromotionTag };
 }

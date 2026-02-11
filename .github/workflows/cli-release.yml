@@ -106,9 +106,9 @@ jobs:
       ref: ${{ needs.prepare.outputs.new_tag }}
 
 
-  # --------------------------------------------------------
+  # ---------------------------------------------------------------
   # 4. Release RC: Create GitHub pre-release if RC tag was pushed
-  # --------------------------------------------------------
+  # ---------------------------------------------------------------
   release_rc:
     name: Create Pre-Release
     if: ${{ needs.tag_rc.outputs.pushed == 'true' }}
@@ -147,9 +147,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-  # --------------------------------------------------------
+  # ----------------------------------------------------------------
   # 5. Validate Final: Validate latest RC exists for final release
-  # --------------------------------------------------------
+  # ----------------------------------------------------------------
   validate_final:
     name: Validate Final Promotion Source
     if: ${{ github.event.inputs.release_candidate == 'false' }}
@@ -159,17 +159,12 @@ jobs:
       - name: Ensure latest RC exists on release branch
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          LATEST_RC_EXISTS: ${{ needs.prepare.outputs.latest_rc_exists }}
           LATEST_RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           LATEST_PROMOTION_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
         with:
           script: |
-            if (process.env.LATEST_RC_EXISTS !== 'true') {
-              core.setFailed(`No RC tag found for branch '${{ github.event.inputs.branch }}'. Final release requires existing RC.`);
-              return;
-            }
             if (!process.env.LATEST_RC_TAG) {
-              core.setFailed('Missing latest_rc_tag output');
+              core.setFailed(`No RC tag found for branch '${{ github.event.inputs.branch }}'. Final release requires existing RC.`);
               return;
             }
             if (!process.env.LATEST_PROMOTION_TAG) {
@@ -331,7 +326,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           FINAL_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
-          FINAL_VERSION: ${{ needs.prepare.outputs.latest_promotion_tag }}
+          FINAL_VERSION: ${{ needs.prepare.outputs.latest_promotion_version }}
           DOWNLOAD_DIR: ${{ runner.temp }}/rc-assets
           NOTES_FILE: ${{ runner.temp }}/RELEASE_NOTES.md
         with:
@@ -341,7 +336,7 @@ jobs:
             const path = require('path');
 
             const finalTag = process.env.FINAL_TAG;
-            const finalVersion = (process.env.FINAL_VERSION || '').replace(/^cli\//, '');
+            const finalVersion = process.env.FINAL_VERSION;
             const downloadDir = process.env.DOWNLOAD_DIR;
             const notesFile = process.env.NOTES_FILE;
             const notes = fs.existsSync(notesFile) ? fs.readFileSync(notesFile, 'utf8') : '';

@@ -36,9 +36,6 @@ on:
       latest_promotion_version:
         description: "Final promotion version derived from latest RC tag (e.g. 0.1.0)"
         value: ${{ jobs.prepare.outputs.latest_promotion_version }}
-      latest_rc_exists:
-        description: "Whether at least one RC tag exists on this release branch"
-        value: ${{ jobs.prepare.outputs.latest_rc_exists }}
       changelog_b64:
         description: "Changelog encoded in base64 for release body"
         value: ${{ jobs.prepare.outputs.changelog_b64 }}
@@ -58,7 +55,6 @@ jobs:
       latest_rc_version: ${{ steps.latest_rc.outputs.latest_rc_version }}
       latest_promotion_tag: ${{ steps.latest_rc.outputs.latest_promotion_tag }}
       latest_promotion_version: ${{ steps.latest_rc.outputs.latest_promotion_version }}
-      latest_rc_exists: ${{ steps.latest_rc.outputs.latest_rc_exists }}
       changelog_b64: ${{ steps.summarize.outputs.changelog_b64 }}
     steps:
       # Checkout the repository and target branch

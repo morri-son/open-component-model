@@ -7,7 +7,7 @@ import { deriveLatestRcMetadata, parseReleaseBranch } from "./release-utils.js";
  *
  * @param {string} branch
  * @param {string} componentPath
- * @returns {{ latestRcTag: string, latestRcVersion: string, latestPromotionVersion: string, latestPromotionTag: string, latestRcExists: string }}
+ * @returns {{ latestRcTag: string, latestRcVersion: string, latestPromotionVersion: string, latestPromotionTag: string }}
  */
 export function resolveLatestRc(branch, componentPath) {
   const basePrefix = parseReleaseBranch(branch);
@@ -36,13 +36,12 @@ export default async function resolveLatestRcAction({ core }) {
   }
 
   try {
-    const { latestRcTag, latestRcVersion, latestPromotionVersion, latestPromotionTag, latestRcExists } = resolveLatestRc(branch, componentPath);
+    const { latestRcTag, latestRcVersion, latestPromotionVersion, latestPromotionTag } = resolveLatestRc(branch, componentPath);
 
     core.setOutput("latest_rc_tag", latestRcTag);
     core.setOutput("latest_rc_version", latestRcVersion);
     core.setOutput("latest_promotion_version", latestPromotionVersion);
     core.setOutput("latest_promotion_tag", latestPromotionTag);
-    core.setOutput("latest_rc_exists", latestRcExists);
 
     await core.summary
       .addHeading("📦 Latest RC Resolution")
@@ -50,7 +49,6 @@ export default async function resolveLatestRcAction({ core }) {
         [{ data: "Field", header: true }, { data: "Value", header: true }],
         ["Release Branch", branch],
         ["Component Path", componentPath],
-        ["Latest RC Exists", latestRcExists],
         ["Latest RC Tag", latestRcTag || "(none)"],
         ["Latest RC Version", latestRcVersion || "(none)"],
         ["Latest Promotion Version", latestPromotionVersion || "(none)"],
