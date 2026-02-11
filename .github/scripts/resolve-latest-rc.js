@@ -38,13 +38,17 @@ export default async function resolveLatestRcAction({ core }) {
   try {
     const { latestRcTag, latestRcVersion, latestPromotionVersion, latestPromotionTag } = resolveLatestRc(branch, componentPath);
 
+    const heading = latestRcTag
+      ? "📦 Latest RC Resolution (for final promotion)"
+      : "📦 Latest RC Resolution (no prior RC found — expected for initial RC runs)";
+
     core.setOutput("latest_rc_tag", latestRcTag);
     core.setOutput("latest_rc_version", latestRcVersion);
     core.setOutput("latest_promotion_version", latestPromotionVersion);
     core.setOutput("latest_promotion_tag", latestPromotionTag);
 
     await core.summary
-      .addHeading("📦 Latest RC Resolution")
+      .addHeading(heading)
       .addTable([
         [{ data: "Field", header: true }, { data: "Value", header: true }],
         ["Release Branch", branch],
