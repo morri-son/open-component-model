@@ -38,7 +38,8 @@ jobs:
     with:
       branch: ${{ github.event.inputs.branch }}
       component_path: cli # cannot use env here
-      release_candidate: ${{ github.event.inputs.release_candidate }}
+      # Reusable workflow expects a boolean; `github.event.inputs.*` is stringly typed.
+      release_candidate: ${{ fromJSON(github.event.inputs.release_candidate) }}
     secrets: inherit
 
   # --------------------------------------------------------
