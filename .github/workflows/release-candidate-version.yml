@@ -92,17 +92,6 @@ jobs:
             const script = await import('${{ github.workspace }}/.github/scripts/resolve-latest-rc.js');
             await script.default({ core, github, context });
 
-      - name: Resolve latest existing RC on branch
-        id: latest_rc
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        env:
-          BRANCH: ${{ inputs.branch }}
-          COMPONENT_PATH: ${{ inputs.component_path }}
-        with:
-          script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/resolve-latest-rc.js');
-            await script.default({ core, github, context });
-
       - name: Generate changelog with git-cliff
         uses: orhun/git-cliff-action@e16f179f0be49ecdfe63753837f20b9531642772 # v4
         id: git-cliff
