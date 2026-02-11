@@ -295,7 +295,7 @@ jobs:
       name: cli/release
     steps:
       - name: Download RC assets
-        uses: robinraju/release-downloader@v1.12
+        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
         env:
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
         with:
