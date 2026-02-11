@@ -61,6 +61,7 @@ jobs:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
           permission-contents: write
+          # Required for pushing tags that reference commits touching workflow files under .github/workflows.
           permission-workflows: write
 
       # Checkout repository for tagging
@@ -200,6 +201,7 @@ jobs:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
           permission-contents: write
+          # Required for pushing tags that reference commits touching workflow files under .github/workflows.
           permission-workflows: write
 
       - name: Checkout Repository
