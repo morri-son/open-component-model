@@ -1,5 +1,6 @@
 // @ts-check
 import { execSync } from "child_process";
+import { parseReleaseBranch } from "./release-utils.js";
 
 // --------------------------
 // GitHub Actions entrypoint
@@ -14,7 +15,7 @@ export default async function computeRcVersion({ core }) {
         return;
     }
 
-    const basePrefix = parseBranch(releaseBranch);
+    const basePrefix = parseReleaseBranch(releaseBranch);
     const tagPrefix = `${componentPath}/v`;
 
     const latestStable = run(core, `git tag --list '${tagPrefix}${basePrefix}.*' | sort -V | tail -n1`);
@@ -66,12 +67,6 @@ export function run(core, cmd) {
     core.warning(`Command failed: ${cmd}\n${err.message}`);
     return "";
   }
-}
-
-export function parseBranch(branch) {
-  const match = /^releases\/v(0\.\d+)/.exec(branch);
-  if (!match) throw new Error(`Invalid branch format: ${branch}`);
-  return match[1];
 }
 
 /**

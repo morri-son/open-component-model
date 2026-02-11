@@ -1,5 +1,6 @@
 import assert from "assert";
-import { computeNextVersions, isStableNewer, parseBranch, parseVersion } from "./compute-rc-version.js";
+import { parseReleaseBranch } from "./release-utils.js";
+import { computeNextVersions, isStableNewer, parseVersion } from "./compute-rc-version.js";
 
 // ----------------------------------------------------------
 // parseVersion tests
@@ -12,13 +13,13 @@ assert.deepStrictEqual(parseVersion("some/other/prefix/v2.3.4"), [2, 3, 4]);
 assert.deepStrictEqual(parseVersion(""), []);
 
 // ----------------------------------------------------------
-// parseBranch tests
+// parseReleaseBranch tests
 // ----------------------------------------------------------
-assert.strictEqual(parseBranch("releases/v0.1"), "0.1");
-assert.strictEqual(parseBranch("releases/v0.100"), "0.100");
-assert.throws(() => parseBranch("release/v0.1"), /Invalid branch/);
-assert.throws(() => parseBranch("v0.1"), /Invalid branch/);
-assert.throws(() => parseBranch("releases/1.0"), /Invalid branch/);
+assert.strictEqual(parseReleaseBranch("releases/v0.1"), "0.1");
+assert.strictEqual(parseReleaseBranch("releases/v0.100"), "0.100");
+assert.throws(() => parseReleaseBranch("release/v0.1"), /Invalid branch/);
+assert.throws(() => parseReleaseBranch("v0.1"), /Invalid branch/);
+assert.throws(() => parseReleaseBranch("releases/1.0"), /Invalid branch/);
 
 // ----------------------------------------------------------
 // computeNextVersions tests
