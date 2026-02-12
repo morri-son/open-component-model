@@ -21,7 +21,7 @@ export default async function computeRcVersion({ core }) {
     // Exclude RC tags here, otherwise latestStable may incorrectly resolve to e.g. v0.4.0-rc.3
     const latestStable = run(
       core,
-      `git tag --list '${tagPrefix}${basePrefix}.*' | sed -E '/-rc\\.[0-9]+$/d' | sort -V | tail -n1`
+      `git tag --list '${tagPrefix}${basePrefix}.*' | grep -Ev -- '-rc\.[0-9]+$' | sort -V | tail -n1`
     );
     const latestRc = run(core, `git tag --list '${tagPrefix}${basePrefix}.*-rc.*' | sort -V | tail -n1`);
 
