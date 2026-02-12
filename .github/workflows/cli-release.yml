@@ -128,6 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: read
     environment:
       name: cli/release-candidate
     steps:
@@ -143,6 +144,31 @@ jobs:
           repository: ${{ github.repository }}
           name: ${{ needs.build.outputs.artifact_name }}
 
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export attestation bundles and index
+        id: export_attestations
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          ASSETS_ROOT: ${{ github.workspace }}
+          ASSET_PATTERNS_JSON: '["bin/ocm-*","oci/cli.tar"]'
+          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
+          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
+          BUNDLE_DIR: ${{ runner.temp }}/attestation-bundles
+          REPOSITORY: ${{ github.repository }}
+        with:
+          script: |
+            const script = await import('${{ github.workspace }}/.github/scripts/attestations-release-assets.js');
+            await script.default({ core });
+
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
@@ -155,6 +181,8 @@ jobs:
           files: |
             ${{ github.workspace }}/bin/ocm-*    
             ${{ github.workspace }}/oci/*
+            ${{ runner.temp }}/attestation-bundles/*.jsonl
+            ${{ runner.temp }}/attestation-bundles/attestations-index.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -258,13 +286,65 @@ jobs:
             execSync(`git push origin "refs/tags/${finalTag}"`);
             core.info(`✅ Created final tag ${finalTag} from ${rcTag} at ${rcSha}`);
 
+  # --------------------------------------------------------------
+  # 7. Verify Attestations: Ensure RC assets/image are attestable
+  # --------------------------------------------------------------
+  verify_attestations:
+    name: Verify RC Attestations for Final Promotion
+    if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
+    needs: [prepare, validate_final]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download RC release assets
+        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1
+        env:
+          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ env.RC_TAG }}
+          out-file-path: ${{ runner.temp }}/rc-assets
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout scripts
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: 'false'
+
+      - name: Verify RC release attestations
+        id: verify_attestations
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          RC_ASSETS_DIR: ${{ runner.temp }}/rc-assets
+          ASSET_PATTERNS_JSON: '["ocm-*","cli.tar"]'
+          RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
+          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
+          REPOSITORY: ${{ github.repository }}
+        with:
+          script: |
+            const script = await import('${{ github.workspace }}/.github/scripts/verify-attestations-from-release.js');
+            await script.default({ core });
+
   # --------------------------------------------------------
-  # 7. Promote Image: Promote OCI image tags
+  # 8. Promote Image: Promote OCI image tags
   # --------------------------------------------------------
   promote_image:
     name: Promote OCI Image to Final and Latest
     if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
-    needs: [prepare, validate_final, tag_final]
+    needs: [prepare, validate_final, verify_attestations, tag_final]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -313,12 +393,12 @@ jobs:
               .write();
 
   # -------------------------------------------------------------
-  # 8. Release Final: Create GitHub final release from RC assets
+  # 9. Release Final: Create GitHub final release from RC assets
   # -------------------------------------------------------------
   release_final:
     name: Create Final Release from RC
     if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
-    needs: [prepare, validate_final, tag_final, promote_image]
+    needs: [prepare, validate_final, verify_attestations, tag_final, promote_image]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -326,7 +406,7 @@ jobs:
       name: cli/release
     steps:
       - name: Download RC assets
-        uses: robinraju/release-downloader@v1.12
+        uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1
         env:
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
         with:
@@ -420,8 +500,8 @@ jobs:
                 ['Promoted from RC', rcTag || 'n/a'],
                 ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
                 ['Uploaded Assets', String(files.length)],
+              ])
               .addEOL()
               .addLink(releaseUrl, releaseUrl)
               .addEOL()
-              ])
               .write();
