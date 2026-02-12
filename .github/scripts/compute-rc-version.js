@@ -1,6 +1,5 @@
 // @ts-check
 import { execSync } from "child_process";
-import { parseReleaseBranch } from "./release-utils.js";
 
 // --------------------------
 // GitHub Actions entrypoint
@@ -16,7 +15,7 @@ export default async function computeRcVersion({ core }) {
         return;
     }
 
-    const basePrefix = parseReleaseBranch(releaseBranch);
+    const basePrefix = parseBranch(releaseBranch);
     const tagPrefix = `${componentPath}/v`;
 
     const latestStable = run(core, `git tag --list '${tagPrefix}${basePrefix}.*' | sort -V | tail -n1`);
@@ -33,7 +32,7 @@ export default async function computeRcVersion({ core }) {
     core.setOutput("promotion_tag", promotionTag);
 
     // --------------------------
-    // Step summary (RC only)
+    // Step summary
     // --------------------------
     if (releaseCandidate) {
       await core.summary
@@ -72,6 +71,12 @@ export function run(core, cmd) {
   }
 }
 
+export function parseBranch(branch) {
+  const match = /^releases\/v(0\.\d+)/.exec(branch);
+  if (!match) throw new Error(`Invalid branch format: ${branch}`);
+  return match[1];
+}
+
 /**
  * Compute the next base and RC (release candidate) versions for a component.
  *
@@ -79,7 +84,7 @@ export function run(core, cmd) {
  *  - If no stable or RC tags exist: start fresh from the given base prefix (e.g., "0.1" → 0.1.0, 0.1.0-rc.1).
  *  - If only a stable tag exists: bump the patch version and start RC sequence (e.g., 0.1.0 → 0.1.1, 0.1.1-rc.1).
  *  - If only RC tags exist: continue RC numbering (e.g., 0.1.1-rc.2 → 0.1.1, 0.1.1-rc.3).
- *  - If both exist and share the same base: continue RC numbering for that version (e.g., 0.1.1 and 0.1.1-rc.4 → 0.1.1, 0.1.1-rc.5).
+ *  - If both exist and share the same base: bump patch and start new RC sequence (e.g., 0.1.2 and 0.1.1-rc.4 -> 0.1.3, 0.1.3-rc.1).
  *  - If the stable tag is newer: bump patch and start new RC sequence (e.g., 0.1.2 and 0.1.1-rc.4 -> 0.1.3, 0.1.3-rc.1).
  *  - If the RC tag is newer: continue RC numbering with its base version (e.g., 0.1.1 and 0.1.2-rc.6 -> 0.1.2, 0.1.2-rc.7).
  *
@@ -131,13 +136,10 @@ export function computeNextVersions(basePrefix, latestStableTag, latestRcTag, bu
             [major, minor, patch] = rcVersionParts;
             break;
 
-        // Same base between stable and RC
+        // Same base between stable and RC → bump patch or minor and start new RC
         case parseTag(latestStableTag) === parseTag(latestRcTag):
-            nextRcNumber = extractRcNumber(latestRcTag) + 1;
-            nextBaseVersion = parseTag(latestStableTag);
-            break;
 
-        // Stable newer → start new patch RC
+        // Stable newer → bump patch or minor and start new RC
         case isStableNewer(latestStableTag, latestRcTag):
             [major, minor, patch] = incrementVersion([major, minor, patch]);
             nextBaseVersion = `${major}.${minor}.${patch}`;
@@ -148,7 +150,7 @@ export function computeNextVersions(basePrefix, latestStableTag, latestRcTag, bu
         default:
             nextRcNumber = extractRcNumber(latestRcTag) + 1;
             [major, minor, patch] = rcVersionParts;
-            nextBaseVersion = parseTag(latestStableTag) || `${major}.${minor}.${patch}`;
+            nextBaseVersion = `${major}.${minor}.${patch}`;
     }
 
     return {

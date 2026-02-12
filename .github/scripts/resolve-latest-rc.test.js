@@ -1,5 +1,5 @@
 import assert from "assert";
-import { deriveLatestRcMetadata, parseReleaseBranch } from "./release-utils.js";
+import { deriveLatestRcMetadata, parseReleaseBranch } from "./resolve-latest-rc.js";
 
 // ----------------------------------------------------------
 // parseReleaseBranch tests

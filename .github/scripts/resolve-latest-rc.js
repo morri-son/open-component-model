@@ -1,6 +1,5 @@
 // @ts-check
 import { execSync } from "child_process";
-import { deriveLatestRcMetadata, parseReleaseBranch } from "./release-utils.js";
 
 /**
  * Resolve latest RC tag metadata for a release branch + component.
@@ -65,4 +64,32 @@ export default async function resolveLatestRcAction({ core }) {
   } catch (error) {
     core.setFailed(error.message);
   }
+}
+
+/**
+ * Parse release branches of form releases/v0.X
+ * @param {string} branch
+ * @returns {string} base prefix (e.g. 0.1)
+ */
+export function parseReleaseBranch(branch) {
+  const match = /^releases\/v(0\.\d+)$/.exec(branch || "");
+  if (!match) {
+    throw new Error(`Invalid branch format: ${branch}`);
+  }
+  return match[1];
+}
+
+/**
+ * Derive latest RC metadata from latest RC tag and component path.
+ * @param {string} latestRcTag
+ * @param {string} componentPath
+ */
+export function deriveLatestRcMetadata(latestRcTag, componentPath) {
+  const latestRcVersion = latestRcTag ? latestRcTag.replace(`${componentPath}/v`, "") : "";
+  const latestPromotionVersion = latestRcVersion ? latestRcVersion.replace(/-rc\.\d+$/, "") : "";
+  const latestPromotionTag = latestRcTag
+    ? `${componentPath}/v${latestPromotionVersion}`
+    : "";
+
+  return { latestRcTag, latestRcVersion, latestPromotionVersion, latestPromotionTag };
 }
