@@ -167,7 +167,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ASSETS_ROOT: ${{ runner.temp }}/rc-build-assets
-          ASSET_PATTERNS_JSON: '["bin/ocm-*","oci/cli.tar"]'
+          ASSET_PATTERNS_JSON: '["bin/ocm-*"]'
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
           BUNDLE_DIR: ${{ runner.temp }}/attestation-bundles
@@ -338,7 +338,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_ASSETS_DIR: ${{ runner.temp }}/rc-assets
-          ASSET_PATTERNS_JSON: '["ocm-*","cli.tar"]'
+          ASSET_PATTERNS_JSON: '["ocm-*"]'
           RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
           REPOSITORY: ${{ github.repository }}
