@@ -10,6 +10,7 @@ import { parseReleaseBranch } from "./release-utils.js";
 export default async function computeRcVersion({ core }) {
     const componentPath = process.env.COMPONENT_PATH;
     const releaseBranch = process.env.BRANCH;
+    const releaseCandidate = `${process.env.RELEASE_CANDIDATE ?? "true"}`.toLowerCase() === "true";
     if (!componentPath || !releaseBranch) {
         core.setFailed("Missing COMPONENT_PATH or BRANCH");
         return;
@@ -38,24 +39,26 @@ export default async function computeRcVersion({ core }) {
     // --------------------------
     // Step summary
     // --------------------------
-    await core.summary
-        .addHeading("📦 RC Version Computation")
-        .addTable([
-            [
-                { data: "Field", header: true },
-                { data: "Value", header: true },
-            ],
-            ["Component Path", componentPath],
-            ["Release Branch", releaseBranch],
-            ["Base Prefix", basePrefix],
-            ["Latest Stable", latestStable || "(none)"],
-            ["Latest RC", latestRc || "(none)"],
-            ["Next Base Version", baseVersion],
-            ["Next RC Version", rcVersion],
-            ["RC Tag", rcTag],
-            ["Promotion Tag", promotionTag],
-        ])
-        .write();
+    if (releaseCandidate) {
+      await core.summary
+          .addHeading("📦 RC Version Computation")
+          .addTable([
+              [
+                  { data: "Field", header: true },
+                  { data: "Value", header: true },
+              ],
+              ["Component Path", componentPath],
+              ["Release Branch", releaseBranch],
+              ["Base Prefix", basePrefix],
+              ["Latest Stable", latestStable || "(none)"],
+              ["Latest RC", latestRc || "(none)"],
+              ["Next Base Version", baseVersion],
+              ["Next RC Version", rcVersion],
+              ["RC Tag", rcTag],
+              ["Promotion Tag", promotionTag],
+          ])
+          .write();
+    }
 }
 
 // --------------------------
