@@ -143,6 +143,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           name: ${{ needs.build.outputs.artifact_name }}
+          path: ${{ runner.temp }}/rc-build-assets
 
       - name: Setup ORAS
         uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
@@ -154,11 +155,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Checkout scripts
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: 'false'
+
       - name: Export attestation bundles and index
         id: export_attestations
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          ASSETS_ROOT: ${{ github.workspace }}
+          ASSETS_ROOT: ${{ runner.temp }}/rc-build-assets
           ASSET_PATTERNS_JSON: '["bin/ocm-*","oci/cli.tar"]'
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
@@ -179,8 +186,8 @@ jobs:
           overwrite_files: 'true'
           prerelease: true
           files: |
-            ${{ github.workspace }}/bin/ocm-*    
-            ${{ github.workspace }}/oci/*
+            ${{ runner.temp }}/rc-build-assets/bin/ocm-*
+            ${{ runner.temp }}/rc-build-assets/oci/*
             ${{ runner.temp }}/attestation-bundles/*.jsonl
             ${{ runner.temp }}/attestation-bundles/attestations-index.json
         env:
