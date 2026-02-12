@@ -165,6 +165,7 @@ jobs:
         id: export_attestations
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ASSETS_ROOT: ${{ runner.temp }}/rc-build-assets
           ASSET_PATTERNS_JSON: '["bin/ocm-*","oci/cli.tar"]'
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
@@ -335,6 +336,7 @@ jobs:
         id: verify_attestations
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_ASSETS_DIR: ${{ runner.temp }}/rc-assets
           ASSET_PATTERNS_JSON: '["ocm-*","cli.tar"]'
           RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
