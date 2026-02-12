@@ -29,6 +29,7 @@ export function resolveLatestRc(branch, componentPath) {
 export default async function resolveLatestRcAction({ core }) {
   const branch = process.env.BRANCH;
   const componentPath = process.env.COMPONENT_PATH;
+  const releaseCandidate = `${process.env.RELEASE_CANDIDATE ?? "true"}`.toLowerCase() === "true";
 
   if (!branch || !componentPath) {
     core.setFailed("Missing BRANCH or COMPONENT_PATH");
@@ -47,18 +48,20 @@ export default async function resolveLatestRcAction({ core }) {
     core.setOutput("latest_promotion_version", latestPromotionVersion);
     core.setOutput("latest_promotion_tag", latestPromotionTag);
 
-    await core.summary
-      .addHeading(heading)
-      .addTable([
-        [{ data: "Field", header: true }, { data: "Value", header: true }],
-        ["Release Branch", branch],
-        ["Component Path", componentPath],
-        ["Latest RC Tag", latestRcTag || "(none)"],
-        ["Latest RC Version", latestRcVersion || "(none)"],
-        ["Latest Promotion Version", latestPromotionVersion || "(none)"],
-        ["Latest Promotion Tag", latestPromotionTag || "(none)"],
-      ])
-      .write();
+    if (!releaseCandidate) {
+      await core.summary
+        .addHeading(heading)
+        .addTable([
+          [{ data: "Field", header: true }, { data: "Value", header: true }],
+          ["Release Branch", branch],
+          ["Component Path", componentPath],
+          ["Latest RC Tag", latestRcTag || "(none)"],
+          ["Latest RC Version", latestRcVersion || "(none)"],
+          ["Latest Promotion Version", latestPromotionVersion || "(none)"],
+          ["Latest Promotion Tag", latestPromotionTag || "(none)"],
+        ])
+        .write();
+    }
   } catch (error) {
     core.setFailed(error.message);
   }

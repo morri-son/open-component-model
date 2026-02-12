@@ -114,7 +114,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           subject-path: "${{ env.LOCATION }}/tmp/bin/ocm-*"
-          show-summary: false
 
       # Determine if this branch is eligible for publishing, but only if we're not on a PR
       - name: Determine if this is a push-eligible branch
@@ -212,4 +211,3 @@ jobs:
           subject-digest: ${{ steps.digest.outputs.digest }}
           subject-name: ${{ env.TARGET_REPO }}
           push-to-registry: true
-          show-summary: false

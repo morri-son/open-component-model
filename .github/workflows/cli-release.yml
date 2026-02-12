@@ -312,9 +312,9 @@ jobs:
               ])
               .write();
 
-  # --------------------------------------------------------
+  # -------------------------------------------------------------
   # 8. Release Final: Create GitHub final release from RC assets
-  # --------------------------------------------------------
+  # -------------------------------------------------------------
   release_final:
     name: Create Final Release from RC
     if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
@@ -413,16 +413,15 @@ jobs:
 
             const releaseUrl = created.data.html_url;
             await core.summary
-              .addHeading(`Final Release Notes (promoted from ${rcTag || 'RC'})`)
-              .addLink(releaseUrl, releaseUrl)
-              .addEOL()
-              .addEOL()
               .addHeading('Final Release Published')
               .addTable([
                 [{data: 'Field', header: true}, {data: 'Value', header: true}],
                 ['Final Tag', finalTag],
                 ['Promoted from RC', rcTag || 'n/a'],
-                ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest (from ${rcVersion || 'n/a'})`],
+                ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
                 ['Uploaded Assets', String(files.length)],
+              .addEOL()
+              .addLink(releaseUrl, releaseUrl)
+              .addEOL()
               ])
               .write();
