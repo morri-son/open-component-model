@@ -6,7 +6,9 @@ import {
   buildAttestationsIndex,
   digestToBundleName,
   findLocalSubjects,
+  localSubjectRef,
   parsePatternList,
+  prettyBundleName,
   resolveImageDigest,
   resolveOciSubjects,
   runExport,
@@ -54,6 +56,11 @@ const idx = buildAttestationsIndex({
 });
 assert.strictEqual(idx.image, "oci://x/y:1.2.3");
 assert.strictEqual(idx.bundles[0].name, "sha256:1.jsonl");
+assert.strictEqual(localSubjectRef("/tmp/ocm-linux-amd64"), "file:ocm-linux-amd64");
+assert.strictEqual(
+  prettyBundleName("file:ocm-linux-amd64", `sha256:${"f".repeat(64)}`),
+  "attestation-ocm-linux-amd64-ffffffffffff.jsonl"
+);
 
 // ----------------------------------------------------------
 // runExport tests
@@ -111,10 +118,15 @@ await withTempDir(async (tmp) => {
   const files = fs.readdirSync(bundleDir).sort();
   assert(files.some((f) => f.endsWith(".jsonl")));
   assert(files.includes("attestations-index.json"));
+  assert(files.some((f) => f.startsWith("attestation-ocm-linux-amd64-")));
+  assert(files.some((f) => f.startsWith("attestation-ghcr.io-acme-cli-0.4.5-rc.1-")));
 
   const parsed = JSON.parse(fs.readFileSync(path.join(bundleDir, "attestations-index.json"), "utf8"));
   assert.strictEqual(parsed.image, "oci://ghcr.io/acme/cli:0.4.5-rc.1");
   assert(parsed.bundles.length >= 4);
+  assert(Array.isArray(parsed.entries));
+  assert(parsed.entries.some((e) => e.subject === "file:ocm-linux-amd64"));
+  assert(parsed.entries.some((e) => e.subject === "oci://ghcr.io/acme/cli:0.4.5-rc.1"));
 
   // Restore process environment for isolation across tests.
   process.env = prev;

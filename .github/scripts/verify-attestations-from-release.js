@@ -56,6 +56,40 @@ export function expectedReleaseAssets(rcAssetsDir, patterns) {
   return [...assets].sort();
 }
 
+/** Convert local file path into stable subject reference used in index entries. */
+export function localSubjectRef(filePath) {
+  return `file:${path.basename(filePath)}`;
+}
+
+/** Load optional attestation index from RC assets directory. */
+export function loadAttestationIndex(rcAssetsDir) {
+  const indexPath = path.join(rcAssetsDir, "attestations-index.json");
+  if (!fs.existsSync(indexPath)) return null;
+  const parsed = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+  if (!Array.isArray(parsed.entries)) return null;
+  return parsed;
+}
+
+/** Resolve bundle path for a subject from index first, then fallback to digest naming. */
+export function resolveBundlePath({ rcAssetsDir, index, subjectRef, digest }) {
+  if (index?.entries) {
+    const match = index.entries.find((entry) => entry.subject === subjectRef && entry.digest === digest && entry.bundle_file);
+    if (match) {
+      return path.join(rcAssetsDir, match.bundle_file);
+    }
+  }
+  return path.join(rcAssetsDir, `${digest}.jsonl`);
+}
+
+/** Resolve bundle path and validate existence. */
+export function requireBundlePath({ rcAssetsDir, index, subjectRef, digest, subjectLabel }) {
+  const bundle = resolveBundlePath({ rcAssetsDir, index, subjectRef, digest });
+  if (!fs.existsSync(bundle)) {
+    throw new Error(`Missing attestation bundle for ${subjectLabel} (expected ${bundle})`);
+  }
+  return bundle;
+}
+
 /** Resolve OCI subjects from JSON, or fallback to TARGET_REPO/RC_VERSION. */
 export function resolveOciSubjects({ ociSubjectsJson, targetRepo, rcVersion }) {
   if (ociSubjectsJson) {
@@ -96,13 +130,17 @@ export async function runVerify({ core, run = runCmd } = {}) {
   const patterns = parsePatternList(assetPatternsJson);
   const assets = expectedReleaseAssets(rcAssetsDir, patterns);
   const ociSubjects = resolveOciSubjects({ ociSubjectsJson, targetRepo, rcVersion });
+  const index = loadAttestationIndex(rcAssetsDir);
 
   for (const asset of assets) {
     const digest = sha256File(asset);
-    const bundle = path.join(rcAssetsDir, `${digest}.jsonl`);
-    if (!fs.existsSync(bundle)) {
-      throw new Error(`Missing attestation bundle for ${asset} (expected ${bundle})`);
-    }
+    const bundle = requireBundlePath({
+      rcAssetsDir,
+      index,
+      subjectRef: localSubjectRef(asset),
+      digest,
+      subjectLabel: asset,
+    });
 
     run("gh", ["attestation", "verify", asset, "--repo", repository, "--bundle", bundle]);
   }
@@ -114,10 +152,7 @@ export async function runVerify({ core, run = runCmd } = {}) {
       throw new Error(`Unexpected oras resolve output: '${digest}'`);
     }
 
-    const bundle = path.join(rcAssetsDir, `${digest}.jsonl`);
-    if (!fs.existsSync(bundle)) {
-      throw new Error(`Missing image attestation bundle for ${imageRef} (expected ${bundle})`);
-    }
+    const bundle = requireBundlePath({ rcAssetsDir, index, subjectRef: imageRef, digest, subjectLabel: imageRef });
 
     run("gh", ["attestation", "verify", imageRef, "--repo", repository, "--bundle", bundle]);
     lastDigest = digest;

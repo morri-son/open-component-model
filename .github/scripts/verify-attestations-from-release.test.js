@@ -4,7 +4,10 @@ import os from "os";
 import path from "path";
 import {
   expectedReleaseAssets,
+  loadAttestationIndex,
+  localSubjectRef,
   parsePatternList,
+  resolveBundlePath,
   resolveOciSubjects,
   runVerify,
   sha256File,
@@ -47,6 +50,25 @@ assert.deepStrictEqual(
   resolveOciSubjects({ ociSubjectsJson: '["oci://ghcr.io/acme/cli:1","oci://ghcr.io/acme/controller:1"]' }),
   ["oci://ghcr.io/acme/cli:1", "oci://ghcr.io/acme/controller:1"]
 );
+assert.strictEqual(localSubjectRef("/tmp/ocm-linux-amd64"), "file:ocm-linux-amd64");
+
+await withTempDir(async (tmp) => {
+  const assetsDir = path.join(tmp, "rc-assets");
+  fs.mkdirSync(assetsDir, { recursive: true });
+  const digest = `sha256:${"a".repeat(64)}`;
+  fs.writeFileSync(
+    path.join(assetsDir, "attestations-index.json"),
+    JSON.stringify({
+      entries: [{ subject: "file:ocm-linux-amd64", digest, bundle_file: "attestation-ocm-linux-amd64-aaaaaaaaaaaa.jsonl" }],
+    })
+  );
+  const idx = loadAttestationIndex(assetsDir);
+  assert(idx);
+  assert.strictEqual(
+    resolveBundlePath({ rcAssetsDir: assetsDir, index: idx, subjectRef: "file:ocm-linux-amd64", digest }),
+    path.join(assetsDir, "attestation-ocm-linux-amd64-aaaaaaaaaaaa.jsonl")
+  );
+});
 
 // ----------------------------------------------------------
 // runVerify tests
@@ -65,9 +87,23 @@ await withTempDir(async (tmp) => {
   const imageDigest = `sha256:${"d".repeat(64)}`;
   const binDigest = sha256File(bin);
   const tarDigest = sha256File(tar);
-  fs.writeFileSync(path.join(assetsDir, `${binDigest}.jsonl`), "bundle-bin");
-  fs.writeFileSync(path.join(assetsDir, `${tarDigest}.jsonl`), "bundle-tar");
-  fs.writeFileSync(path.join(assetsDir, `${imageDigest}.jsonl`), "bundle-image");
+  fs.writeFileSync(path.join(assetsDir, "attestation-ocm-linux-amd64-dddddddddddd.jsonl"), "bundle-bin");
+  fs.writeFileSync(path.join(assetsDir, "attestation-cli.tar-eeeeeeeeeeee.jsonl"), "bundle-tar");
+  fs.writeFileSync(path.join(assetsDir, "attestation-ghcr.io-acme-cli-0.4.5-rc.1-ffffffffffff.jsonl"), "bundle-image");
+  fs.writeFileSync(
+    path.join(assetsDir, "attestations-index.json"),
+    JSON.stringify({
+      entries: [
+        { subject: "file:ocm-linux-amd64", digest: binDigest, bundle_file: "attestation-ocm-linux-amd64-dddddddddddd.jsonl" },
+        { subject: "file:cli.tar", digest: tarDigest, bundle_file: "attestation-cli.tar-eeeeeeeeeeee.jsonl" },
+        {
+          subject: "oci://ghcr.io/acme/cli:0.4.5-rc.1",
+          digest: imageDigest,
+          bundle_file: "attestation-ghcr.io-acme-cli-0.4.5-rc.1-ffffffffffff.jsonl",
+        },
+      ],
+    })
+  );
 
   const calls = [];
   const run = (cmd, args) => {

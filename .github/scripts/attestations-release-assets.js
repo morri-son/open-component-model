@@ -83,15 +83,53 @@ export function resolveOciSubjects({ ociSubjectsJson, targetRepo, rcVersion }) {
 }
 
 /** Build a stable, machine-readable index for uploaded attestation bundles. */
-export function buildAttestationsIndex({ imageRef, bundleNames }) {
+export function buildAttestationsIndex({ imageRef, entries = [], bundleNames = [] }) {
+  const normalizedEntries = entries.length
+    ? entries
+    : [...bundleNames].map((name) => ({
+        subject: "",
+        digest: name.replace(/\.jsonl$/, ""),
+        bundle_file: name,
+        kind: "unknown",
+      }));
   return {
     generated_at: new Date().toISOString(),
     image: imageRef,
-    bundles: [...bundleNames].sort().map((name) => ({
-      name,
-      digest: name.replace(/\.jsonl$/, ""),
-    })),
+    bundles: [...normalizedEntries]
+      .sort((a, b) => a.bundle_file.localeCompare(b.bundle_file))
+      .map(({ bundle_file, digest }) => ({ name: bundle_file, digest })),
+    entries: normalizedEntries,
   };
+}
+
+/** Convert local file path into stable subject reference. */
+export function localSubjectRef(filePath) {
+  return `file:${path.basename(filePath)}`;
+}
+
+/** Create readable attestation bundle file name. */
+export function prettyBundleName(subjectRef, digest) {
+  const shortDigest = digest.replace(/^sha256:/, "").slice(0, 12);
+  const normalized = `${subjectRef || "subject"}`
+    .replace(/^oci:\/\//, "")
+    .replace(/^file:/, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  return `attestation-${normalized || "subject"}-${shortDigest}.jsonl`;
+}
+
+/** Keep bundle file names unique in a deterministic way. */
+export function uniqueBundleName(name, used) {
+  let next = name;
+  let i = 1;
+  while (used.has(next)) {
+    next = name.replace(/\.jsonl$/, `-${i}.jsonl`);
+    i += 1;
+  }
+  used.add(next);
+  return next;
 }
 
 /** Compute `sha256:<hex>` for a local file. */
@@ -133,32 +171,35 @@ export async function runExport({ core, run = runCmd } = {}) {
   const patterns = parsePatternList(assetPatternsJson);
   const localSubjects = findLocalSubjects(assetsRoot, patterns);
   const ociSubjects = resolveOciSubjects({ ociSubjectsJson, targetRepo, rcVersion });
-  const bundleNames = [];
+  const indexEntries = [];
+  const usedNames = new Set();
+
+  const downloadAndRename = ({ subject, subjectRef, digest }) => {
+    const downloadedName = digestToBundleName(digest);
+    run("gh", ["attestation", "download", subject, "--repo", repository, "--limit", "100"], { cwd: bundleDir });
+    const downloadedPath = path.join(bundleDir, downloadedName);
+    if (!fs.existsSync(downloadedPath)) {
+      throw new Error(`Missing expected bundle after download: ${downloadedPath}`);
+    }
+
+    const finalName = uniqueBundleName(prettyBundleName(subjectRef, digest), usedNames);
+    fs.renameSync(downloadedPath, path.join(bundleDir, finalName));
+    indexEntries.push({ subject: subjectRef, digest, bundle_file: finalName, kind: subject.startsWith("oci://") ? "oci" : "file" });
+  };
 
   for (const subject of localSubjects) {
-    const digest = sha256File(subject);
-    const bundleName = digestToBundleName(digest);
-    run("gh", ["attestation", "download", subject, "--repo", repository, "--limit", "100"], { cwd: bundleDir });
-    if (!fs.existsSync(path.join(bundleDir, bundleName))) {
-      throw new Error(`Missing expected bundle after download: ${path.join(bundleDir, bundleName)}`);
-    }
-    bundleNames.push(bundleName);
+    downloadAndRename({ subject, subjectRef: localSubjectRef(subject), digest: sha256File(subject) });
   }
 
   for (const ociSubject of ociSubjects) {
     const digest = resolveImageDigest(run("oras", ["resolve", ociSubject.replace(/^oci:\/\//, "")]));
-    const bundleName = digestToBundleName(digest);
-    run("gh", ["attestation", "download", ociSubject, "--repo", repository, "--limit", "100"], { cwd: bundleDir });
-    if (!fs.existsSync(path.join(bundleDir, bundleName))) {
-      throw new Error(`Missing expected image bundle after download: ${path.join(bundleDir, bundleName)}`);
-    }
-    bundleNames.push(bundleName);
+    downloadAndRename({ subject: ociSubject, subjectRef: ociSubject, digest });
   }
 
   const indexPath = path.join(bundleDir, "attestations-index.json");
-  fs.writeFileSync(indexPath, JSON.stringify(buildAttestationsIndex({ imageRef: ociSubjects[0], bundleNames }), null, 2));
+  fs.writeFileSync(indexPath, JSON.stringify(buildAttestationsIndex({ imageRef: ociSubjects[0], entries: indexEntries }), null, 2));
 
-  core?.setOutput("bundle_count", String(bundleNames.length));
+  core?.setOutput("bundle_count", String(indexEntries.length));
   core?.setOutput("index_path", indexPath);
 }
 
