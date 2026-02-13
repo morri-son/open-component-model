@@ -431,7 +431,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           NOTES_FILE: ${{ runner.temp }}/RELEASE_NOTES.md
-        run: gh release view "$RC_TAG" --json body --jq '.body // ""' > "$NOTES_FILE"
+        run: gh release view "$RC_TAG" --repo "${{ github.repository }}" --json body --jq '.body // ""' > "$NOTES_FILE"
 
       - name: Publish final release with RC assets
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
