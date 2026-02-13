@@ -92,3 +92,4 @@ When officially built, it is possibly overwritten with the released version of t
 	cmd.Flags().StringP(FlagFormat, FlagFormatShortHand, FlagFormatOCMv1, "format of the generated documentation")
 	return cmd
 }
+// Hotfix for issue #42: Improve error message clarity
