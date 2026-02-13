@@ -130,13 +130,18 @@ export async function runVerify({ core, run = runCmd } = {}) {
     verifiedCount++;
   }
 
-  // Verify attestation for OCI image
-  if (index.image && index.image.ref) {
-    const ociRef = imageRef || `oci://${index.image.ref}`;
+  // Verify attestation for OCI image using digest from index
+  // Important: We use the digest from the index, not the current tag,
+  // because OCI tags are mutable and may have been overwritten.
+  if (index.image && index.image.ref && index.image.digest) {
+    // Extract registry/repo from ref (without tag) and use digest
+    const refParts = index.image.ref.split(":");
+    const repoWithoutTag = refParts[0];
+    const ociRefWithDigest = `oci://${repoWithoutTag}@${index.image.digest}`;
     const imageBundlePath = findBundle(assetsDir, index, index.image.ref);
 
-    core?.info(`Verifying attestation for OCI image ${index.image.ref}...`);
-    run("gh", ["attestation", "verify", ociRef, "--repo", repository, "--bundle", imageBundlePath]);
+    core?.info(`Verifying attestation for OCI image ${repoWithoutTag}@${index.image.digest}...`);
+    run("gh", ["attestation", "verify", ociRefWithDigest, "--repo", repository, "--bundle", imageBundlePath]);
     core?.info(`✅ OCI image verified`);
     verifiedCount++;
   }
