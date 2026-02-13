@@ -219,8 +219,8 @@ cancel-in-progress: true
 - `index_path` - Pfad zur `attestations-index.json`
 
 ### Erzeugte Dateien
-- `attestation-<asset-name>.jsonl` - Ein Bundle pro Binary
-- `attestation-image.jsonl` - Bundle für OCI-Image
+- `attestation-<asset-name>.jsonl` - Ein Bundle pro Binary (z.B. `attestation-ocm-linux-amd64.jsonl`)
+- `attestation-ocm-image.jsonl` - Bundle für OCI-Image
 - `attestations-index.json` - Index mit Metadaten
 
 ### Besonderheit
@@ -248,8 +248,15 @@ cancel-in-progress: true
 ### Verhalten
 1. Lädt `attestations-index.json` aus Assets
 2. Verifiziert jedes Binary gegen sein Bundle
-3. Verifiziert OCI-Image gegen sein Bundle
+3. **Verifiziert OCI-Image per Digest** (nicht per Tag!) gegen sein Bundle
+   - OCI-Tags sind mutable und können überschrieben werden
+   - Verwendet `index.image.digest` für exakte Identifikation
 4. Schlägt fehl, wenn eine Verifikation nicht erfolgreich ist
+
+### Wichtige Design-Entscheidung
+Die OCI-Image-Verifikation verwendet den **Digest aus dem Index**, nicht den aktuellen Tag.
+Dies ist essentiell, da OCI-Tags mutable sind und zwischen RC-Erstellung und Final-Promotion
+durch andere Builds überschrieben werden können.
 
 ---
 
@@ -275,7 +282,7 @@ cancel-in-progress: true
       "subject": "ghcr.io/owner/cli:0.8.0-rc.1",
       "type": "oci-image",
       "digest": "sha256:abc123...",
-      "bundle": "attestation-image.jsonl"
+      "bundle": "attestation-ocm-image.jsonl"
     }
   ]
 }
