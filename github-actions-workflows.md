@@ -220,7 +220,7 @@ cancel-in-progress: true
 
 ### Erzeugte Dateien
 - `attestation-<asset-name>.jsonl` - Ein Bundle pro Binary (z.B. `attestation-ocm-linux-amd64.jsonl`)
-- `attestation-ocm-image.jsonl` - Bundle für OCI-Image
+- `attestation-ocm-oci-image.jsonl` - Bundle für OCI-Image
 - `attestations-index.json` - Index mit Metadaten
 
 ### Besonderheit
@@ -282,7 +282,7 @@ durch andere Builds überschrieben werden können.
       "subject": "ghcr.io/owner/cli:0.8.0-rc.1",
       "type": "oci-image",
       "digest": "sha256:abc123...",
-      "bundle": "attestation-ocm-image.jsonl"
+      "bundle": "attestation-ocm-oci-image.jsonl"
     }
   ]
 }
