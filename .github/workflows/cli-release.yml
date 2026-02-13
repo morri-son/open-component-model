@@ -166,15 +166,16 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ASSETS_ROOT: ${{ runner.temp }}/rc-build-assets
-          ASSET_PATTERNS_JSON: '["bin/ocm-*"]'
-          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
+          ASSETS_DIR: ${{ runner.temp }}/rc-build-assets
+          ASSET_PATTERNS: '["bin/ocm-*"]'
+          IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          BUNDLE_DIR: ${{ runner.temp }}/attestation-bundles
+          OUTPUT_DIR: ${{ runner.temp }}/attestation-bundles
           REPOSITORY: ${{ github.repository }}
         with:
           script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/attestations-release-assets.js');
+            const script = await import('${{ github.workspace }}/.github/scripts/export-attestations.js');
             await script.default({ core });
 
       - name: Create RC Release
@@ -367,14 +368,13 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_ASSETS_DIR: ${{ runner.temp }}/rc-assets
-          ASSET_PATTERNS_JSON: '["ocm-*"]'
-          RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
-          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
+          ASSETS_DIR: ${{ runner.temp }}/rc-assets
+          ASSET_PATTERNS: '["ocm-*"]'
+          IMAGE_REF: oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/cli:${{ needs.prepare.outputs.latest_rc_version }}
           REPOSITORY: ${{ github.repository }}
         with:
           script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/verify-attestations-from-release.js');
+            const script = await import('${{ github.workspace }}/.github/scripts/verify-attestations.js');
             await script.default({ core });
 
   # --------------------------------------------------------
