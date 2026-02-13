@@ -349,12 +349,11 @@ jobs:
 
       - name: Download RC release assets
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
         with:
           repository: ${{ github.repository }}
-          tag: ${{ env.RC_TAG }}
+          tag: ${{ needs.prepare.outputs.latest_rc_tag }}
           out-file-path: ${{ runner.temp }}/rc-assets
+          preRelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout scripts
@@ -446,12 +445,11 @@ jobs:
     steps:
       - name: Download RC assets
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
         with:
           repository: ${{ github.repository }}
-          tag: ${{ env.RC_TAG }}
+          tag: ${{ needs.prepare.outputs.latest_rc_tag }}
           out-file-path: ${{ runner.temp }}/rc-assets
+          preRelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
        # Intentionally reuse already published RC release notes as source of truth.

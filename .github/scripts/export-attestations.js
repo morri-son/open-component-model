@@ -130,7 +130,7 @@ export async function runExport({ core, run = runCmd } = {}) {
 
   // Export attestation for OCI image
   const imageRef = `${targetRepo}:${imageTag}`;
-  const imageBundleName = "attestation-image.jsonl";
+  const imageBundleName = "attestation-ocm-image.jsonl";
   const imageBundlePath = path.join(outputDir, imageBundleName);
 
   core?.info(`Downloading attestation for OCI image ${imageRef}...`);
