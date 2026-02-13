@@ -73,19 +73,11 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
 
-      # Determine committer and set up git identity
-      - id: committer
-        name: Determine Committer used for pushing Tag
-        run: |
-          echo "name=${{ github.actor }}" >> "$GITHUB_OUTPUT"
-          echo "email=${{ github.actor }}@users.noreply.github.com" >> "$GITHUB_OUTPUT"
-
       - name: Setup git config
         run: |
-          git config --global user.name "${{ steps.committer.outputs.name }}"
-          git config --global user.email "${{ steps.committer.outputs.email }}"
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      # Create and push tag if not existing
       - name: Create ${{ needs.prepare.outputs.new_tag }}
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -128,7 +120,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: read
     environment:
       name: cli/release-candidate
     steps:
@@ -145,16 +136,6 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
           path: ${{ runner.temp }}/rc-build-assets
 
-      - name: Setup ORAS
-        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
-
-      - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout scripts
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -166,18 +147,20 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ASSETS_ROOT: ${{ runner.temp }}/rc-build-assets
-          ASSET_PATTERNS_JSON: '["bin/ocm-*"]'
-          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
+          ASSETS_DIR: ${{ runner.temp }}/rc-build-assets
+          ASSET_PATTERNS: '["bin/ocm-*"]'
+          IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          BUNDLE_DIR: ${{ runner.temp }}/attestation-bundles
+          OUTPUT_DIR: ${{ runner.temp }}/attestation-bundles
           REPOSITORY: ${{ github.repository }}
         with:
           script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/attestations-release-assets.js');
+            const script = await import('${{ github.workspace }}/.github/scripts/export-attestations.js');
             await script.default({ core });
 
       - name: Create RC Release
+        id: create_rc_release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           name: CLI ${{ needs.prepare.outputs.new_version }}
@@ -194,6 +177,35 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Summarize RC release
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
+          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: process.env.RC_TAG,
+            });
+            const releaseUrl = release.data.html_url;
+            const assetsCount = Array.isArray(release.data.assets) ? release.data.assets.length : 0;
+
+            await core.summary
+              .addHeading('RC Release Published')
+              .addTable([
+                [{ data: 'Field', header: true }, { data: 'Value', header: true }],
+                ['RC Tag', process.env.RC_TAG],
+                ['RC Version', process.env.RC_VERSION],
+                ['Uploaded Assets', String(assetsCount)],
+              ])
+              .addEOL()
+              .addLink(releaseUrl, releaseUrl)
+              .addEOL()
+              .write();
+
 
   # ----------------------------------------------------------------
   # 5. Validate Final: Validate latest RC exists for final release
@@ -205,20 +217,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ensure latest RC exists on release branch
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           LATEST_RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           LATEST_PROMOTION_TAG: ${{ needs.prepare.outputs.latest_promotion_tag }}
-        with:
-          script: |
-            if (!process.env.LATEST_RC_TAG) {
-              core.setFailed(`No RC tag found for branch '${{ github.event.inputs.branch }}'. Final release requires existing RC.`);
-              return;
-            }
-            if (!process.env.LATEST_PROMOTION_TAG) {
-              core.setFailed('Missing latest_promotion_tag output');
-              return;
-            }
+        run: |
+          if [ -z "$LATEST_RC_TAG" ]; then
+            echo "::error::No RC tag found for branch '${{ github.event.inputs.branch }}'. Final release requires existing RC."
+            exit 1
+          fi
+          if [ -z "$LATEST_PROMOTION_TAG" ]; then
+            echo "::error::Missing latest_promotion_tag output"
+            exit 1
+          fi
+          echo "✅ Found RC tag: $LATEST_RC_TAG -> $LATEST_PROMOTION_TAG"
 
   # --------------------------------------------------------
   # 6. Tag Final: Create and push final tag from RC commit
@@ -249,17 +260,10 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
 
-      # Determine committer and set up git identity
-      - id: committer
-        name: Determine Committer used for pushing Tag
-        run: |
-          echo "name=${{ github.actor }}" >> "$GITHUB_OUTPUT"
-          echo "email=${{ github.actor }}@users.noreply.github.com" >> "$GITHUB_OUTPUT"
-
       - name: Setup git config
         run: |
-          git config --global user.name "${{ steps.committer.outputs.name }}"
-          git config --global user.email "${{ steps.committer.outputs.email }}"
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create final tag from latest RC commit
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -318,12 +322,11 @@ jobs:
 
       - name: Download RC release assets
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
         with:
           repository: ${{ github.repository }}
-          tag: ${{ env.RC_TAG }}
+          tag: ${{ needs.prepare.outputs.latest_rc_tag }}
           out-file-path: ${{ runner.temp }}/rc-assets
+          fileName: '*'
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout scripts
@@ -337,14 +340,13 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_ASSETS_DIR: ${{ runner.temp }}/rc-assets
-          ASSET_PATTERNS_JSON: '["ocm-*"]'
-          RC_VERSION: ${{ needs.prepare.outputs.latest_rc_version }}
-          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
+          ASSETS_DIR: ${{ runner.temp }}/rc-assets
+          ASSET_PATTERNS: '["ocm-*"]'
+          IMAGE_REF: oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/cli:${{ needs.prepare.outputs.latest_rc_version }}
           REPOSITORY: ${{ github.repository }}
         with:
           script: |
-            const script = await import('${{ github.workspace }}/.github/scripts/verify-attestations-from-release.js');
+            const script = await import('${{ github.workspace }}/.github/scripts/verify-attestations.js');
             await script.default({ core });
 
   # --------------------------------------------------------
@@ -416,31 +418,20 @@ jobs:
     steps:
       - name: Download RC assets
         uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
         with:
           repository: ${{ github.repository }}
-          tag: ${{ env.RC_TAG }}
+          tag: ${{ needs.prepare.outputs.latest_rc_tag }}
           out-file-path: ${{ runner.temp }}/rc-assets
+          fileName: '*'
           token: ${{ secrets.GITHUB_TOKEN }}
 
-       # Intentionally reuse already published RC release notes as source of truth.
-       # We do NOT regenerate notes via git-cliff to keep final promotion aligned with RC.
+      # Reuse RC release notes as source of truth (no git-cliff regeneration)
       - name: Capture RC release notes
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.latest_rc_tag }}
           NOTES_FILE: ${{ runner.temp }}/RELEASE_NOTES.md
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: process.env.RC_TAG,
-            });
-            fs.writeFileSync(process.env.NOTES_FILE, release.data.body || '');
+        run: gh release view "$RC_TAG" --json body --jq '.body // ""' > "$NOTES_FILE"
 
       - name: Publish final release with RC assets
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
