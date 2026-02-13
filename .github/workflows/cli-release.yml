@@ -353,7 +353,7 @@ jobs:
           repository: ${{ github.repository }}
           tag: ${{ needs.prepare.outputs.latest_rc_tag }}
           out-file-path: ${{ runner.temp }}/rc-assets
-          preRelease: true
+          fileName: '*'
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout scripts
@@ -449,7 +449,7 @@ jobs:
           repository: ${{ github.repository }}
           tag: ${{ needs.prepare.outputs.latest_rc_tag }}
           out-file-path: ${{ runner.temp }}/rc-assets
-          preRelease: true
+          fileName: '*'
           token: ${{ secrets.GITHUB_TOKEN }}
 
        # Intentionally reuse already published RC release notes as source of truth.
