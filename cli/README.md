@@ -61,3 +61,4 @@ See [ADR-0001: Plugins](../docs/adr/0001_plugins.md) for architecture details.
 - [Architecture Decisions](../docs/adr/)
 - [OCM Specification](https://github.com/open-component-model/ocm-spec)
 # Minor documentation fix for RC2 test
+# Hotfix for critical bug in v0.11.0
