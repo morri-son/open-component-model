@@ -60,3 +60,4 @@ See [ADR-0001: Plugins](../docs/adr/0001_plugins.md) for architecture details.
 - [Go Library](../bindings/go/README.md)
 - [Architecture Decisions](../docs/adr/)
 - [OCM Specification](https://github.com/open-component-model/ocm-spec)
+# Minor documentation fix for RC2 test
