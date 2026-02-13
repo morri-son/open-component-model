@@ -237,7 +237,7 @@ jobs:
   tag_final:
     name: Create and Push Final Tag
     if: ${{ github.event.inputs.release_candidate == 'false' && github.event.inputs.dry_run == 'false' }}
-    needs: [prepare, validate_final]
+    needs: [prepare, validate_final, verify_attestations]
     runs-on: ubuntu-latest
     permissions:
       contents: write
