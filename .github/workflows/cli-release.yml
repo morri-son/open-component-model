@@ -410,12 +410,12 @@ jobs:
               : `Promoted from ${rcTag}`;
 
             // Replace RC header with final release header
-            // From: "[cli/v0.17.0-rc.1] - 2026-02-02"
-            // To:   "[cli/v0.17.0] - promoted from [cli/v0.17.0-rc.1] on 2026-02-16"
+            // From: "## [cli/v0.17.0-rc.1] - 2026-02-02"
+            // To:   "## [cli/v0.17.0] - promoted from [cli/v0.17.0-rc.1] on 2026-02-16"
             const today = new Date().toISOString().split('T')[0];
             notes = notes.replace(
-              /^\[([^\]]+)\]\s*-\s*[\d-]+/,
-              `[${finalTag}] - promoted from [${rcTag}] on ${today}`
+              /^(##\s*)?\[([^\]]+)\]\s*-\s*[\d-]+/,
+              `$1[${finalTag}] - promoted from [${rcTag}] on ${today}`
             );
 
             const created = await github.rest.repos.createRelease({
