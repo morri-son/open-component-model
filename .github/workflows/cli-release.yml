@@ -114,8 +114,12 @@ jobs:
       contents: write
     steps:
       - name: Decode changelog to file
+        env:
+          CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: |
-          echo "${{ needs.prepare.outputs.changelog_b64 }}" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
+          [ -n "$CHANGELOG_B64" ] && echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md" || true
+          # Ensure file exists and is not empty
+          [ -s "${{ runner.temp }}/CHANGELOG.md" ] || echo "Release notes not available." > "${{ runner.temp }}/CHANGELOG.md"
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -382,9 +386,18 @@ jobs:
             const assetsDir = process.env.ASSETS_DIR;
             const notesFile = path.join(assetsDir, 'CHANGELOG.md');
 
-            const notes = fs.existsSync(notesFile)
+            let notes = fs.existsSync(notesFile)
               ? fs.readFileSync(notesFile, 'utf8').trim()
               : `Promoted from ${rcTag}`;
+
+            // Replace RC header with final release header
+            // From: "[cli/v0.17.0-rc.1] - 2026-02-02"
+            // To:   "[cli/v0.17.0] - promoted from [cli/v0.17.0-rc.1] on 2026-02-16"
+            const today = new Date().toISOString().split('T')[0];
+            notes = notes.replace(
+              /^\[([^\]]+)\]\s*-\s*[\d-]+/,
+              `[${finalTag}] - promoted from [${rcTag}] on ${today}`
+            );
 
             const created = await github.rest.repos.createRelease({
               owner: context.repo.owner,
