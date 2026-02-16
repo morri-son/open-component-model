@@ -141,11 +141,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Upload changelog as artifact to be reused in final release
-      # This avoids the 1MB output limit for workflow outputs
+      # Uses new_version (not new_tag) to avoid slash in artifact name
       - name: Upload changelog artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: changelog-${{ needs.prepare.outputs.new_tag }}
+          name: changelog-${{ needs.prepare.outputs.new_version }}
           path: ${{ runner.temp }}/CHANGELOG.md
           retention-days: 90
 
@@ -358,12 +358,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Download the changelog from the RC release phase
-      # This ensures RC and Final have identical release notes
+      # Download changelog from RC phase (uses new_version to avoid slash in name)
       - name: Download changelog artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: changelog-${{ needs.prepare.outputs.new_tag }}
+          name: changelog-${{ needs.prepare.outputs.new_version }}
           path: ${{ runner.temp }}
 
       - name: Download build artifacts
