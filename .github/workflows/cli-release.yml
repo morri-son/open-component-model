@@ -374,7 +374,6 @@ jobs:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
-
       - name: Generate release notes with git-cliff
         uses: orhun/git-cliff-action@e16f179f0be49ecdfe63753837f20b9531642772 # v4
         id: changelog
