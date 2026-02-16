@@ -302,11 +302,52 @@ changelog generation throughout the release cycle.
 
 ## Troubleshooting
 
-If something goes wrong during a release, check the following common issues:
+If something goes wrong during a release, check the following common issues.
 
-**RC was not created**
-- Check if the workflow run failed before tag creation.
-- Rerun as dry-run first, then rerun with `dry_run=false`.
+> **Note:** Tags are currently **not immutable**. While we plan to enforce tag immutability
+> once stable releases are produced, tags can currently be deleted to clean up failed releases.
+> This troubleshooting section will change once immutable tags are enforced.
+
+### RC Phase Issues
+
+**RC tag exists but build or release failed**
+
+⚠️ A new workflow run would create `rc.2` instead of retrying `rc.1`.
+
+**Recommended recovery (clean slate):**
+1. Delete the orphaned RC tag and release (if any):
+   ```bash
+   gh release delete cli/v0.17.0-rc.1 --yes 2>/dev/null || true
+   git push origin --delete cli/v0.17.0-rc.1
+   ```
+2. Fix the underlying issue (if known)
+3. Start a new workflow run (creates fresh `rc.1`)
+
+**Alternative (accept higher RC number):**
+- If the orphaned `rc.1` tag is not a problem, simply start a new workflow.
+- It will create `rc.2` automatically.
+- The orphaned `rc.1` can be cleaned up later.
+
+### Final Phase Issues
+
+**Any failure after verify_attestations (tag/OCI/release)**
+
+⚠️ A workflow re-run is **not possible** for final phase failures—it would create a new RC.
+
+**Recommended recovery (clean slate):**
+1. Delete the orphaned final tag (if created):
+   ```bash
+   git push origin --delete cli/v0.17.0
+   ```
+2. Delete the RC release and RC tag:
+   ```bash
+   gh release delete cli/v0.17.0-rc.1 --yes
+   git push origin --delete cli/v0.17.0-rc.1
+   ```
+3. Start a new workflow run (creates fresh `rc.1`)
+4. Request expedited approval to avoid the 14-day wait again
+
+### Common Issues
 
 **Workflow stuck at environment gate**
 - This is expected behavior—wait for the 14-day period to elapse.
