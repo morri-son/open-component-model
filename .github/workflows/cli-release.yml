@@ -342,7 +342,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ASSETS_DIR: ${{ runner.temp }}/rc-assets
           ASSET_PATTERNS: '["ocm-*"]'
-          IMAGE_REF: oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/cli:${{ needs.prepare.outputs.latest_rc_version }}
           REPOSITORY: ${{ github.repository }}
         with:
           script: |

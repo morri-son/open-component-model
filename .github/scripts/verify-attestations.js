@@ -1,10 +1,13 @@
 // @ts-check
 import fs from "fs";
 import path from "path";
-import { parsePatterns, findAssets, runCmd } from "./attestation-utils.js";
+import { parsePatterns, findAssets, sha256File, runCmd } from "./attestation-utils.js";
+
+// Re-export utilities for tests
+export { parsePatterns, findAssets, sha256File } from "./attestation-utils.js";
 
 /** Load attestations index from assets directory. */
-function loadIndex(assetsDir) {
+export function loadIndex(assetsDir) {
   const indexPath = path.join(assetsDir, "attestations-index.json");
   if (!fs.existsSync(indexPath)) {
     throw new Error(`Attestations index not found: ${indexPath}`);
@@ -17,7 +20,7 @@ function loadIndex(assetsDir) {
 }
 
 /** Find bundle path for a subject from the index. */
-function findBundle(assetsDir, index, subject) {
+export function findBundle(assetsDir, index, subject) {
   const entry = index.attestations.find((a) => a.subject === subject);
   if (!entry) {
     throw new Error(`No attestation entry found for subject: ${subject}`);

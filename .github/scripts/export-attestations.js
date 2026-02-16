@@ -3,8 +3,11 @@ import fs from "fs";
 import path from "path";
 import { sha256File, parsePatterns, findAssets, runCmd } from "./attestation-utils.js";
 
+// Re-export utilities for tests
+export { sha256File, parsePatterns, findAssets } from "./attestation-utils.js";
+
 /** Create human-readable attestation bundle file name from asset name. */
-function bundleNameForAsset(assetPath) {
+export function bundleNameForAsset(assetPath) {
   return `attestation-${path.basename(assetPath)}.jsonl`;
 }
 
@@ -25,8 +28,8 @@ export async function runExport({ core, run = runCmd } = {}) {
   if (!assetsDir || !assetPatterns || !outputDir || !repository) {
     throw new Error("Missing required env: ASSETS_DIR, ASSET_PATTERNS, OUTPUT_DIR, REPOSITORY");
   }
-  if (!imageDigest || !targetRepo) {
-    throw new Error("Missing required env: IMAGE_DIGEST, TARGET_REPO");
+  if (!imageDigest || !imageTag || !targetRepo) {
+    throw new Error("Missing required env: IMAGE_DIGEST, IMAGE_TAG, TARGET_REPO");
   }
 
   fs.mkdirSync(outputDir, { recursive: true });
