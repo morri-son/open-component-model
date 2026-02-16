@@ -1,17 +1,18 @@
 # OCM Release Process: Architecture and Design
 
-This document explains the OCM CLI release workflow architecture, design decisions, and the two-phase release model (Release Candidate → Final Promotion).
+This document explains the OCM CLI release workflow architecture, design decisions, and the unified release model with environment-gated promotion.
 
 ---
 
 ## Overview
 
-The release process uses a **two-phase model**:
+The release process uses a **unified single-run model**:
 
-1. **Release Candidate (RC)**: Creates RC tag, builds artifacts, generates attestations, publishes pre-release
-2. **Final Promotion**: Verifies RC attestations, creates final tag from RC commit, promotes OCI tags, publishes final release
+1. **Phase 1 - Release Candidate (RC)**: Creates RC tag, builds artifacts, generates attestations, publishes pre-release
+2. **Environment Gate**: 14-day wait timer + required reviewer approval
+3. **Phase 2 - Final Promotion**: Verifies RC attestations, creates final tag from RC commit, promotes OCI tags, publishes final release
 
-Both phases run through `cli-release.yml` controlled by the `release_candidate` input parameter.
+Both phases run in **a single workflow execution** (`cli-release.yml`), with the environment gate providing the separation between RC and Final.
 
 ---
 
@@ -24,18 +25,25 @@ Both phases run through `cli-release.yml` controlled by the `release_candidate` 
 - Published as GitHub **pre-release**
 - RC commit is immutable source of truth for final promotion
 
+### Environment Gate
+- GitHub Environment: `cli/release`
+- **Wait Timer**: 14 days (20160 minutes)
+- **Required Reviewers**: At least 1 reviewer must approve
+- Blocks workflow execution between RC and Final phases
+
 ### Final Promotion
-- Uses **existing RC** as source
+- Uses outputs from the **same workflow run** as RC
 - Verifies all RC attestations before proceeding
 - Creates final tag (`cli/v0.X.Y`) from **same commit** as RC
 - Promotes OCI tags (`:rc.N` → `:0.X.Y` + `:latest`)
-- Publishes GitHub **final release** with RC assets
+- Publishes GitHub **final release** with same artifacts
 
 ### Attestations
 Supply-chain security artifacts proving build provenance:
-- One bundle per binary (e.g., `attestation-ocm-linux-amd64.jsonl`)
-- One bundle for OCI image (`attestation-ocm-oci-image.jsonl`)
-- Index file (`attestations-index.json`) mapping subjects to bundles
+- Generated during build via `actions/attest-build-provenance`
+- Stored in GitHub's attestation store
+- Verified using `gh attestation verify` (no local bundles needed)
+- Uses SLSA Provenance v1 format (https://slsa.dev/provenance/v1)
 
 ---
 
@@ -46,201 +54,198 @@ Supply-chain security artifacts proving build provenance:
 ```
 release-branch.yml          Creates releases/v0.X branches
     │
-    └─> cli-release.yml     Orchestrates RC and Final paths
+    └─> cli-release.yml     Single workflow for RC + Final
             │
-            ├─> release-candidate-version.yml    Metadata computation
-            └─> cli.yml                          Build + Publish
+            ├─> release-candidate-version.yml    Version computation + changelog
+            └─> cli.yml                          Build + Publish + Attest
 ```
 
-### Job Flow
+### Job Flow (Single Workflow Run)
 
-#### RC Path (`release_candidate=true`)
 ```
-prepare → tag_rc → build → release_rc
-   │         │        │         │
-   │         │        │         └─> Export attestations
-   │         │        └─> Attest binaries + OCI image
-   │         └─> Create annotated RC tag
-   └─> Compute version, generate changelog
-```
-
-#### Final Path (`release_candidate=false`)
-```
-prepare → validate_final → verify_attestations → tag_final → promote_image → release_final
-   │            │                  │                  │             │              │
-   │            │                  │                  │             │              └─> Publish final release
-   │            │                  │                  │             └─> ORAS tag promotion
-   │            │                  │                  └─> Create final tag from RC commit
-   │            │                  └─> Verify all RC attestations
-   │            └─> Ensure RC exists
-   └─> Resolve latest RC metadata
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              PHASE 1: RC                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  prepare ──▶ tag_rc ──▶ build ──▶ release_rc                               │
+│     │          │          │           │                                     │
+│     │          │          │           └─▶ Create GitHub pre-release         │
+│     │          │          └─▶ Build binaries, OCI image, attest all        │
+│     │          └─▶ Create annotated RC tag                                  │
+│     └─▶ Compute version, generate changelog                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                         ENVIRONMENT GATE                                    │
+│                     cli/release (14 days + approval)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                            PHASE 2: FINAL                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  verify_attestations ──▶ promote_final ──▶ release_final                   │
+│          │                     │                │                           │
+│          │                     │                └─▶ GitHub final release    │
+│          │                     └─▶ Final tag + OCI tag promotion           │
+│          └─▶ Verify binary + OCI attestations via gh CLI                   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Key Design Decisions
 
-### 1. Immutable RC Commits
+### 1. Single Workflow Run
+**Why**: Simplifies the release process and ensures consistency between RC and Final.
+
+**Benefits**:
+- All outputs from RC phase are directly available in Final phase
+- No need to download RC assets or resolve latest RC tag
+- Eliminates drift between RC and Final
+- Single audit trail in workflow run history
+
+### 2. Environment Gate for Promotion
+**Why**: Provides controlled waiting period and approval process.
+
+```yaml
+verify_attestations:
+  environment:
+    name: cli/release  # 14-day wait + reviewer approval
+```
+
+The environment must be configured in GitHub with:
+- Required reviewers (at least 1)
+- Wait timer: 20160 minutes (14 days)
+
+### 3. Simplified Attestation Verification
+**Why**: GitHub's attestation API handles everything; no local bundle management needed.
+
+```bash
+# Binary verification
+gh attestation verify <file> --repo <repo>
+
+# OCI image verification  
+gh attestation verify oci://<repo>@<digest> --repo <repo>
+```
+
+**Benefits**:
+- No attestation bundles stored as release assets
+- No custom scripts for export/verify
+- Uses SLSA Provenance v1 standard
+- Verification against GitHub's attestation store
+
+### 4. Immutable RC Commits
 **Why**: Final tag references the **exact commit** of the RC tag, ensuring binary reproducibility.
 
 ```javascript
-// tag_final job
 const rcSha = execSync(`git rev-parse "refs/tags/${rcTag}^{commit}"`);
 execSync(`git tag -a "${finalTag}" "${rcSha}" -m "Promote ${rcTag}"`);
 ```
 
 If the final tag already exists, the workflow aborts—tags are immutable.
 
-### 2. Digest-Based OCI Verification
-**Why**: OCI tags are mutable and can be overwritten between RC creation and final promotion.
+### 5. Git-cliff for Both RC and Final
+**Why**: Consistent changelog generation using the same tool and configuration.
 
-The attestation index stores the image digest:
-```json
-{
-  "image": {
-    "ref": "ghcr.io/owner/cli:0.8.0-rc.1",
-    "digest": "sha256:abc123..."
-  }
-}
+Both RC and Final releases use git-cliff with identical parameters:
+- `--ignore-tags` excludes RC tags from final changelog
+- `--tag` sets the target tag for changelog scope
+- Same `cliff.toml` configuration
+
+### 6. Dry-Run for RC Phase Only
+**Why**: The dry-run mode validates the RC phase without creating artifacts.
+
+```yaml
+dry_run:
+  description: "Dry-run RC phase without pushing tags or creating releases."
 ```
 
-Verification uses `oci://repo@sha256:...` (by digest), not `oci://repo:tag` (by tag).
-
-### 3. Human-Readable Attestation Names
-**Why**: Easier debugging and asset management.
-
-Instead of cryptic hash names:
-```
-sha256:def456...7890ab.jsonl
-```
-
-We use:
-```
-attestation-ocm-linux-amd64.jsonl
-attestation-ocm-oci-image.jsonl
-```
-
-The index maps subjects to bundles:
-```json
-{
-  "attestations": [
-    {
-      "subject": "ocm-linux-amd64",
-      "digest": "sha256:def456...",
-      "bundle": "attestation-ocm-linux-amd64.jsonl"
-    }
-  ]
-}
-```
-
-### 4. No Re-computation for Final
-**Why**: Avoids drift between RC and Final. The final release notes are copied from RC, not regenerated via `git-cliff`.
-
-```bash
-# release_final job
-gh release view "$RC_TAG" --json body --jq '.body' > RELEASE_NOTES.md
-```
-
-### 5. Separate Metadata Workflow
-**Why**: Centralized version computation logic, reusable for RC and Final.
-
-`release-candidate-version.yml` outputs:
-- **RC mode**: `new_tag`, `new_version`, `changelog_b64`
-- **Final mode**: `latest_rc_tag`, `latest_promotion_tag`
+- `dry_run=true`: Runs prepare step only, validates version computation
+- `dry_run=false`: Executes full RC + Final flow (with gate in between)
 
 ---
 
-## Attestation System
+## Workflow Inputs
 
-### Export (RC Release)
-**Script**: `export-attestations.js`
-
-**Inputs**: Build artifacts directory, `IMAGE_DIGEST` from build output
-
-**Process**:
-1. Download attestations from GitHub for each binary via `gh attestation download <file>`
-2. Download OCI image attestation via `gh attestation download oci://repo@<digest>`
-3. Rename bundles to human-readable names
-4. Generate `attestations-index.json`
-
-**Key Detail**: Uses `IMAGE_DIGEST` **directly from build output**, no registry lookup needed.
-
-### Verify (Final Promotion)
-**Script**: `verify-attestations.js`
-
-**Inputs**: RC release assets directory (includes attestation bundles + index)
-
-**Process**:
-1. Load `attestations-index.json`
-2. For each binary: `gh attestation verify <file> --bundle <bundle>`
-3. For OCI image: `gh attestation verify oci://repo@<digest> --bundle <bundle>`
-
-**Key Detail**: Verifies by **digest from index**, ensuring exact RC image, regardless of tag mutations.
-
-### Attestations Index Format
-```json
-{
-  "version": "1",
-  "generated_at": "2026-02-13T09:27:00.000Z",
-  "rc_version": "0.8.0-rc.1",
-  "image": {
-    "ref": "ghcr.io/owner/cli:0.8.0-rc.1",
-    "digest": "sha256:abc123..."
-  },
-  "attestations": [
-    {
-      "subject": "ocm-linux-amd64",
-      "type": "binary",
-      "digest": "sha256:def456...",
-      "bundle": "attestation-ocm-linux-amd64.jsonl"
-    },
-    {
-      "subject": "ghcr.io/owner/cli:0.8.0-rc.1",
-      "type": "oci-image",
-      "digest": "sha256:abc123...",
-      "bundle": "attestation-ocm-oci-image.jsonl"
-    }
-  ]
-}
-```
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `branch` | Yes | - | Release branch (e.g., `releases/v0.8`) |
+| `dry_run` | No | `true` | Dry-run RC phase only |
 
 ---
 
-## Extension Points
+## Workflow Outputs (from prepare job)
 
-### Multi-Component Support
-The attestation scripts are generic and accept `COMPONENT_PATH`:
-- `COMPONENT_PATH=cli` → CLI Release
-- `COMPONENT_PATH=kubernetes/controller` → Controller Release (planned)
+| Output | Example | Description |
+|--------|---------|-------------|
+| `new_tag` | `cli/v0.8.0-rc.1` | RC tag name |
+| `new_version` | `0.8.0-rc.1` | RC version |
+| `base_version` | `0.8.0` | Base version without RC suffix |
+| `promotion_tag` | `cli/v0.8.0` | Final tag name |
+| `promotion_version` | `0.8.0` | Final version |
+| `changelog_b64` | (base64) | Changelog for release notes |
 
-### Additional Artifacts
-To attest more artifacts (e.g., Helm charts):
-1. Extend `ASSET_PATTERNS`: `["bin/ocm-*", "helm/*.tgz"]`
-2. New entries automatically included in index
-3. Verification handles all entries from index
+---
+
+## Environment Setup
+
+The `cli/release` environment must be configured in GitHub:
+
+1. Go to **Settings → Environments → New environment**
+2. Name: `cli/release`
+3. Configure protection rules:
+   - ✅ **Required reviewers**: Add at least 1 reviewer
+   - ✅ **Wait timer**: 20160 minutes (14 days)
+
+---
+
+## Scripts
+
+### compute-rc-version.js
+Computes the next RC version based on existing tags:
+
+**Inputs** (env vars):
+- `BRANCH`: Release branch (e.g., `releases/v0.8`)
+- `COMPONENT_PATH`: Component path (e.g., `cli`)
+
+**Outputs**:
+- `new_tag`, `new_version`, `base_version`, `promotion_tag`, `promotion_version`
+
+**Versioning Rules**:
+- No existing tags → `0.X.0-rc.1`
+- Only stable exists → bump patch, start RC sequence
+- Only RC exists → increment RC number
+- Both exist → compare and continue appropriately
 
 ---
 
 ## Validation
 
 ```bash
-# Run script tests
+# Run version computation tests
 node .github/scripts/compute-rc-version.test.js
-node .github/scripts/resolve-latest-rc.test.js
-node .github/scripts/export-attestations.test.js
-node .github/scripts/verify-attestations.test.js
 
-# Dry-run validation (if release flow changed)
-# Trigger cli-release.yml with dry_run=true for both RC and Final
+# Dry-run validation
+# Trigger cli-release.yml with dry_run=true
 ```
+
+---
+
+## Migration from Two-Workflow Model
+
+The previous model required two separate workflow runs:
+1. RC workflow run (with `release_candidate=true`)
+2. Final workflow run (with `release_candidate=false`)
+
+The new unified model:
+1. Single workflow run handles both phases
+2. Environment gate provides the separation
+3. No `release_candidate` input parameter
+4. Simplified scripts (removed `resolve-latest-rc.js`, `export-attestations.js`, `verify-attestations.js`)
 
 ---
 
 ## Summary
 
 The OCM release process ensures:
+- **Simplicity**: Single workflow run for entire release cycle
 - **Immutability**: Final releases reference exact RC commits
-- **Security**: Full attestation chain for supply-chain verification
-- **Reproducibility**: Digest-based verification prevents tag manipulation
-- **Extensibility**: Generic scripts support multi-component releases
-- **Safety**: Multiple validation gates before final promotion
+- **Security**: Attestation verification via GitHub's native API
+- **Reproducibility**: Same artifacts used for RC and Final
+- **Control**: Environment gate with wait timer and approval
+- **Consistency**: Git-cliff for both RC and Final release notes
