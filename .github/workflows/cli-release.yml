@@ -71,20 +71,28 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
+      - name: Download changelog artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: changelog
+          path: ${{ runner.temp }}
+
       - name: Create ${{ needs.prepare.outputs.new_tag }}
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           TAG: ${{ needs.prepare.outputs.new_tag }}
-          CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
+          CHANGELOG_FILE: ${{ runner.temp }}/CHANGELOG.md
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
             const { execSync } = require("child_process");
+            const fs = require("fs");
             const tag = process.env.TAG;
-            const msg = Buffer.from(process.env.CHANGELOG_B64, "base64").toString("utf8");
+            const changelogFile = process.env.CHANGELOG_FILE;
+            const msg = fs.existsSync(changelogFile) ? fs.readFileSync(changelogFile, "utf8") : "Release";
             try { execSync(`git rev-parse "refs/tags/${tag}"`); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
-            require("fs").writeFileSync(".tagmsg", msg);
+            fs.writeFileSync(".tagmsg", msg);
             execSync(`git tag -a "${tag}" -F .tagmsg`);
             execSync(`git push origin "refs/tags/${tag}"`);
             core.setOutput("pushed","true");
@@ -113,15 +121,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Decode changelog to file
-        env:
-          CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
-        run: |
-          if [ -z "$CHANGELOG_B64" ]; then
-            echo "::error::changelog_b64 is empty - release-candidate-version workflow failed"
-            exit 1
-          fi
-          echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
+      - name: Download changelog artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: changelog
+          path: ${{ runner.temp }}
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7

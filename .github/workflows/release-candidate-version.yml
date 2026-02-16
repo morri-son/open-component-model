@@ -99,3 +99,12 @@ jobs:
             const encoded = Buffer.from(log).toString("base64");
             core.setOutput("changelog_b64", encoded);
             await core.summary.addRaw(log).write();
+
+      # Upload changelog as artifact to avoid output size limits
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: changelog
+          path: ${{ runner.temp }}/CHANGELOG.md
+          if-no-files-found: error
+          retention-days: 7
