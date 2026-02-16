@@ -156,8 +156,6 @@ and final promotion in a single run, with a 14-day environment gate in between.
 
 > ⚠️ **Always do a dry-run first** before the actual release.
 
-> 🧪 **Testing:** Use `test_mode = true` to bypass the 14-day wait (uses `cli/release-test` environment).
-
 > CLI and Controller are released together. Do not release only one of them.
 
 <details>
@@ -203,7 +201,7 @@ and final promotion in a single run, with a 14-day environment gate in between.
 ### 3) Approve Final Promotion (CLI + Controller)
 
 After the 14-day waiting period, the release workflow requires approval to proceed
-with final promotion. This replaces the previous two-workflow model.
+with final promotion.
 
 1. Go to **Actions** → find the paused workflow run for CLI.
 2. Click **Review deployments** on the pending `cli/release` environment.
@@ -215,19 +213,15 @@ with final promotion. This replaces the previous two-workflow model.
 > before proceeding. If verification fails, the promotion is aborted.
 
 <details>
-<summary>Environment gate configuration</summary>
+<summary>Environment setup (one-time, for new repositories)</summary>
 
-Two environments must be configured in GitHub:
+The `cli/release` environment must be configured in GitHub Settings:
 
-**`cli/release`** (Production):
-- **Required reviewers**: At least 1 reviewer must approve
-- **Wait timer**: 20160 minutes (14 days)
-
-**`cli/release-test`** (Testing):
-- **Required reviewers**: None (self-approval allowed)
-- **Wait timer**: 0 minutes
-
-Use `test_mode = true` when triggering the workflow to use the test environment.
+1. Go to **Settings → Environments → New environment**
+2. Name: `cli/release`
+3. Configure protection rules:
+   - ✅ **Required reviewers**: Add at least 1 reviewer
+   - ✅ **Wait timer**: 20160 minutes (14 days)
 
 </details>
 
@@ -336,9 +330,3 @@ If something goes wrong during a release, check the following common issues:
 - Verify you are listed as a required reviewer for the `cli/release` environment.
 - Contact a repository admin to add you as a reviewer.
 
----
-
-## Additional Documentation
-
-For technical details about the workflow implementation, see:
-- [OCM Release Workflows Architecture](./.github/docs/ocm-release-workflows.md)
