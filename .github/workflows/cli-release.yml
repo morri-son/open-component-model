@@ -133,21 +133,14 @@ jobs:
           body_path: ${{ runner.temp }}/CHANGELOG.md
           fail_on_unmatched_files: true
           prerelease: true
-          # Only binaries are uploaded as release assets.
+          # Binaries and CHANGELOG.md as release assets.
           # OCI image is available in GHCR, not as a tarball asset.
+          # CHANGELOG.md is uploaded as asset for final release to download.
           files: |
             ${{ runner.temp }}/rc-build-assets/bin/ocm-*
+            ${{ runner.temp }}/CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Upload changelog as artifact to be reused in final release
-      # This avoids the 1MB output limit for workflow outputs
-      - name: Upload changelog artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: changelog-${{ needs.prepare.outputs.new_tag }}
-          path: ${{ runner.temp }}/CHANGELOG.md
-          retention-days: 90
 
       - name: Summarize RC release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -353,36 +346,29 @@ jobs:
   # --------------------------------------------------------
   release_final:
     name: Create Final Release
-    needs: [prepare, build, promote_final]
+    needs: [prepare, promote_final]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      # Download the changelog from the RC release phase
-      # This ensures RC and Final have identical release notes
-      - name: Download changelog artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
-        with:
-          name: changelog-${{ needs.prepare.outputs.new_tag }}
-          path: ${{ runner.temp }}
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: ${{ needs.build.outputs.artifact_name }}
-          path: ${{ runner.temp }}/build-assets
+      # Download all assets from RC release (binaries + CHANGELOG.md)
+      - name: Download RC release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
+        run: |
+          gh release download "$RC_TAG" \
+            --repo "${{ github.repository }}" \
+            --dir "${{ runner.temp }}/rc-assets"
 
       - name: Publish final release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
-          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
           FINAL_TAG: ${{ needs.prepare.outputs.promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          ASSETS_DIR: ${{ runner.temp }}/build-assets
-          NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
+          ASSETS_DIR: ${{ runner.temp }}/rc-assets
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -394,7 +380,7 @@ jobs:
             const rcTag = process.env.RC_TAG;
             const targetRepo = process.env.TARGET_REPO;
             const assetsDir = process.env.ASSETS_DIR;
-            const notesFile = process.env.NOTES_FILE;
+            const notesFile = path.join(assetsDir, 'CHANGELOG.md');
 
             const notes = fs.existsSync(notesFile)
               ? fs.readFileSync(notesFile, 'utf8').trim()
@@ -409,21 +395,18 @@ jobs:
               prerelease: false,
             });
 
-            // Upload binaries
-            const binDir = path.join(assetsDir, 'bin');
-            if (fs.existsSync(binDir)) {
-              const binaries = fs.readdirSync(binDir).filter(f => f.startsWith('ocm-'));
-              for (const file of binaries) {
-                const filePath = path.join(binDir, file);
-                const data = fs.readFileSync(filePath);
-                await github.rest.repos.uploadReleaseAsset({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: created.data.id,
-                  name: file,
-                  data,
-                });
-              }
+            // Upload binaries (ocm-* files, exclude CHANGELOG.md)
+            const binaries = fs.readdirSync(assetsDir).filter(f => f.startsWith('ocm-'));
+            for (const file of binaries) {
+              const filePath = path.join(assetsDir, file);
+              const data = fs.readFileSync(filePath);
+              await github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: created.data.id,
+                name: file,
+                data,
+              });
             }
 
             const releaseUrl = created.data.html_url;
