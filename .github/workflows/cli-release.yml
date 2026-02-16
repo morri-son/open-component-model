@@ -135,17 +135,30 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
           path: ${{ runner.temp }}/rc-build-assets
 
+      - name: Prepare changelog for release
+        id: changelog
+        run: |
+          CHANGELOG="${{ runner.temp }}/CHANGELOG.md"
+          if [ -s "$CHANGELOG" ]; then
+            echo "has_content=true" >> "$GITHUB_OUTPUT"
+            echo "body_path=$CHANGELOG" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_content=false" >> "$GITHUB_OUTPUT"
+            # Create minimal changelog header for empty releases
+            echo "## [${{ needs.prepare.outputs.new_tag }}] - $(date +%Y-%m-%d)" > "$CHANGELOG"
+            echo "body_path=$CHANGELOG" >> "$GITHUB_OUTPUT"
+            echo "::warning::Changelog is empty - no commits found for this release"
+          fi
+
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           name: CLI ${{ needs.prepare.outputs.new_version }}
           tag_name: ${{ needs.prepare.outputs.new_tag }}
-          body_path: ${{ runner.temp }}/CHANGELOG.md
+          body_path: ${{ steps.changelog.outputs.body_path }}
           fail_on_unmatched_files: true
           prerelease: true
           # Binaries and CHANGELOG.md as release assets.
-          # OCI image is available in GHCR, not as a tarball asset.
-          # CHANGELOG.md is uploaded as asset for final release to download.
           files: |
             ${{ runner.temp }}/rc-build-assets/bin/ocm-*
             ${{ runner.temp }}/CHANGELOG.md
