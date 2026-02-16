@@ -117,9 +117,11 @@ jobs:
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: |
-          [ -n "$CHANGELOG_B64" ] && echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md" || true
-          # Ensure file exists and is not empty
-          [ -s "${{ runner.temp }}/CHANGELOG.md" ] || echo "Release notes not available." > "${{ runner.temp }}/CHANGELOG.md"
+          if [ -z "$CHANGELOG_B64" ]; then
+            echo "::error::changelog_b64 is empty - release-candidate-version workflow failed"
+            exit 1
+          fi
+          echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
