@@ -158,14 +158,28 @@ jobs:
       - name: Setup docker/buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
+      # Debug: Show what REF we're working with
+      - name: Debug REF and inputs
+        run: |
+          echo "REF from env: ${{ env.REF }}"
+          echo "inputs.ref: ${{ inputs.ref }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
+          echo "github.ref_name: ${{ github.ref_name }}"
+          echo "github.ref: ${{ github.ref }}"
+
       # Compute VERSION from env.REF
       - name: Compute VERSION
         id: version
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          TAG_PREFIX: "controller/v"
+          REF: ${{ inputs.ref || github.head_ref || github.ref_name }}
+          TAG_PREFIX: "kubernetes/controller/v"
         with:
           script: |
+            // Debug: show what we're working with
+            core.info(`REF from env: ${process.env.REF || '(not set)'}`);
+            core.info(`TAG_PREFIX: ${process.env.TAG_PREFIX}`);
+            
             const script = await import('${{ github.workspace }}/.github/scripts/compute-version.js');
             await script.default({ core });
 
@@ -315,8 +329,8 @@ jobs:
       # Create Kind cluster and run E2E tests
       - name: Create kind cluster and run E2E
         run: |
-          # Load KIND_NODE_IMAGE_VERSION from .env
-          source .env
+          # Load KIND_NODE_IMAGE_VERSION from .env in controller directory
+          source ${{ env.LOCATION }}/.env
           
           # Setup cluster (without building image - we already have it)
           bash ${{ env.LOCATION }}/test/e2e/hacks/setup.sh

@@ -36,7 +36,7 @@ jobs:
     uses: ./.github/workflows/release-candidate-version.yml
     with:
       branch: ${{ github.event.inputs.branch }}
-      component_path: kubernetes/controller # cannot use env here
+      component_path: kubernetes/controller # Path to controller source code
     secrets: inherit
 
   # --------------------------------------------------------
