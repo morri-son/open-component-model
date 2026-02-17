@@ -367,21 +367,14 @@ jobs:
           IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
-          
-          # Push chart and capture digest from output
-          PUSH_OUTPUT=$(helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart 2>&1)
-          echo "$PUSH_OUTPUT"
-          
-          # Extract digest from helm push output (format: "Digest: sha256:...")
-          CHART_DIGEST=$(echo "$PUSH_OUTPUT" | grep -oP 'Digest: \Ksha256:[a-f0-9]+')
-          echo "digest=${CHART_DIGEST}" >> "$GITHUB_OUTPUT"
-          echo "✓ Chart pushed with digest: ${CHART_DIGEST}"
+          helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
+          echo "chart_path=dist/ocm-k8s-toolkit-${VERSION}.tgz" >> "$GITHUB_OUTPUT"
 
       - name: Attest chart
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          subject-digest: ${{ steps.chart-push.outputs.digest }}
+          subject-path: ${{ env.LOCATION }}/${{ steps.chart-push.outputs.chart_path }}
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
           push-to-registry: true
 
