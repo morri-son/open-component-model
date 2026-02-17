@@ -1,6 +1,6 @@
-name: CLI Release
+name: Controller Release
 
-run-name: CLI Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && '(dry-run)' || '' }}
+run-name: Controller Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && '(dry-run)' || '' }}
 
 on:
   workflow_dispatch:
@@ -17,11 +17,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  COMPONENT_PATH: cli
+  COMPONENT_PATH: kubernetes/controller
 
 concurrency:
   cancel-in-progress: true
-  group: cli-release-${{ github.event.inputs.branch }}
+  group: controller-release-${{ github.event.inputs.branch }}
 
 jobs:
   # ============================================================
@@ -36,7 +36,7 @@ jobs:
     uses: ./.github/workflows/release-candidate-version.yml
     with:
       branch: ${{ github.event.inputs.branch }}
-      component_path: cli # cannot use env here
+      component_path: kubernetes/controller # Path to controller source code
     secrets: inherit
 
   # --------------------------------------------------------
@@ -94,13 +94,13 @@ jobs:
             core.info(`✅ Created RC tag ${tag}`);
 
   # --------------------------------------------------------
-  # 3. Build CLI
+  # 3. Build Controller
   # --------------------------------------------------------
   build:
-    name: Build CLI for ${{ needs.prepare.outputs.new_tag }}
+    name: Build Controller for ${{ needs.prepare.outputs.new_tag }}
     if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
     needs: [prepare, tag_rc]
-    uses: ./.github/workflows/cli.yml
+    uses: ./.github/workflows/kubernetes-controller-new.yml
     secrets: inherit
     with:
       ref: ${{ needs.prepare.outputs.new_tag }}
@@ -122,24 +122,35 @@ jobs:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
 
-      - name: Download CLI artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          name: ${{ needs.build.outputs.artifact_name }}
-          path: ${{ runner.temp }}/rc-build-assets
+          version: v3.14.0
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Helm chart from OCI registry
+        env:
+          VERSION: ${{ needs.prepare.outputs.new_version }}
+        run: |
+          CHART_REPO="oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          helm pull "${CHART_REPO}" --version "${VERSION}" --destination "${{ runner.temp }}/rc-build-assets"
 
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
-          name: CLI ${{ needs.prepare.outputs.new_version }}
+          name: Controller ${{ needs.prepare.outputs.new_version }}
           tag_name: ${{ needs.prepare.outputs.new_tag }}
           body_path: ${{ runner.temp }}/CHANGELOG.md
           fail_on_unmatched_files: true
           prerelease: true
           files: |
-            ${{ runner.temp }}/rc-build-assets/bin/ocm-*
+            ${{ runner.temp }}/rc-build-assets/ocm-k8s-toolkit-*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -172,11 +183,11 @@ jobs:
               .addEOL()
               .write();
 
-  # ================================================
+  # ============================================================
   # PHASE 2: FINAL RELEASE (after environment gate)
-  # ================================================
+  # ============================================================
   # Environment Gate:
-  # The "cli/release" environment must be configured in GitHub Settings → Environments:
+  # The "controller/release" environment must be configured in GitHub Settings → Environments:
   # - Required reviewers: At least 1 reviewer must approve
   # - Wait timer: 20160 minutes (14 days)
   #
@@ -190,40 +201,71 @@ jobs:
     needs: [prepare, build, release_rc]
     runs-on: ubuntu-latest
     environment:
-      name: cli/release
+      name: controller/release
     permissions:
       contents: read
       packages: read
     steps:
-      - name: Download RC binaries
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
-        run: |
-          gh release download "$RC_TAG" \
-            --repo "${{ github.repository }}" \
-            --pattern "ocm-*" \
-            --dir "${{ runner.temp }}/binaries"
-
-      - name: Verify binary attestations
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for file in ${{ runner.temp }}/binaries/ocm-*; do
-            echo "Verifying $(basename "$file")..."
-            gh attestation verify "$file" --repo "${{ github.repository }}"
-          done
-          echo "✅ All binary attestations verified"
-
-      - name: Verify OCI image attestation
+      - name: Verify controller image attestation
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
-          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
+          IMAGE_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          echo "Verifying OCI image attestation for ${TARGET_REPO}@${IMAGE_DIGEST}..."
-          gh attestation verify "oci://${TARGET_REPO}@${IMAGE_DIGEST}" --repo "${{ github.repository }}"
-          echo "✅ OCI image attestation verified"
+          echo "Verifying controller image attestation for ${IMAGE_REPO}@${IMAGE_DIGEST}..."
+          gh attestation verify "oci://${IMAGE_REPO}@${IMAGE_DIGEST}" --repo "${{ github.repository }}"
+          echo "✅ Controller image attestation verified"
+
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.14.0
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify RC Helm chart exists and download
+        env:
+          VERSION: ${{ needs.prepare.outputs.new_version }}
+        run: |
+          CHART_REPO="oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          helm pull "${CHART_REPO}" --version "${VERSION}" --destination /tmp
+          echo "✅ RC Helm chart downloaded"
+
+      - name: Resolve RC chart digest
+        id: rc_chart_digest
+        env:
+          VERSION: ${{ needs.prepare.outputs.new_version }}
+        run: |
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          DIGEST=$(oras resolve "${CHART_REPO}:${VERSION}")
+          
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Failed to resolve RC chart digest"
+            exit 1
+          fi
+          
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "✓ RC chart digest: ${DIGEST}"
+
+      # Verify RC Helm chart attestation for supply chain security
+      # This ensures the chart was not tampered with during the 14-day wait period
+      - name: Verify RC Helm chart attestation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHART_DIGEST: ${{ steps.rc_chart_digest.outputs.digest }}
+          CHART_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
+        run: |
+          echo "Verifying RC Helm chart attestation for ${CHART_REPO}@${CHART_DIGEST}..."
+          gh attestation verify "oci://${CHART_REPO}@${CHART_DIGEST}" --repo "${{ github.repository }}"
+          echo "✅ RC Helm chart attestation verified"
 
   # ---------------------------------------------------------
   # 6. Promote Final: Create final tag and promote OCI image
@@ -235,6 +277,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write      # Needed for chart attestation
+      attestations: write  # Needed for chart attestation
     outputs:
       set_latest: ${{ steps.promote_oci.outputs.set_latest }}
     steps:
@@ -316,17 +360,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Promote OCI image tags
+      # Promote controller image by re-tagging (no rebuild, preserves attestation)
+      - name: Promote controller image tags
         id: promote_oci
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
           FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
-          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
+          IMAGE_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         with:
           script: |
             const { execSync } = require('child_process');
-            const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
+            const { RC_VERSION: rc, FINAL_VERSION: final, IMAGE_REPO: repo } = process.env;
 
             if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
 
@@ -339,8 +384,8 @@ jobs:
                 per_page: 100,
               });
               highest = releases.data
-                .filter(r => !r.prerelease && r.tag_name.startsWith('cli/v'))
-                .map(r => r.tag_name.replace('cli/', ''))
+                .filter(r => !r.prerelease && r.tag_name.startsWith('controller/v'))
+                .map(r => r.tag_name.replace('controller/', ''))
                 .filter(t => /^v\d+\.\d+\.\d+$/.test(t))
                 .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                 .pop() || '';
@@ -356,13 +401,80 @@ jobs:
             // Export setLatest for use in release_final job
             core.setOutput('set_latest', setLatest ? 'true' : 'false');
 
-            await core.summary.addHeading('OCI Image Promotion').addTable([
+            await core.summary.addHeading('Controller Image Promotion').addTable([
               [{data: 'Field', header: true}, {data: 'Value', header: true}],
               ['Source', `${repo}:${rc}`],
               ['Final', `${repo}:${final}`],
               ['Highest existing', highest || '(none)'],
               ['Latest', setLatest ? 'Yes' : `No (${highest} > ${final})`],
             ]).write();
+
+      # Re-package Helm chart with final version (required because Chart.yaml version changes)
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.14.0
+
+      - name: Re-package Helm chart for final release
+        working-directory: ${{ env.COMPONENT_PATH }}
+        env:
+          FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+        run: |
+          # Re-package chart with final version
+          # Use image digest to ensure the chart references the exact tested image
+          task helm/package VERSION="${FINAL_VERSION}" APP_VERSION="${FINAL_VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
+          
+          # Verify chart was created
+          CHART_FILE="dist/ocm-k8s-toolkit-${FINAL_VERSION}.tgz"
+          if [ ! -f "${CHART_FILE}" ]; then
+            echo "::error::Chart file not found: ${CHART_FILE}"
+            ls -la dist/
+            exit 1
+          fi
+          echo "✅ Final chart packaged: ${CHART_FILE}"
+
+      - name: Push final Helm chart
+        working-directory: ${{ env.COMPONENT_PATH }}
+        env:
+          FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
+        run: |
+          CHART_PATH="dist/ocm-k8s-toolkit-${FINAL_VERSION}.tgz"
+          CHART_REPO="oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          
+          helm push "${CHART_PATH}" "${CHART_REPO}"
+          echo "✅ Final chart pushed to ${CHART_REPO}"
+
+      - name: Resolve final chart digest
+        id: chart_digest_final
+        env:
+          FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
+        run: |
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          DIGEST=$(oras resolve "${CHART_REPO}:${FINAL_VERSION}")
+          
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Failed to resolve chart digest"
+            exit 1
+          fi
+          
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "✅ Final chart digest: ${DIGEST}"
+
+      # Attest the final, repackaged Helm chart
+      - name: Attest final Helm chart
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          subject-digest: ${{ steps.chart_digest_final.outputs.digest }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
+          push-to-registry: true
 
   # --------------------------------------------------------
   # 7. Release Final: Create GitHub final release
@@ -385,25 +497,37 @@ jobs:
             --json body \
             --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
 
-      # Download binaries from RC release assets to reuse for final release
-      - name: Download RC release binaries
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
-        run: |
-          gh release download "$RC_TAG" \
-            --repo "${{ github.repository }}" \
-            --pattern "ocm-*" \
-            --dir "${{ runner.temp }}/binaries"
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.14.0
+
+      # Download final Helm chart from OCI registry (not RC chart!)
+      - name: Download final Helm chart
+        env:
+          FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
+        run: |
+          CHART_REPO="oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          helm pull "${CHART_REPO}" --version "${FINAL_VERSION}" --destination "${{ runner.temp }}/assets"
+          echo "✅ Downloaded final Helm chart"
+          ls -la "${{ runner.temp }}/assets"
+
+      # Create final GitHub release with Helm chart as asset
       - name: Publish final release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
           FINAL_TAG: ${{ needs.prepare.outputs.promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
-          TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          BINARIES_DIR: ${{ runner.temp }}/binaries
+          IMAGE_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+          ASSETS_DIR: ${{ runner.temp }}/assets
           NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
           SET_LATEST: ${{ needs.promote_final.outputs.set_latest }}
         with:
@@ -415,8 +539,8 @@ jobs:
             const finalTag = process.env.FINAL_TAG;
             const finalVersion = process.env.FINAL_VERSION;
             const rcTag = process.env.RC_TAG;
-            const targetRepo = process.env.TARGET_REPO;
-            const binariesDir = process.env.BINARIES_DIR;
+            const imageRepo = process.env.IMAGE_REPO;
+            const assetsDir = process.env.ASSETS_DIR;
             const notesFile = process.env.NOTES_FILE;
             const setLatest = process.env.SET_LATEST === 'true';
 
@@ -425,8 +549,8 @@ jobs:
               : `Promoted from ${rcTag}`;
 
             // Replace RC header with final release header
-            // From: "[cli/v0.17.0-rc.1] - 2026-02-02"
-            // To:   "[cli/v0.17.0] - promoted from [cli/v0.17.0-rc.1] on 2026-02-16"
+            // From: "[controller/v0.17.0-rc.1] - 2026-02-02"
+            // To:   "[controller/v0.17.0] - promoted from [controller/v0.17.0-rc.1] on 2026-02-17"
             const today = new Date().toISOString().split('T')[0];
             notes = notes.replace(
               /^\[([^\]]+)\]\s*-\s*[\d-]+/,
@@ -439,7 +563,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: finalTag,
-              name: `CLI ${finalVersion}`,
+              name: `Controller ${finalVersion}`,
               body: notes,
               prerelease: false,
               make_latest: setLatest ? 'true' : 'false',
@@ -449,10 +573,10 @@ jobs:
               ? `✅ Release marked as Latest`
               : `⚠️ Release NOT marked as Latest (older patch release)`);
 
-            // Upload binaries from RC release
-            const binaries = fs.readdirSync(binariesDir).filter(f => f.startsWith('ocm-'));
-            for (const file of binaries) {
-              const filePath = path.join(binariesDir, file);
+            // Upload Helm chart from final release (not RC!)
+            const charts = fs.readdirSync(assetsDir).filter(f => f.endsWith('.tgz'));
+            for (const file of charts) {
+              const filePath = path.join(assetsDir, file);
               const data = fs.readFileSync(filePath);
               await github.rest.repos.uploadReleaseAsset({
                 owner: context.repo.owner,
@@ -461,15 +585,17 @@ jobs:
                 name: file,
                 data,
                 headers: {
-                  'content-type': 'application/octet-stream',
+                  'content-type': 'application/gzip',
+                  'content-length': data.length,
                 },
               });
+              core.info(`✅ Uploaded ${file}`);
             }
 
             const releaseUrl = created.data.html_url;
-            const ociTags = setLatest
-              ? `${targetRepo}:${finalVersion}, ${targetRepo}:latest`
-              : `${targetRepo}:${finalVersion}`;
+            const imageTags = setLatest
+              ? `${imageRepo}:${finalVersion}, ${imageRepo}:latest`
+              : `${imageRepo}:${finalVersion}`;
 
             await core.summary
               .addHeading('Final Release Published')
@@ -477,8 +603,9 @@ jobs:
                 [{data: 'Field', header: true}, {data: 'Value', header: true}],
                 ['Final Tag', finalTag],
                 ['Promoted from RC', rcTag],
-                ['OCI Tags', ociTags],
+                ['Image Tags', imageTags],
                 ['GitHub Latest', setLatest ? 'Yes' : 'No (older version)'],
+                ['Assets', String(charts.length)],
               ])
               .addEOL()
               .addLink(releaseUrl, releaseUrl)
