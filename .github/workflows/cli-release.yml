@@ -59,6 +59,7 @@ jobs:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
+      # Checkout repository for tagging
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -66,6 +67,7 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
 
+      # Set committer for git identity
       - name: Setup git config
         run: |
           git config --global user.name "${{ github.actor }}"
@@ -114,6 +116,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Recreate changelog file from base64 string for release body
       - name: Decode changelog to file
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
@@ -169,9 +172,9 @@ jobs:
               .addEOL()
               .write();
 
-  # ============================================================
+  # ================================================
   # PHASE 2: FINAL RELEASE (after environment gate)
-  # ============================================================
+  # ================================================
   # Environment Gate:
   # The "cli/release" environment must be configured in GitHub Settings → Environments:
   # - Required reviewers: At least 1 reviewer must approve
@@ -179,9 +182,9 @@ jobs:
   #
   # This gate blocks all Phase 2 jobs until approved.
 
-  # --------------------------------------------------------
+  # -----------------------------------------------------------
   # 5. Verify Attestations: Ensure RC artifacts are attestable
-  # --------------------------------------------------------
+  # -----------------------------------------------------------
   verify_attestations:
     name: Verify RC Attestations
     needs: [prepare, build, release_rc]
@@ -222,9 +225,9 @@ jobs:
           gh attestation verify "oci://${TARGET_REPO}@${IMAGE_DIGEST}" --repo "${{ github.repository }}"
           echo "✅ OCI image attestation verified"
 
-  # --------------------------------------------------------
+  # ---------------------------------------------------------
   # 6. Promote Final: Create final tag and promote OCI image
-  # --------------------------------------------------------
+  # ---------------------------------------------------------
   promote_final:
     name: Promote to Final Release
     needs: [prepare, build, verify_attestations]
@@ -371,7 +374,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Get release notes from RC release body (no separate asset needed)
+      # Get release notes from RC release body to reuse for final release
       - name: Get release notes from RC
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -382,7 +385,7 @@ jobs:
             --json body \
             --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
 
-      # Download binaries from RC release assets (same binaries that were tested)
+      # Download binaries from RC release assets to reuse for final release
       - name: Download RC release binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -430,7 +433,7 @@ jobs:
               `[${finalTag}] - promoted from [${rcTag}] on ${today}`
             );
 
-            // Use make_latest to control whether this release is marked as "Latest"
+            // Use make_latest to control whether this release is marked as "latest"
             // Only set as latest if this version >= highest existing final version
             const created = await github.rest.repos.createRelease({
               owner: context.repo.owner,
@@ -446,7 +449,7 @@ jobs:
               ? `✅ Release marked as Latest`
               : `⚠️ Release NOT marked as Latest (older patch release)`);
 
-            // Upload binaries from RC release (same binaries that were tested)
+            // Upload binaries from RC release
             const binaries = fs.readdirSync(binariesDir).filter(f => f.startsWith('ocm-'));
             for (const file of binaries) {
               const filePath = path.join(binariesDir, file);
@@ -481,4 +484,3 @@ jobs:
               .addLink(releaseUrl, releaseUrl)
               .addEOL()
               .write();
-
