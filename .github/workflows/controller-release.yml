@@ -253,7 +253,7 @@ jobs:
           fi
           
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-          echo "✓ RC chart digest: ${DIGEST}"
+          echo "✅ RC chart digest: ${DIGEST}"
 
       # Verify RC Helm chart attestation for supply chain security
       # This ensures the chart was not tampered with during the 14-day wait period
