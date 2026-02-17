@@ -73,10 +73,6 @@ jobs:
             Taskfile.yml
           persist-credentials: false
 
-      - name: Setup Go
-        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
-        with:
-          go-version-file: ${{ env.LOCATION }}/go.mod
 
       - name: Install Task
         uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
