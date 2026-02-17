@@ -93,22 +93,9 @@ jobs:
         with:
           script: |
             const fs = require("fs");
-            const tag = process.env.TAG;
-            const today = new Date().toISOString().split('T')[0];
-            
-            let log = "";
-            if (fs.existsSync(process.env.CHANGELOG_FILE)) {
-              log = fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim();
-            }
-            
-            // If git-cliff produced no content or empty file, generate a minimal header
-            if (!log || log.length === 0) {
-              const version = tag.replace(/^[^\/]+\//, ''); // strip component prefix like "cli/"
-              log = `## [${version}] - ${today}\n\nInitial release for this version line.`;
-              core.warning(`git-cliff produced no changelog content. Using minimal header for ${tag}`);
-            }
-            
+            const log = fs.existsSync(process.env.CHANGELOG_FILE)
+              ? fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim()
+              : "No changelog.";
             const encoded = Buffer.from(log).toString("base64");
             core.setOutput("changelog_b64", encoded);
-            core.info(`Changelog length: ${log.length} chars, base64 length: ${encoded.length}`);
             await core.summary.addRaw(log).write();
