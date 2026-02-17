@@ -116,10 +116,21 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Helm chart
+        env:
+          CHART_REPO: oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
+          VERSION: ${{ needs.prepare.outputs.new_version }}
         run: |
-          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart" \
-            --version "${{ needs.prepare.outputs.new_version }}" \
-            --destination "${{ runner.temp }}/assets"
+          mkdir -p "${{ runner.temp }}/assets"
+          for i in 1 2 3 4 5; do
+            if helm pull "${CHART_REPO}" --version "${VERSION}" --destination "${{ runner.temp }}/assets"; then
+              echo "✓ Chart downloaded successfully"
+              exit 0
+            fi
+            echo "Attempt $i: Chart not yet available in registry, waiting..."
+            sleep 5
+          done
+          echo "::error::Failed to download chart after 5 attempts"
+          exit 1
 
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
