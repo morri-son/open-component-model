@@ -236,6 +236,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+    outputs:
+      set_latest: ${{ steps.promote_oci.outputs.set_latest }}
     steps:
       - name: Validate release preconditions
         env:
@@ -316,6 +318,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote OCI image tags
+        id: promote_oci
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
@@ -328,17 +331,21 @@ jobs:
 
             if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
 
-            // Get highest existing final version from GHCR
+            // Get highest existing final version from GitHub releases (not OCI)
             let highest = '';
             try {
-              const { data } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
-                package_type: 'container', package_name: 'cli', org: context.repo.owner
+              const releases = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
               });
-              highest = data.flatMap(v => v.metadata?.container?.tags || [])
+              highest = releases.data
+                .filter(r => !r.prerelease && r.tag_name.startsWith('cli/v'))
+                .map(r => r.tag_name.replace('cli/', ''))
                 .filter(t => /^v\d+\.\d+\.\d+$/.test(t))
                 .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                 .pop() || '';
-            } catch (e) { core.warning(`Could not fetch existing tags: ${e.message}`); }
+            } catch (e) { core.warning(`Could not fetch existing releases: ${e.message}`); }
 
             // Set :latest only if this version is >= the current highest
             const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
@@ -347,10 +354,14 @@ jobs:
             execSync(`oras tag "${repo}:${rc}" ${tags}`, { stdio: 'inherit' });
             core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
 
+            // Export setLatest for use in release_final job
+            core.setOutput('set_latest', setLatest ? 'true' : 'false');
+
             await core.summary.addHeading('OCI Image Promotion').addTable([
               [{data: 'Field', header: true}, {data: 'Value', header: true}],
               ['Source', `${repo}:${rc}`],
               ['Final', `${repo}:${final}`],
+              ['Highest existing', highest || '(none)'],
               ['Latest', setLatest ? 'Yes' : `No (${highest} > ${final})`],
             ]).write();
 
@@ -395,6 +406,7 @@ jobs:
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
           BINARIES_DIR: ${{ runner.temp }}/binaries
           NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
+          SET_LATEST: ${{ needs.promote_final.outputs.set_latest }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -407,6 +419,7 @@ jobs:
             const targetRepo = process.env.TARGET_REPO;
             const binariesDir = process.env.BINARIES_DIR;
             const notesFile = process.env.NOTES_FILE;
+            const setLatest = process.env.SET_LATEST === 'true';
 
             let notes = fs.existsSync(notesFile)
               ? fs.readFileSync(notesFile, 'utf8').trim()
@@ -421,6 +434,8 @@ jobs:
               `[${finalTag}] - promoted from [${rcTag}] on ${today}`
             );
 
+            // Use make_latest to control whether this release is marked as "Latest"
+            // Only set as latest if this version >= highest existing final version
             const created = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -428,7 +443,12 @@ jobs:
               name: `CLI ${finalVersion}`,
               body: notes,
               prerelease: false,
+              make_latest: setLatest ? 'true' : 'false',
             });
+
+            core.info(setLatest
+              ? `✅ Release marked as Latest`
+              : `⚠️ Release NOT marked as Latest (older patch release)`);
 
             // Upload binaries from RC release (same binaries that were tested)
             const binaries = fs.readdirSync(binariesDir).filter(f => f.startsWith('ocm-'));
@@ -448,13 +468,18 @@ jobs:
             }
 
             const releaseUrl = created.data.html_url;
+            const ociTags = setLatest
+              ? `${targetRepo}:${finalVersion}, ${targetRepo}:latest`
+              : `${targetRepo}:${finalVersion}`;
+
             await core.summary
               .addHeading('Final Release Published')
               .addTable([
                 [{data: 'Field', header: true}, {data: 'Value', header: true}],
                 ['Final Tag', finalTag],
                 ['Promoted from RC', rcTag],
-                ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
+                ['OCI Tags', ociTags],
+                ['GitHub Latest', setLatest ? 'Yes' : 'No (older version)'],
               ])
               .addEOL()
               .addLink(releaseUrl, releaseUrl)
