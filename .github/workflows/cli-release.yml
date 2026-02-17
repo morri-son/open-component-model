@@ -1,6 +1,6 @@
 name: CLI Release
 
-run-name: CLI Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && ' (dry-run)' || '' }}
+run-name: CLI Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && '(dry-run)' || '' }}
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
     uses: ./.github/workflows/release-candidate-version.yml
     with:
       branch: ${{ github.event.inputs.branch }}
-      component_path: cli
+      component_path: cli # cannot use env here
     secrets: inherit
 
   # --------------------------------------------------------
@@ -71,6 +71,7 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
+      # Create and push tag if not existing
       - name: Create ${{ needs.prepare.outputs.new_tag }}
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -116,12 +117,7 @@ jobs:
       - name: Decode changelog to file
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
-        run: |
-          if [ -z "$CHANGELOG_B64" ]; then
-            echo "::error::changelog_b64 is empty - release-candidate-version workflow failed"
-            exit 1
-          fi
-          echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
+        run: echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
