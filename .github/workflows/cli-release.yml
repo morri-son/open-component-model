@@ -139,12 +139,8 @@ jobs:
           body_path: ${{ runner.temp }}/CHANGELOG.md
           fail_on_unmatched_files: true
           prerelease: true
-          # Binaries and CHANGELOG.md as release assets.
-          # OCI image is available in GHCR, not as a tarball asset.
-          # CHANGELOG.md is uploaded as asset for final release to download.
           files: |
             ${{ runner.temp }}/rc-build-assets/bin/ocm-*
-            ${{ runner.temp }}/CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -357,15 +353,27 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Download all assets from RC release (binaries + CHANGELOG.md)
-      - name: Download RC release assets
+      # Get release notes from RC release body (no separate asset needed)
+      - name: Get release notes from RC
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
+        run: |
+          gh release view "$RC_TAG" \
+            --repo "${{ github.repository }}" \
+            --json body \
+            --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
+
+      # Download binaries from RC release assets (same binaries that were tested)
+      - name: Download RC release binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
         run: |
           gh release download "$RC_TAG" \
             --repo "${{ github.repository }}" \
-            --dir "${{ runner.temp }}/rc-assets"
+            --pattern "ocm-*" \
+            --dir "${{ runner.temp }}/binaries"
 
       - name: Publish final release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -374,7 +382,8 @@ jobs:
           FINAL_TAG: ${{ needs.prepare.outputs.promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          ASSETS_DIR: ${{ runner.temp }}/rc-assets
+          BINARIES_DIR: ${{ runner.temp }}/binaries
+          NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -385,8 +394,8 @@ jobs:
             const finalVersion = process.env.FINAL_VERSION;
             const rcTag = process.env.RC_TAG;
             const targetRepo = process.env.TARGET_REPO;
-            const assetsDir = process.env.ASSETS_DIR;
-            const notesFile = path.join(assetsDir, 'CHANGELOG.md');
+            const binariesDir = process.env.BINARIES_DIR;
+            const notesFile = process.env.NOTES_FILE;
 
             let notes = fs.existsSync(notesFile)
               ? fs.readFileSync(notesFile, 'utf8').trim()
@@ -410,10 +419,10 @@ jobs:
               prerelease: false,
             });
 
-            // Upload binaries (ocm-* files, exclude CHANGELOG.md)
-            const binaries = fs.readdirSync(assetsDir).filter(f => f.startsWith('ocm-'));
+            // Upload binaries from RC release (same binaries that were tested)
+            const binaries = fs.readdirSync(binariesDir).filter(f => f.startsWith('ocm-'));
             for (const file of binaries) {
-              const filePath = path.join(assetsDir, file);
+              const filePath = path.join(binariesDir, file);
               const data = fs.readFileSync(filePath);
               await github.rest.repos.uploadReleaseAsset({
                 owner: context.repo.owner,
