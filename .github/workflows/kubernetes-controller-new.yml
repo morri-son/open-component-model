@@ -365,17 +365,31 @@ jobs:
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
+          CHART_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
           
           # Push chart and capture digest from output
-          PUSH_OUTPUT=$(helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart 2>&1)
+          PUSH_OUTPUT=$(helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${CHART_REPO} 2>&1)
           echo "$PUSH_OUTPUT"
           
           # Extract digest from helm push output (format: "Digest: sha256:...")
           CHART_DIGEST=$(echo "$PUSH_OUTPUT" | grep -oP 'Digest: \Ksha256:[a-f0-9]+')
           echo "digest=${CHART_DIGEST}" >> "$GITHUB_OUTPUT"
           echo "✓ Chart pushed with digest: ${CHART_DIGEST}"
+          
+          # Wait for registry propagation and verify chart is accessible
+          echo "Waiting for registry propagation..."
+          sleep 5
+          
+          for i in {1..5}; do
+            if oras manifest fetch "${CHART_REPO}@${CHART_DIGEST}" > /dev/null 2>&1; then
+              echo "✓ Chart manifest verified at ${CHART_REPO}@${CHART_DIGEST}"
+              break
+            fi
+            echo "Attempt $i: Chart not yet available, waiting..."
+            sleep 3
+          done
 
       - name: Attest chart
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
