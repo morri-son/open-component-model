@@ -1,10 +1,6 @@
 name: Kubernetes Controller
 
 on:
-  # Trigger workflow on pushes to main or release branches, and on PRs targeting main as well as release tags
-  # if we are on a PR, limit runtime and only build the controller if it has been modified.
-  # if we are on a push, build the Controller regardless of what has changed to always be up to date
-  # also allow manual triggering for rebuilds or failing jobs or rebuilding the artifact
   push:
     branches:
       - main
@@ -13,14 +9,14 @@ on:
       - 'kubernetes/controller/v**'
     paths:
       - kubernetes/controller/**/*
-      - .github/workflows/kubernetes-controller.yml
+      - .github/workflows/kubernetes-controller-new.yml
       - .env
   pull_request:
     branches:
       - main
     paths:
       - kubernetes/controller/**/*
-      - .github/workflows/kubernetes-controller.yml
+      - .github/workflows/kubernetes-controller-new.yml
       - .env
   workflow_call:
     inputs:
@@ -44,16 +40,10 @@ on:
         value: ${{ jobs.publish.outputs.image_digest }}
 
 env:
-  LOCATION: "kubernetes/controller"     # Folder containing the Controller source
-  REGISTRY: ghcr.io                     # Target container registry
-  # github.head_ref → branch name from the PR target (works only for pull_request events)
-  # github.ref_name → branch or tag name for normal push/tag events
-  # inputs.ref → overrides both for workflow_call
+  LOCATION: "kubernetes/controller"
+  REGISTRY: ghcr.io
   REF: ${{ inputs.ref || github.head_ref || github.ref_name }}
   ARTIFACT_NAME: ${{ inputs.artifact_name || 'controller-artifacts' }}
-  # Repository selection for checkout:
-  # - pull_request: Use head repository (fork) for PR changes
-  # - other events: Use current repository
   CHECKOUT_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
 
 jobs:
@@ -69,7 +59,6 @@ jobs:
           ref: ${{ env.REF }}
           sparse-checkout: |
             ${{ env.LOCATION }}
-            .github/workflows/kubernetes-controller.yml
             Taskfile.yml
           persist-credentials: false
 
@@ -84,31 +73,21 @@ jobs:
         with:
           version: v3.14.0
 
-      - name: Generate values schema
+      - name: Validate Helm chart
         working-directory: ${{ env.LOCATION }}
-        run: task helm/schema
-
-      - name: Generate chart documentation
-        working-directory: ${{ env.LOCATION }}
-        run: task helm/docs
-
-      - name: Lint chart
-        working-directory: ${{ env.LOCATION }}
-        run: task helm/lint
-
-      - name: Render chart templates
-        working-directory: ${{ env.LOCATION }}
-        run: task helm/template
+        run: |
+          task helm/schema
+          task helm/docs
+          task helm/lint
+          task helm/template
 
       - name: Verify no uncommitted changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "::error::Uncommitted changes detected after running helm tasks"
-            git status
-            git diff
+            git status && git diff
             exit 1
           fi
-          echo "✅ No uncommitted changes detected"
 
   build:
     name: Build Controller
@@ -119,7 +98,6 @@ jobs:
       artifact_name: ${{ env.ARTIFACT_NAME }}
       artifact_id: ${{ steps.upload-artifacts.outputs.artifact-id }}
       version: ${{ steps.version.outputs.version }}
-      should_run_e2e: ${{ steps.branch-check.outputs.should_run_e2e }}
       should_publish: ${{ steps.branch-check.outputs.should_publish }}
     permissions:
       contents: read
@@ -132,7 +110,7 @@ jobs:
             .github/scripts
             ${{ env.LOCATION }}
             Taskfile.yml
-          persist-credentials: 'false'
+          persist-credentials: false
           ref: ${{ env.REF }}
 
       - name: Setup Go
@@ -147,41 +125,25 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           version: 3.x
 
-      # Setup Docker Buildx for multi-arch OCI layout build
       - name: Setup docker/buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      # Debug: Show what REF we're working with
-      - name: Debug REF and inputs
-        run: |
-          echo "REF from env: ${{ env.REF }}"
-          echo "inputs.ref: ${{ inputs.ref }}"
-          echo "github.head_ref: ${{ github.head_ref }}"
-          echo "github.ref_name: ${{ github.ref_name }}"
-          echo "github.ref: ${{ github.ref }}"
-          echo "github.event_name: ${{ github.event_name }}"
-
-      # Compute VERSION from env.REF
       - name: Compute VERSION
         id: version
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          REF: ${{ inputs.ref || github.head_ref || github.ref_name }}
+          REF: ${{ env.REF }}
           TAG_PREFIX: "kubernetes/controller/v"
         with:
           script: |
-            core.info(`REF from env: ${process.env.REF || '(not set)'}`);
-            core.info(`TAG_PREFIX: ${process.env.TAG_PREFIX}`);
-            
             const script = await import('${{ github.workspace }}/.github/scripts/compute-version.js');
             await script.default({ core });
 
-      # Determine if E2E should run and if we should publish
-      - name: Determine branch eligibility
+      - name: Determine publish eligibility
         id: branch-check
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          REF: ${{ inputs.ref || github.head_ref || github.ref_name }}
+          REF: ${{ env.REF }}
           EVENT_NAME: ${{ github.event_name }}
         with:
           script: |
@@ -189,88 +151,45 @@ jobs:
             const eventName = process.env.EVENT_NAME;
             const defaultBranch = context.payload.repository?.default_branch || 'main';
             
-            // E2E should run for PRs and any push/tag
-            // Always run E2E to validate the image works
-            const shouldRunE2e = true;
-            
-            // Publish only for:
-            // - Push to default branch (main)
-            // - Push to release branches (releases/v**)
-            // - Release tags (kubernetes/controller/v**)
-            // - workflow_call (from release workflow)
+            // Publish for: main, release branches, release tags, workflow_call
             // Never publish for PRs
-            let shouldPublish = false;
+            const shouldPublish = eventName !== 'pull_request' && (
+              eventName === 'workflow_call' ||
+              ref === defaultBranch ||
+              /^releases\/v\d+\./.test(ref) ||
+              /^kubernetes\/controller\/v\d+\.\d+(\.\d+)?(-.*)?$/.test(ref)
+            );
             
-            if (eventName === 'pull_request') {
-              shouldPublish = false;
-              core.info('PR detected - will NOT publish');
-            } else if (eventName === 'workflow_call') {
-              // workflow_call is always from release workflow
-              shouldPublish = true;
-              core.info('workflow_call detected - will publish');
-            } else if (ref === defaultBranch) {
-              shouldPublish = true;
-              core.info(`Push to default branch (${defaultBranch}) - will publish`);
-            } else if (/^releases\/v\d+\./.test(ref)) {
-              shouldPublish = true;
-              core.info(`Push to release branch (${ref}) - will publish`);
-            } else if (/^kubernetes\/controller\/v\d+\.\d+(\.\d+)?(-.*)?$/.test(ref)) {
-              shouldPublish = true;
-              core.info(`Release tag detected (${ref}) - will publish`);
-            } else {
-              core.info(`Ref ${ref} is not eligible for publishing`);
-            }
-            
-            core.setOutput('should_run_e2e', shouldRunE2e);
             core.setOutput('should_publish', shouldPublish);
-            
-            core.info(`should_run_e2e: ${shouldRunE2e}`);
-            core.info(`should_publish: ${shouldPublish}`);
 
-      # Build multi-arch controller image to OCI layout directory
-      # This creates a directory structure that ORAS can read directly
-      - name: Build Multi-Arch Controller Image to OCI Layout
+      - name: Build Multi-Arch Image to OCI Layout
         working-directory: ${{ env.LOCATION }}
         env:
           VERSION: ${{ steps.version.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
           mkdir -p tmp/oci
-          
-          # Build multi-arch image to OCI layout directory (not tarball)
-          # Using directory format allows ORAS to read it directly with platform filter
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag "${IMAGE_NAME}:${VERSION}" \
             --output type=oci,dest=tmp/oci/controller,oci-mediatypes=true \
             -f Dockerfile .
-          
-          echo "✓ Built multi-arch OCI layout directory: tmp/oci/controller"
-          ls -la tmp/oci/controller/
-          
-          # Save version to file for later jobs
-          echo "${VERSION}" > tmp/oci/version.txt
-          echo "✓ Saved version: ${VERSION}"
 
-      # Upload OCI layout directory and version file as artifacts
       - name: Upload Artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         id: upload-artifacts
         with:
-          if-no-files-found: 'error'
+          if-no-files-found: error
           name: ${{ env.ARTIFACT_NAME }}
-          path: |
-            ${{ env.LOCATION }}/tmp/oci/
+          path: ${{ env.LOCATION }}/tmp/oci/
 
   E2E:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build
-    # Always run E2E if build succeeded - validates the image works before publish
-    if: ${{ needs.build.outputs.should_run_e2e == 'true' }}
     permissions:
-      actions: read       # Needed for artifact download
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -283,7 +202,7 @@ jobs:
             .env
           persist-credentials: false
 
-      - name: Setup Go (required for E2E tests)
+      - name: Setup Go
         uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
         with:
           go-version-file: ${{ env.LOCATION }}/go.mod
@@ -312,90 +231,34 @@ jobs:
         with:
           version: v3.14.0
 
-      # Download OCI layout artifact from build job
       - name: Download build artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: ${{ env.LOCATION }}/tmp/oci
 
-      # Load controller image from OCI layout into Docker daemon
-      # Use ORAS to extract only linux/amd64 platform for Kind cluster
-      - name: Load controller image from OCI layout
+      - name: Load image from OCI layout
         working-directory: ${{ env.LOCATION }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          echo "Loading image from OCI layout with platform filter: linux/amd64"
-          
-          # Read version from artifact (fallback)
-          if [ -z "${VERSION}" ] && [ -f tmp/oci/version.txt ]; then
-            VERSION=$(cat tmp/oci/version.txt)
-            echo "Read version from artifact: ${VERSION}"
-          fi
-          
-          # Verify OCI layout exists
-          if [ ! -d "tmp/oci/controller" ]; then
-            echo "::error::OCI layout directory not found: tmp/oci/controller"
-            ls -la tmp/oci/
-            exit 1
-          fi
-          
-          echo "OCI layout contents:"
-          ls -la tmp/oci/controller/
-          
-          # Use ORAS to copy from OCI layout to Docker daemon with platform filter
-          # This extracts only the linux/amd64 image from the multi-arch manifest
-          # Format: oras cp --from-oci-layout <oci-layout-path>:<tag> --platform <platform> docker://<image>:<tag>
           oras cp \
             --from-oci-layout tmp/oci/controller:${VERSION} \
             --platform linux/amd64 \
             docker://${IMAGE_NAME}:${VERSION}
           
-          echo "✓ Loaded linux/amd64 image into Docker daemon"
-          
-          # Verify image was loaded
-          docker images | grep -E "kubernetes/controller|${IMAGE_NAME}" || {
-            echo "::error::Controller image not found in Docker after load"
-            docker images
-            exit 1
-          }
-          
-          echo "✓ Successfully loaded image from OCI layout"
-          docker images | grep -E "kubernetes/controller"
-          
-          # Set env for E2E tests
+          docker images | grep -q kubernetes/controller || exit 1
           echo "CONTROLLER_IMG=${IMAGE_NAME}:${VERSION}" >> "$GITHUB_ENV"
 
-      # Create Kind cluster and run E2E tests
-      - name: Create kind cluster and run E2E
+      - name: Run E2E tests
         run: |
-          # Load KIND_NODE_IMAGE_VERSION from .env in controller directory
-          set -a  # Export all variables
-          source ${{ env.LOCATION }}/.env
-          set +a  # Stop exporting
-          
-          # Verify the variable is set
-          echo "KIND_NODE_IMAGE_VERSION=${KIND_NODE_IMAGE_VERSION}"
-          echo "CONTROLLER_IMG=${CONTROLLER_IMG}"
-          
-          # Setup cluster (without building image - we already have it)
+          set -a && source ${{ env.LOCATION }}/.env && set +a
           bash ${{ env.LOCATION }}/test/e2e/hacks/setup.sh
-          
-          # Load pre-loaded image into Kind cluster
-          # Image is already in Docker daemon from previous step
           kind load docker-image "${CONTROLLER_IMG}"
-          
-          echo "✓ Loaded controller image into Kind cluster"
-          
-          # Verify image is in Kind
-          docker exec kind-control-plane crictl images | grep controller || true
-          
-          # Run E2E tests
           task ${{ env.LOCATION }}:test/e2e
 
-      - name: Cleanup Docker resources
+      - name: Cleanup
         if: always()
         run: docker system prune --force
 
@@ -403,16 +266,14 @@ jobs:
     name: Publish Image & Chart
     runs-on: ubuntu-latest
     needs: [build, E2E]
-    # Only publish after successful E2E and when should_publish is true
-    # This skips publishing for PRs
     if: ${{ needs.build.outputs.should_publish == 'true' }}
     outputs:
       image_digest: ${{ steps.image-digest.outputs.digest }}
     permissions:
-      actions: read           # Needed for artifact download
-      packages: write         # Needed for pushing image and chart to registry
-      id-token: write         # Needed for provenance attestation identity
-      attestations: write     # Allows storing provenance attestation
+      actions: read
+      packages: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -422,7 +283,7 @@ jobs:
           sparse-checkout: |
             ${{ env.LOCATION }}
             Taskfile.yml
-          persist-credentials: 'false'
+          persist-credentials: false
 
       - name: Install Task
         uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
@@ -445,77 +306,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Download OCI layout artifact from build job
       - name: Download build artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: ${{ env.LOCATION }}/tmp/oci
 
-      # Read version from artifact
-      - name: Read version
-        id: version
+      - name: Push image from OCI layout
         working-directory: ${{ env.LOCATION }}
-        run: |
-          VERSION="${{ needs.build.outputs.version }}"
-          
-          # Fallback to version.txt if output is empty
-          if [ -z "${VERSION}" ] && [ -f tmp/oci/version.txt ]; then
-            VERSION=$(cat tmp/oci/version.txt)
-          fi
-          
-          if [ -z "${VERSION}" ]; then
-            echo "::error::Could not determine version"
-            exit 1
-          fi
-          
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "✅ Version: ${VERSION}"
-
-      # Push multi-arch image from OCI layout to registry
-      - name: Push controller image from OCI layout
-        working-directory: ${{ env.LOCATION }}
-        id: push-image
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          echo "Pushing multi-arch image from OCI layout to registry..."
-          
-          # Verify OCI layout exists
-          if [ ! -d "tmp/oci/controller" ]; then
-            echo "::error::OCI layout directory not found: tmp/oci/controller"
-            ls -la tmp/oci/
-            exit 1
-          fi
-          
-          # Push multi-arch image from OCI layout to registry
-          # This preserves all platforms (linux/amd64, linux/arm64)
-          oras cp \
-            --from-oci-layout tmp/oci/controller:${VERSION} \
-            ${IMAGE_NAME}:${VERSION}
-          
-          echo "✓ Image pushed to ${IMAGE_NAME}:${VERSION}"
+          oras cp --from-oci-layout tmp/oci/controller:${VERSION} ${IMAGE_NAME}:${VERSION}
 
-      # Resolve pushed image digest for attestation
-      - name: Resolve pushed image digest
+      - name: Resolve image digest
         id: image-digest
         env:
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           DIGEST=$(oras resolve "${IMAGE_NAME}:${VERSION}")
-          
-          if [ -z "$DIGEST" ]; then
-            echo "::error::Failed to resolve image digest"
-            exit 1
-          fi
-          
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-          echo "✅ Image digest: ${DIGEST}"
 
-      # Attest controller image with provenance metadata
-      - name: Attest controller image
+      - name: Attest image
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -523,67 +337,31 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
           push-to-registry: true
 
-      # Tag image as latest only on main branch
-      - name: Tag Image as latest on main
+      - name: Tag as latest on main
         if: ${{ env.REF == github.event.repository.default_branch }}
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
-        run: |
-          oras tag "${IMAGE_NAME}:${VERSION}" latest
-          echo "✅ Tagged ${IMAGE_NAME}:latest"
+        run: oras tag "${IMAGE_NAME}:${VERSION}" latest
 
-      # Package Helm chart with matching version and image digest reference
-      - name: Package Helm chart
+      - name: Package and push Helm chart
         working-directory: ${{ env.LOCATION }}
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
           IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
         run: |
-          # Package chart with version and app version
-          # The chart will reference the image by digest for reproducibility
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
-          
-          # Verify chart was created
-          CHART_FILE="dist/ocm-k8s-toolkit-${VERSION}.tgz"
-          if [ ! -f "${CHART_FILE}" ]; then
-            echo "::error::Chart file not found: ${CHART_FILE}"
-            ls -la dist/
-            exit 1
-          fi
-          echo "✅ Chart packaged: ${CHART_FILE}"
+          helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
 
-      # Push Helm chart to OCI registry
-      - name: Push Helm chart
-        working-directory: ${{ env.LOCATION }}
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          CHART_PATH="dist/ocm-k8s-toolkit-${VERSION}.tgz"
-          CHART_REPO="oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
-          
-          helm push "${CHART_PATH}" "${CHART_REPO}"
-          echo "✅ Chart pushed to ${CHART_REPO}"
-
-      # Resolve chart digest for attestation
       - name: Resolve chart digest
         id: chart-digest
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
-          DIGEST=$(oras resolve "${CHART_REPO}:${VERSION}")
-          
-          if [ -z "$DIGEST" ]; then
-            echo "::error::Failed to resolve chart digest"
-            exit 1
-          fi
-          
-          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-          echo "✅ Chart digest: ${DIGEST}"
+          echo "digest=$(oras resolve ${CHART_REPO}:${VERSION})" >> "$GITHUB_OUTPUT"
 
-      # Attest Helm chart with provenance metadata
-      - name: Attest Helm chart
+      - name: Attest chart
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -591,6 +369,6 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
           push-to-registry: true
 
-      - name: Cleanup Docker resources
+      - name: Cleanup
         if: always()
         run: docker system prune --force
