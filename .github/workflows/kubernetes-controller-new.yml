@@ -168,11 +168,20 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          mkdir -p tmp/oci
+          mkdir -p tmp/oci tmp/docker
+          
+          # Build 1: Multi-arch OCI Layout for registry push
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag "${IMAGE_NAME}:${VERSION}" \
             --output type=oci,dest=tmp/oci/controller,oci-mediatypes=true \
+            -f Dockerfile .
+          
+          # Build 2: amd64 Docker tar for E2E (uses buildx cache - instant)
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "${IMAGE_NAME}:${VERSION}" \
+            --output type=docker,dest=tmp/docker/controller-amd64.tar \
             -f Dockerfile .
 
       - name: Upload Artifacts
@@ -181,7 +190,9 @@ jobs:
         with:
           if-no-files-found: error
           name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.LOCATION }}/tmp/oci/
+          path: |
+            ${{ env.LOCATION }}/tmp/oci/
+            ${{ env.LOCATION }}/tmp/docker/
 
   E2E:
     name: E2E Tests
@@ -235,20 +246,24 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.build.outputs.artifact_name }}
-          path: ${{ env.LOCATION }}/tmp/oci
+          path: ${{ env.LOCATION }}/tmp
 
-      - name: Load image from OCI layout
+      - name: Load image from Docker tar
         working-directory: ${{ env.LOCATION }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          oras cp \
-            --from-oci-layout tmp/oci/controller:${VERSION} \
-            --platform linux/amd64 \
-            docker://${IMAGE_NAME}:${VERSION}
+          echo "Loading image from Docker tar..."
+          docker load < tmp/docker/controller-amd64.tar
           
-          docker images | grep -q kubernetes/controller || exit 1
+          docker images | grep -q kubernetes/controller || {
+            echo "::error::Controller image not found after docker load"
+            docker images
+            exit 1
+          }
+          
+          echo "✓ Image loaded successfully"
           echo "CONTROLLER_IMG=${IMAGE_NAME}:${VERSION}" >> "$GITHUB_ENV"
 
       - name: Run E2E tests
@@ -310,7 +325,7 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.build.outputs.artifact_name }}
-          path: ${{ env.LOCATION }}/tmp/oci
+          path: ${{ env.LOCATION }}/tmp
 
       - name: Push image from OCI layout
         working-directory: ${{ env.LOCATION }}
