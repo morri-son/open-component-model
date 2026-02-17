@@ -10,7 +10,7 @@ on:
       - main
       - 'releases/v**'
     tags:
-      - 'controller/v**'
+      - 'kubernetes/controller/v**'
     paths:
       - kubernetes/controller/**/*
       - .github/workflows/kubernetes-controller.yml
@@ -227,7 +227,7 @@ jobs:
               "should_push",
               process.env.GITHUB_REF_NAME === context.payload.repository.default_branch ||
               /^releases\/v0\./.test(process.env.GITHUB_REF_NAME) ||
-              /^controller\/v\d+\.\d+(\.\d+)?(-.*)?$/.test(process.env.GITHUB_REF_NAME)
+              /^kubernetes\/controller\/v\d+\.\d+(\.\d+)?(-.*)?$/.test(process.env.GITHUB_REF_NAME)
             )
 
       # Save image reference as artifact for E2E tests
@@ -330,7 +330,12 @@ jobs:
       - name: Create kind cluster and run E2E
         run: |
           # Load KIND_NODE_IMAGE_VERSION from .env in controller directory
+          set -a  # Export all variables
           source ${{ env.LOCATION }}/.env
+          set +a  # Stop exporting
+          
+          # Verify the variable is set
+          echo "KIND_NODE_IMAGE_VERSION=${KIND_NODE_IMAGE_VERSION}"
           
           # Setup cluster (without building image - we already have it)
           bash ${{ env.LOCATION }}/test/e2e/hacks/setup.sh
