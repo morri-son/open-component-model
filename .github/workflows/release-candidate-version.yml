@@ -24,6 +24,9 @@ on:
       promotion_tag:
         description: "Tag to be used for promotion later, eg. cli/v0.1.0-rc.1 -> cli/v0.1.0"
         value: ${{ jobs.prepare.outputs.promotion_tag }}
+      promotion_version:
+        description: "Version to be used for promotion later, eg. 0.1.0-rc.1 -> 0.1.0"
+        value: ${{ jobs.prepare.outputs.promotion_version }}
       changelog_b64:
         description: "Changelog encoded in base64 for release body"
         value: ${{ jobs.prepare.outputs.changelog_b64 }}
@@ -39,6 +42,7 @@ jobs:
       new_version: ${{ steps.compute.outputs.new_version }}
       base_version: ${{ steps.compute.outputs.base_version }}
       promotion_tag: ${{ steps.compute.outputs.promotion_tag }}
+      promotion_version: ${{ steps.compute.outputs.promotion_version }}
       changelog_b64: ${{ steps.summarize.outputs.changelog_b64 }}
     steps:
       # Checkout the repository and target branch
@@ -89,9 +93,22 @@ jobs:
         with:
           script: |
             const fs = require("fs");
-            const log = fs.existsSync(process.env.CHANGELOG_FILE)
-              ? fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim()
-              : "No changelog.";
+            const tag = process.env.TAG;
+            const today = new Date().toISOString().split("T")[0];
+
+            // Read changelog file if it exists
+            let log = "";
+            if (fs.existsSync(process.env.CHANGELOG_FILE)) {
+              log = fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim();
+            }
+
+            // Generate fallback header if changelog is empty
+            // This can happen when --use-branch-tags finds no tags on a new release branch
+            if (!log) {
+              log = `## [${tag}] - ${today}\n\nNo changes since the previous release.`;
+              core.info(`Generated fallback changelog for ${tag}`);
+            }
+
             const encoded = Buffer.from(log).toString("base64");
             core.setOutput("changelog_b64", encoded);
             await core.summary.addRaw(log).write();
