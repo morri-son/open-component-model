@@ -82,7 +82,7 @@ jobs:
             --tag "${{ steps.compute.outputs.new_tag }}" \
             -o "$RUNNER_TEMP/CHANGELOG.md" \
             --use-branch-tags \
-            --latest
+            --current
 
       - name: Summarize changelog
         id: summarize
