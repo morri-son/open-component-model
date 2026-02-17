@@ -95,7 +95,7 @@ jobs:
   # --------------------------------------------------------
   build:
     name: Build CLI for ${{ needs.prepare.outputs.new_tag }}
-    if: ${{ needs.tag_rc.outputs.pushed == 'true' }}
+    if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
     needs: [prepare, tag_rc]
     uses: ./.github/workflows/cli.yml
     secrets: inherit
@@ -107,7 +107,7 @@ jobs:
   # --------------------------------------------------------
   release_rc:
     name: Create RC Pre-Release
-    if: ${{ needs.tag_rc.outputs.pushed == 'true' }}
+    if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
     needs: [prepare, tag_rc, build]
     runs-on: ubuntu-latest
     permissions:
@@ -324,24 +324,35 @@ jobs:
         with:
           script: |
             const { execSync } = require('child_process');
-            const rcVersion = process.env.RC_VERSION;
-            const finalVersion = process.env.FINAL_VERSION;
-            const targetRepo = process.env.TARGET_REPO;
-            if (!rcVersion || !finalVersion) {
-              core.setFailed('Missing RC_VERSION or FINAL_VERSION');
-              return;
-            }
-            execSync(`oras tag "${targetRepo}:${rcVersion}" "${finalVersion}" "latest"`, { stdio: 'inherit' });
-            core.info(`✅ Promoted ${targetRepo}:${rcVersion} to :${finalVersion} and :latest`);
+            const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
 
-            await core.summary
-              .addHeading('OCI Image Promotion')
-              .addTable([
-                [{data: 'Field', header: true}, {data: 'Value', header: true}],
-                ['Source Tag', `${targetRepo}:${rcVersion}`],
-                ['Promoted Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
-              ])
-              .write();
+            if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
+
+            // Get highest existing final version from GHCR
+            let highest = '';
+            try {
+              const { data } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+                package_type: 'container', package_name: 'cli', org: context.repo.owner
+              });
+              highest = data.flatMap(v => v.metadata?.container?.tags || [])
+                .filter(t => /^v\d+\.\d+\.\d+$/.test(t))
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+                .pop() || '';
+            } catch (e) { core.warning(`Could not fetch existing tags: ${e.message}`); }
+
+            // Set :latest only if this version is >= the current highest
+            const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
+            const tags = setLatest ? `"${final}" "latest"` : `"${final}"`;
+
+            execSync(`oras tag "${repo}:${rc}" ${tags}`, { stdio: 'inherit' });
+            core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
+
+            await core.summary.addHeading('OCI Image Promotion').addTable([
+              [{data: 'Field', header: true}, {data: 'Value', header: true}],
+              ['Source', `${repo}:${rc}`],
+              ['Final', `${repo}:${final}`],
+              ['Latest', setLatest ? 'Yes' : `No (${highest} > ${final})`],
+            ]).write();
 
   # --------------------------------------------------------
   # 7. Release Final: Create GitHub final release
@@ -430,6 +441,9 @@ jobs:
                 release_id: created.data.id,
                 name: file,
                 data,
+                headers: {
+                  'content-type': 'application/octet-stream',
+                },
               });
             }
 

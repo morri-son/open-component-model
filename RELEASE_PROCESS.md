@@ -190,7 +190,7 @@ and final promotion in a single run, with a 14-day environment gate in between.
 - **prepare**: compute next RC metadata + changelog via git-cliff.
 - **tag_rc**: create/push RC tag (skipped on dry-run).
 - **build**: call `cli.yml` to build binaries, OCI image, and generate attestations.
-- **release_rc**: publish GitHub pre-release with binaries and OCI tarball.
+- **release_rc**: publish GitHub pre-release with binaries and publish OCI image on ghcr.io.
 - **Environment Gate**: workflow pauses for 14 days, then requires approval.
 - **verify_attestations**: verify all attestations via `gh attestation verify`.
 - **promote_final**: create final tag from RC commit, promote OCI tags.
@@ -234,7 +234,7 @@ Once approved, the workflow continues with:
 2. **Validation**: Ensures RC tag and promotion tag are present
 3. **Final tag creation**: Creates immutable final tag from RC commit SHA
 4. **OCI promotion**: Tags the RC image as final version and `latest`
-5. **Release creation**: Publishes GitHub final release with release notes via git-cliff
+5. **Release creation**: Publishes GitHub final release with release notes from RC release body
 
 </details>
 
