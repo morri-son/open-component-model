@@ -1,0 +1,474 @@
+name: Kubernetes Controller
+
+on:
+  # Trigger workflow on pushes to main or release branches, and on PRs targeting main as well as release tags
+  # if we are on a PR, limit runtime and only build the controller if it has been modified.
+  # if we are on a push, build the Controller regardless of what has changed to always be up to date
+  # also allow manual triggering for rebuilds or failing jobs or rebuilding the artifact
+  push:
+    branches:
+      - main
+      - 'releases/v**'
+    tags:
+      - 'controller/v**'
+    paths:
+      - kubernetes/controller/**/*
+      - .github/workflows/kubernetes-controller.yml
+      - .env
+  pull_request:
+    branches:
+      - main
+    paths:
+      - kubernetes/controller/**/*
+      - .github/workflows/kubernetes-controller.yml
+      - .env
+  workflow_call:
+    inputs:
+      artifact_name:
+        description: "The artifact name to build."
+        type: string
+        required: false
+      ref:
+        description: "The ref to build on (branch or tag). Defaults to the current ref."
+        type: string
+        required: false
+    outputs:
+      artifact_name:
+        description: "The artifact name that was built."
+        value: ${{ jobs.build.outputs.artifact_name }}
+      artifact_id:
+        description: "The artifact id that was built."
+        value: ${{ jobs.build.outputs.artifact_id }}
+      image_digest:
+        description: "The digest of the pushed controller image (sha256:...)."
+        value: ${{ jobs.publish.outputs.image_digest }}
+
+env:
+  LOCATION: "kubernetes/controller"     # Folder containing the Controller source
+  REGISTRY: ghcr.io                     # Target container registry
+  # github.head_ref → branch name from the PR target (works only for pull_request events)
+  # github.ref_name → branch or tag name for normal push/tag events
+  # inputs.ref → overrides both for workflow_call
+  REF: ${{ inputs.ref || github.head_ref || github.ref_name }}
+  ARTIFACT_NAME: ${{ inputs.artifact_name || 'controller-artifacts' }}
+  # Repository selection for checkout:
+  # - pull_request: Use head repository (fork) for PR changes
+  # - other events: Use current repository
+  CHECKOUT_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+
+jobs:
+  verify-chart:
+    name: Verify Chart
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ env.CHECKOUT_REPO }}
+          ref: ${{ env.REF }}
+          sparse-checkout: |
+            ${{ env.LOCATION }}
+            .github/workflows/kubernetes-controller.yml
+            Taskfile.yml
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version-file: ${{ env.LOCATION }}/go.mod
+
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.14.0
+
+      - name: Generate values schema
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/schema
+
+      - name: Generate chart documentation
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/docs
+
+      - name: Lint chart
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/lint
+
+      - name: Render chart templates
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/template
+
+      - name: Verify no uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Uncommitted changes detected after running helm tasks"
+            git status
+            git diff
+            exit 1
+          fi
+          echo "✓ No uncommitted changes detected"
+
+  build:
+    name: Build Controller
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify-chart
+    outputs:
+      artifact_name: ${{ env.ARTIFACT_NAME }}
+      artifact_id: ${{ steps.upload-artifacts.outputs.artifact_id }}
+      should_push: ${{ steps.branch-check.outputs.should_push }}  # Used by E2E and publish jobs
+    permissions:
+      contents: read
+      packages: write         # Needed for pushing to GHCR during build
+      id-token: write         # Needed for provenance attestations
+      attestations: write     # Allows storing build attestations
+    steps:
+      # Checkout only the Controller
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ env.CHECKOUT_REPO }}
+          sparse-checkout: |
+            .github/scripts
+            ${{ env.LOCATION }}
+            Taskfile.yml
+          persist-credentials: 'false'  # Disable automatic token persistence
+          ref: ${{ env.REF }}
+
+      - name: Setup Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version-file: ${{ env.LOCATION }}/go.mod
+          cache-dependency-path: ${{ env.LOCATION }}/go.sum  # Cache dependencies by go.sum
+
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+
+      # Setup Docker Buildx for multi-arch and advanced image building
+      - name: Setup docker/buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      # Compute VERSION from env.REF
+      - name: Compute VERSION
+        id: version
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          TAG_PREFIX: "controller/v"
+        with:
+          script: |
+            const script = await import('${{ github.workspace }}/.github/scripts/compute-version.js');
+            await script.default({ core });
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build multi-arch controller image and push directly to registry
+      # We build and push in one step to enable multi-arch support
+      - name: Build & Push Multi-Arch Controller Image
+        id: build-push
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6
+        with:
+          context: ${{ env.LOCATION }}
+          file: ${{ env.LOCATION }}/Dockerfile
+          platforms: linux/amd64,linux/arm64  # Multi-arch for production
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller:${{ steps.version.outputs.version }}
+          # Enable GitHub Actions cache for layer caching
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Attest controller image with provenance metadata, but only if we're not on a PR
+      - name: Attest controller image
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          subject-digest: ${{ steps.build-push.outputs.digest }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+          push-to-registry: true
+
+      # Determine if this branch is eligible for publishing, but only if we're not on a PR
+      - name: Determine if this is a push-eligible branch
+        if: ${{ github.event_name != 'pull_request' }}
+        id: branch-check
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            core.setOutput(
+              "should_push",
+              process.env.GITHUB_REF_NAME === context.payload.repository.default_branch ||
+              /^releases\/v0\./.test(process.env.GITHUB_REF_NAME) ||
+              /^controller\/v\d+\.\d+(\.\d+)?(-.*)?$/.test(process.env.GITHUB_REF_NAME)
+            )
+
+      # Save image reference as artifact for E2E tests
+      - name: Save image reference for E2E
+        if: ${{ steps.branch-check.outputs.should_push }}
+        run: |
+          mkdir -p /tmp/controller-artifacts
+          echo "${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller:${{ steps.version.outputs.version }}" > /tmp/controller-artifacts/image-ref.txt
+          echo "${{ steps.build-push.outputs.digest }}" > /tmp/controller-artifacts/image-digest.txt
+
+      # Upload image reference only if branch is eligible for push
+      - name: Upload Artifacts
+        if: ${{ steps.branch-check.outputs.should_push }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        id: upload-artifacts
+        with:
+          if-no-files-found: 'error'
+          name: ${{ env.ARTIFACT_NAME }}
+          path: /tmp/controller-artifacts/
+
+  E2E:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+    if: ${{ needs.build.outputs.should_push == 'true' }}  # Only run E2E if we're going to publish
+    permissions:
+      actions: read       # Needed for artifact download
+      packages: read      # Needed to pull image from GHCR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ env.CHECKOUT_REPO }}
+          ref: ${{ env.REF }}
+          sparse-checkout: |
+            ${{ env.LOCATION }}
+            Taskfile.yml
+            .env
+          persist-credentials: false
+
+      - name: Setup Go (required for CLI build)
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version-file: ${{ env.LOCATION }}/go.mod
+          cache: false
+
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up docker
+        uses: docker/setup-docker-action@e43656e248c0bd0647d3f5c195d116aacf6fcaf4 # v4
+
+      - name: Setup ocm
+        uses: open-component-model/ocm-setup-action@655f3525fd283ca7d22e6b2ceec42324331df401 # v1.0.0
+
+      - name: Setup Flux CLI
+        uses: fluxcd/flux2/action@8454b02a32e48d775b9f563cb51fdcb1787b5b93 # v2.7.5
+
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.14.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Download artifact with image reference
+      - name: Download build artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: /tmp/controller-artifacts
+
+      # Pull the pre-built image from registry
+      - name: Pull controller image from registry
+        run: |
+          IMAGE_REF=$(cat /tmp/controller-artifacts/image-ref.txt)
+          echo "Pulling image: ${IMAGE_REF}"
+          docker pull "${IMAGE_REF}"
+          
+          # Verify image was pulled
+          docker images | grep kubernetes/controller || {
+            echo "::error::Controller image not found in Docker"
+            docker images
+            exit 1
+          }
+          
+          # Set env for E2E tests
+          echo "CONTROLLER_IMG=${IMAGE_REF}" >> "$GITHUB_ENV"
+
+      # Create Kind cluster and run E2E tests
+      - name: Create kind cluster and run E2E
+        run: |
+          # Load KIND_NODE_IMAGE_VERSION from .env
+          source .env
+          
+          # Setup cluster (without building image - we already have it)
+          bash ${{ env.LOCATION }}/test/e2e/hacks/setup.sh
+          
+          # Load pre-pulled image into Kind cluster
+          kind load docker-image "${CONTROLLER_IMG}"
+          
+          # Run E2E tests
+          task ${{ env.LOCATION }}:test/e2e
+
+      - name: Cleanup Docker resources
+        if: always()
+        run: docker system prune --force
+
+  publish:
+    name: Publish Chart & Attest
+    runs-on: ubuntu-latest
+    needs: [build, E2E]
+    if: ${{ needs.build.outputs.should_push == 'true' }}  # Skip unless we should push
+    outputs:
+      image_digest: ${{ steps.image-digest.outputs.digest }}
+    permissions:
+      actions: read           # Needed for artifact download
+      packages: write         # Needed for pushing chart and provenance layers
+      id-token: write         # Needed for provenance attestation identity
+      attestations: write     # Allows storing provenance attestation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ env.CHECKOUT_REPO }}
+          ref: ${{ env.REF }}
+          sparse-checkout: |
+            ${{ env.LOCATION }}
+            Taskfile.yml
+          persist-credentials: 'false'  # Disable automatic token persistence
+
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Download artifact with image digest
+      - name: Download build artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: /tmp/controller-artifacts
+
+      # Read image digest from artifact
+      - name: Read image digest
+        id: image-digest
+        run: |
+          DIGEST=$(cat /tmp/controller-artifacts/image-digest.txt)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "✓ Image digest: ${DIGEST}"
+
+      # Setup ORAS CLI for chart digest resolution
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
+
+      - name: Install Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: v3.14.0
+
+      # Get version from image reference
+      - name: Read version
+        id: version
+        run: |
+          IMAGE_REF=$(cat /tmp/controller-artifacts/image-ref.txt)
+          VERSION=$(echo "${IMAGE_REF}" | cut -d':' -f2)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "✓ Version: ${VERSION}"
+
+      # Package Helm chart with matching version and image digest reference
+      - name: Package Helm chart
+        working-directory: ${{ env.LOCATION }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
+        run: |
+          # Package chart with version and app version
+          # The chart will reference the image by digest for reproducibility
+          task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
+          
+          # Verify chart was created
+          CHART_FILE="dist/ocm-k8s-toolkit-${VERSION}.tgz"
+          if [ ! -f "${CHART_FILE}" ]; then
+            echo "::error::Chart file not found: ${CHART_FILE}"
+            ls -la dist/
+            exit 1
+          fi
+          echo "✓ Chart packaged: ${CHART_FILE}"
+
+      # Push Helm chart to OCI registry
+      - name: Push Helm chart
+        working-directory: ${{ env.LOCATION }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          CHART_PATH="dist/ocm-k8s-toolkit-${VERSION}.tgz"
+          CHART_REPO="oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          
+          helm push "${CHART_PATH}" "${CHART_REPO}"
+          echo "✓ Chart pushed to ${CHART_REPO}"
+
+      # Tag image as latest only on main branch
+      - name: Tag Image as latest on main
+        if: ${{ env.REF == github.event.repository.default_branch }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          IMAGE_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+        run: |
+          oras tag "${IMAGE_REPO}:${VERSION}" "${IMAGE_REPO}:latest"
+          echo "✓ Tagged ${IMAGE_REPO}:latest"
+
+      # Resolve chart digest for attestation
+      - name: Resolve chart digest
+        id: chart-digest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          DIGEST=$(oras resolve "${CHART_REPO}:${VERSION}")
+          
+          if [ -z "$DIGEST" ]; then
+            echo "::error::Failed to resolve chart digest"
+            exit 1
+          fi
+          
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "✓ Chart digest: ${DIGEST}"
+
+      # Attest Helm chart with provenance metadata
+      - name: Attest Helm chart
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          subject-digest: ${{ steps.chart-digest.outputs.digest }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
+          push-to-registry: true
+
+      - name: Cleanup Docker resources
+        if: always()
+        run: docker system prune --force
+
