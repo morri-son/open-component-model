@@ -305,16 +305,19 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
           path: /tmp/controller-artifacts
 
-      # Pull the pre-built image from registry (amd64 only for Kind)
+      # Pull the pre-built image from registry by digest to avoid multi-arch manifest issues
       - name: Pull controller image from registry
         run: |
           IMAGE_REF=$(cat /tmp/controller-artifacts/image-ref.txt)
-          echo "Pulling image: ${IMAGE_REF}"
+          IMAGE_DIGEST=$(cat /tmp/controller-artifacts/image-digest.txt)
+          IMAGE_REPO="${IMAGE_REF%:*}"  # Strip tag to get repo
           
-          # Pull only amd64 platform for Kind (GitHub runners are amd64)
-          docker pull --platform linux/amd64 "${IMAGE_REF}"
+          echo "Pulling image by digest: ${IMAGE_REPO}@${IMAGE_DIGEST}"
           
-          # Verify image was pulled
+          # Pull by digest to get the exact amd64 image, bypassing multi-arch manifest
+          docker pull --platform linux/amd64 "${IMAGE_REPO}@${IMAGE_DIGEST}"
+          
+          # Verify image was pulled and has the expected tag
           docker images | grep kubernetes/controller || {
             echo "::error::Controller image not found in Docker"
             docker images
@@ -323,7 +326,7 @@ jobs:
           
           echo "✓ Successfully pulled amd64 image for Kind"
           
-          # Set env for E2E tests
+          # Set env for E2E tests - use original tag reference
           echo "CONTROLLER_IMG=${IMAGE_REF}" >> "$GITHUB_ENV"
 
       # Create Kind cluster and run E2E tests
