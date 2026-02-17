@@ -289,8 +289,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           subject-path: ${{ env.COMPONENT_PATH }}/${{ steps.chart-push.outputs.chart_path }}
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
-          push-to-registry: true
 
   release_final:
     name: Create Final Release
