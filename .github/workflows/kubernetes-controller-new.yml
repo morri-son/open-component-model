@@ -305,12 +305,14 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
           path: /tmp/controller-artifacts
 
-      # Pull the pre-built image from registry
+      # Pull the pre-built image from registry (amd64 only for Kind)
       - name: Pull controller image from registry
         run: |
           IMAGE_REF=$(cat /tmp/controller-artifacts/image-ref.txt)
           echo "Pulling image: ${IMAGE_REF}"
-          docker pull "${IMAGE_REF}"
+          
+          # Pull only amd64 platform for Kind (GitHub runners are amd64)
+          docker pull --platform linux/amd64 "${IMAGE_REF}"
           
           # Verify image was pulled
           docker images | grep kubernetes/controller || {
@@ -318,6 +320,8 @@ jobs:
             docker images
             exit 1
           }
+          
+          echo "✓ Successfully pulled amd64 image for Kind"
           
           # Set env for E2E tests
           echo "CONTROLLER_IMG=${IMAGE_REF}" >> "$GITHUB_ENV"
