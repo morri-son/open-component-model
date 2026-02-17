@@ -95,7 +95,7 @@ jobs:
   # --------------------------------------------------------
   build:
     name: Build CLI for ${{ needs.prepare.outputs.new_tag }}
-    if: ${{ needs.tag_rc.outputs.pushed == 'true' }}
+    if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
     needs: [prepare, tag_rc]
     uses: ./.github/workflows/cli.yml
     secrets: inherit
@@ -107,7 +107,7 @@ jobs:
   # --------------------------------------------------------
   release_rc:
     name: Create RC Pre-Release
-    if: ${{ needs.tag_rc.outputs.pushed == 'true' }}
+    if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
     needs: [prepare, tag_rc, build]
     runs-on: ubuntu-latest
     permissions:
@@ -117,9 +117,11 @@ jobs:
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: |
-          [ -n "$CHANGELOG_B64" ] && echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md" || true
-          # Ensure file exists and is not empty
-          [ -s "${{ runner.temp }}/CHANGELOG.md" ] || echo "Release notes not available." > "${{ runner.temp }}/CHANGELOG.md"
+          if [ -z "$CHANGELOG_B64" ]; then
+            echo "::error::changelog_b64 is empty - release-candidate-version workflow failed"
+            exit 1
+          fi
+          echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -137,12 +139,8 @@ jobs:
           body_path: ${{ runner.temp }}/CHANGELOG.md
           fail_on_unmatched_files: true
           prerelease: true
-          # Binaries and CHANGELOG.md as release assets.
-          # OCI image is available in GHCR, not as a tarball asset.
-          # CHANGELOG.md is uploaded as asset for final release to download.
           files: |
             ${{ runner.temp }}/rc-build-assets/bin/ocm-*
-            ${{ runner.temp }}/CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -326,24 +324,35 @@ jobs:
         with:
           script: |
             const { execSync } = require('child_process');
-            const rcVersion = process.env.RC_VERSION;
-            const finalVersion = process.env.FINAL_VERSION;
-            const targetRepo = process.env.TARGET_REPO;
-            if (!rcVersion || !finalVersion) {
-              core.setFailed('Missing RC_VERSION or FINAL_VERSION');
-              return;
-            }
-            execSync(`oras tag "${targetRepo}:${rcVersion}" "${finalVersion}" "latest"`, { stdio: 'inherit' });
-            core.info(`✅ Promoted ${targetRepo}:${rcVersion} to :${finalVersion} and :latest`);
+            const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
 
-            await core.summary
-              .addHeading('OCI Image Promotion')
-              .addTable([
-                [{data: 'Field', header: true}, {data: 'Value', header: true}],
-                ['Source Tag', `${targetRepo}:${rcVersion}`],
-                ['Promoted Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
-              ])
-              .write();
+            if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
+
+            // Get highest existing final version from GHCR
+            let highest = '';
+            try {
+              const { data } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+                package_type: 'container', package_name: 'cli', org: context.repo.owner
+              });
+              highest = data.flatMap(v => v.metadata?.container?.tags || [])
+                .filter(t => /^v\d+\.\d+\.\d+$/.test(t))
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+                .pop() || '';
+            } catch (e) { core.warning(`Could not fetch existing tags: ${e.message}`); }
+
+            // Set :latest only if this version is >= the current highest
+            const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
+            const tags = setLatest ? `"${final}" "latest"` : `"${final}"`;
+
+            execSync(`oras tag "${repo}:${rc}" ${tags}`, { stdio: 'inherit' });
+            core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
+
+            await core.summary.addHeading('OCI Image Promotion').addTable([
+              [{data: 'Field', header: true}, {data: 'Value', header: true}],
+              ['Source', `${repo}:${rc}`],
+              ['Final', `${repo}:${final}`],
+              ['Latest', setLatest ? 'Yes' : `No (${highest} > ${final})`],
+            ]).write();
 
   # --------------------------------------------------------
   # 7. Release Final: Create GitHub final release
@@ -355,15 +364,27 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Download all assets from RC release (binaries + CHANGELOG.md)
-      - name: Download RC release assets
+      # Get release notes from RC release body (no separate asset needed)
+      - name: Get release notes from RC
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
+        run: |
+          gh release view "$RC_TAG" \
+            --repo "${{ github.repository }}" \
+            --json body \
+            --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
+
+      # Download binaries from RC release assets (same binaries that were tested)
+      - name: Download RC release binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
         run: |
           gh release download "$RC_TAG" \
             --repo "${{ github.repository }}" \
-            --dir "${{ runner.temp }}/rc-assets"
+            --pattern "ocm-*" \
+            --dir "${{ runner.temp }}/binaries"
 
       - name: Publish final release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -372,7 +393,8 @@ jobs:
           FINAL_TAG: ${{ needs.prepare.outputs.promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-          ASSETS_DIR: ${{ runner.temp }}/rc-assets
+          BINARIES_DIR: ${{ runner.temp }}/binaries
+          NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -383,8 +405,8 @@ jobs:
             const finalVersion = process.env.FINAL_VERSION;
             const rcTag = process.env.RC_TAG;
             const targetRepo = process.env.TARGET_REPO;
-            const assetsDir = process.env.ASSETS_DIR;
-            const notesFile = path.join(assetsDir, 'CHANGELOG.md');
+            const binariesDir = process.env.BINARIES_DIR;
+            const notesFile = process.env.NOTES_FILE;
 
             let notes = fs.existsSync(notesFile)
               ? fs.readFileSync(notesFile, 'utf8').trim()
@@ -408,10 +430,10 @@ jobs:
               prerelease: false,
             });
 
-            // Upload binaries (ocm-* files, exclude CHANGELOG.md)
-            const binaries = fs.readdirSync(assetsDir).filter(f => f.startsWith('ocm-'));
+            // Upload binaries from RC release (same binaries that were tested)
+            const binaries = fs.readdirSync(binariesDir).filter(f => f.startsWith('ocm-'));
             for (const file of binaries) {
-              const filePath = path.join(assetsDir, file);
+              const filePath = path.join(binariesDir, file);
               const data = fs.readFileSync(filePath);
               await github.rest.repos.uploadReleaseAsset({
                 owner: context.repo.owner,
@@ -419,6 +441,9 @@ jobs:
                 release_id: created.data.id,
                 name: file,
                 data,
+                headers: {
+                  'content-type': 'application/octet-stream',
+                },
               });
             }
 
