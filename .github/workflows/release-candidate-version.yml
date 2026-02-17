@@ -93,9 +93,22 @@ jobs:
         with:
           script: |
             const fs = require("fs");
-            const log = fs.existsSync(process.env.CHANGELOG_FILE)
-              ? fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim()
-              : "No changelog.";
+            const tag = process.env.TAG;
+            const today = new Date().toISOString().split("T")[0];
+
+            // Read changelog file if it exists
+            let log = "";
+            if (fs.existsSync(process.env.CHANGELOG_FILE)) {
+              log = fs.readFileSync(process.env.CHANGELOG_FILE, "utf8").trim();
+            }
+
+            // Generate fallback header if changelog is empty
+            // This can happen when --use-branch-tags finds no tags on a new release branch
+            if (!log) {
+              log = `## [${tag}] - ${today}\n\nNo changes since the previous release.`;
+              core.info(`Generated fallback changelog for ${tag}`);
+            }
+
             const encoded = Buffer.from(log).toString("base64");
             core.setOutput("changelog_b64", encoded);
             await core.summary.addRaw(log).write();
