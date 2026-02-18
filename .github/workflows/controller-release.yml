@@ -1,5 +1,24 @@
 name: Controller Release
 
+# =============================================================================
+# CONTROLLER RELEASE WORKFLOW
+# =============================================================================
+# Two-phase release process with environment gate for safety:
+#
+# PHASE 1 (RC): Automatic
+#   - Compute next RC version (e.g., v0.21.0-rc.13)
+#   - Create annotated git tag
+#   - Build, test, and publish image + chart via controller build workflow
+#   - Create GitHub pre-release with Helm chart as asset
+#
+# PHASE 2 (Final): Manual approval required
+#   - Waits for 'controller/release' environment approval (14-day timeout)
+#   - Verifies RC attestations (image + chart)
+#   - Promotes RC image to final version tag (+ 'latest' if highest)
+#   - Re-packages Helm chart with final version (same image digest)
+#   - Creates GitHub release with chart as asset
+# =============================================================================
+
 run-name: Controller Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && ' (dry-run)' || '' }}
 
 on:
@@ -24,10 +43,17 @@ concurrency:
   group: controller-release-${{ github.event.inputs.branch }}
 
 jobs:
-  # ============================================================
+  # ===========================================================================
   # PHASE 1: RELEASE CANDIDATE
-  # ============================================================
+  # ===========================================================================
 
+  # ---------------------------------------------------------------------------
+  # PREPARE
+  # ---------------------------------------------------------------------------
+  # Computes the next RC version by analyzing existing tags on the release
+  # branch. Also generates changelog from commit messages since last tag.
+  # Outputs: new_version, new_tag, promotion_version, promotion_tag, changelog
+  # ---------------------------------------------------------------------------
   prepare:
     name: Prepare Release Metadata
     uses: ./.github/workflows/release-candidate-version.yml
@@ -36,6 +62,13 @@ jobs:
       component_path: kubernetes/controller
     secrets: inherit
 
+  # ---------------------------------------------------------------------------
+  # TAG RC
+  # ---------------------------------------------------------------------------
+  # Creates the RC git tag with changelog as annotation message.
+  # Uses GitHub App token to bypass branch protection and trigger build workflow.
+  # Skips if tag already exists (idempotent).
+  # ---------------------------------------------------------------------------
   tag_rc:
     name: Create RC Tag
     runs-on: ubuntu-latest
@@ -48,6 +81,7 @@ jobs:
     steps:
       - name: Generate App Token
         id: get_token
+        # App token required to push tags that trigger other workflows
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         with:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
@@ -67,6 +101,7 @@ jobs:
 
       - name: Create tag
         id: tag
+        # Creates annotated tag with changelog; skips if already exists
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -83,6 +118,14 @@ jobs:
             execSync(`git push origin "refs/tags/${tag}"`);
             core.setOutput("pushed","true");
 
+  # ---------------------------------------------------------------------------
+  # BUILD
+  # ---------------------------------------------------------------------------
+  # Calls the main controller build workflow which:
+  # - Builds multi-arch image to OCI layout
+  # - Runs E2E tests
+  # - Publishes image + chart with attestations
+  # ---------------------------------------------------------------------------
   build:
     name: Build Controller
     if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
@@ -92,6 +135,12 @@ jobs:
     with:
       ref: ${{ needs.prepare.outputs.new_tag }}
 
+  # ---------------------------------------------------------------------------
+  # RELEASE RC
+  # ---------------------------------------------------------------------------
+  # Creates GitHub pre-release with the Helm chart as downloadable asset.
+  # Downloads chart from GHCR and attaches to release.
+  # ---------------------------------------------------------------------------
   release_rc:
     name: Create RC Release
     if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
@@ -116,12 +165,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Helm chart
+        # Helm appends chart name to OCI path: .../chart/ocm-k8s-toolkit
         run: |
           helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.new_version }}" \
             --destination "${{ runner.temp }}/assets"
 
       - name: Create RC Release
+        # Pre-release allows testing before promoting to final
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           name: Controller ${{ needs.prepare.outputs.new_version }}
@@ -131,10 +182,17 @@ jobs:
           prerelease: true
           files: ${{ runner.temp }}/assets/ocm-k8s-toolkit-*.tgz
 
-  # ============================================================
+  # ===========================================================================
   # PHASE 2: FINAL RELEASE (after environment gate)
-  # ============================================================
+  # ===========================================================================
 
+  # ---------------------------------------------------------------------------
+  # VERIFY ATTESTATIONS
+  # ---------------------------------------------------------------------------
+  # Verifies SLSA provenance attestations for both image and chart.
+  # This job requires approval from the 'controller/release' environment,
+  # creating a gate between RC and final release (default: 14-day timeout).
+  # ---------------------------------------------------------------------------
   verify_attestations:
     name: Verify RC Attestations
     needs: [prepare, build, release_rc]
@@ -149,6 +207,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+        # Validates SLSA provenance was created by this repository
         run: |
           gh attestation verify \
             "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller@${IMAGE_DIGEST}" \
@@ -173,11 +232,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.new_version }}
+        # Resolves chart digest first, then verifies attestation
         run: |
           CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
           DIGEST=$(oras resolve "${CHART_REPO}:${VERSION}")
           gh attestation verify "oci://${CHART_REPO}@${DIGEST}" --repo "${{ github.repository }}"
 
+  # ---------------------------------------------------------------------------
+  # PROMOTE FINAL
+  # ---------------------------------------------------------------------------
+  # Promotes RC artifacts to final release:
+  # - Re-tags image: RC tag -> final tag (+ 'latest' if highest version)
+  # - Re-packages chart with final version (same IMAGE_DIGEST for reproducibility)
+  # - Creates attestation for new chart package
+  # Image is NOT rebuilt - only re-tagged, preserving the same digest.
+  # ---------------------------------------------------------------------------
   promote_final:
     name: Promote to Final
     needs: [prepare, build, verify_attestations]
@@ -211,6 +280,7 @@ jobs:
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create final tag
+        # Points final tag to same commit as RC tag (no rebuild needed)
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -237,6 +307,7 @@ jobs:
 
       - name: Promote image tags
         id: promote_oci
+        # Re-tags existing image; adds 'latest' only if this is the highest version
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
@@ -278,6 +349,7 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.promotion_version }}
           IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+        # Re-packages chart with final version but SAME image digest for reproducibility
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
           helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
@@ -286,11 +358,13 @@ jobs:
         id: chart-digest
         env:
           VERSION: ${{ needs.prepare.outputs.promotion_version }}
+        # Get digest after push for attestation
         run: |
           CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
           echo "digest=$(oras resolve ${CHART_REPO}:${VERSION})" >> "$GITHUB_OUTPUT"
 
       - name: Attest final chart
+        # New attestation for final chart (different version = different digest)
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -298,6 +372,13 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit
           push-to-registry: true
 
+  # ---------------------------------------------------------------------------
+  # RELEASE FINAL
+  # ---------------------------------------------------------------------------
+  # Creates the final GitHub release (non-prerelease).
+  # Downloads final chart from GHCR and attaches as asset.
+  # Copies release notes from RC release, updating the header.
+  # ---------------------------------------------------------------------------
   release_final:
     name: Create Final Release
     needs: [prepare, promote_final]
@@ -308,6 +389,7 @@ jobs:
       - name: Get RC release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Reuses changelog from RC release
         run: |
           gh release view "${{ needs.prepare.outputs.new_tag }}" \
             --repo "${{ github.repository }}" --json body --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
@@ -325,12 +407,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download final chart
+        # Downloads newly published final chart version
         run: |
           helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.promotion_version }}" \
             --destination "${{ runner.temp }}/assets"
 
       - name: Publish final release
+        # Creates non-prerelease with chart asset; sets as 'latest' if highest version
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}

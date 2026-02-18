@@ -1,5 +1,15 @@
 name: Kubernetes Controller
 
+# =============================================================================
+# CONTROLLER BUILD WORKFLOW
+# =============================================================================
+# This workflow builds, tests, and publishes the OCM Kubernetes Controller.
+# It uses an OCI Layout pattern for multi-arch image builds, enabling:
+# - Single build for both registry push and local E2E testing
+# - Test before publish (no untested images in registry)
+# - No PR pollution (PRs don't push to registry)
+# =============================================================================
+
 on:
   push:
     branches:
@@ -47,6 +57,12 @@ env:
   CHECKOUT_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
 
 jobs:
+  # ===========================================================================
+  # VERIFY CHART
+  # ===========================================================================
+  # Validates the Helm chart by running schema generation, docs generation,
+  # linting, and template rendering. Ensures chart is valid before building.
+  # ===========================================================================
   verify-chart:
     name: Verify Chart
     runs-on: ubuntu-latest
@@ -75,6 +91,7 @@ jobs:
 
       - name: Validate Helm chart
         working-directory: ${{ env.LOCATION }}
+        # Runs schema, docs, lint, and template tasks to ensure chart validity
         run: |
           task helm/schema
           task helm/docs
@@ -82,6 +99,7 @@ jobs:
           task helm/template
 
       - name: Verify no uncommitted changes
+        # Ensures generated files (schema, docs) are committed
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "::error::Uncommitted changes detected after running helm tasks"
@@ -89,6 +107,15 @@ jobs:
             exit 1
           fi
 
+  # ===========================================================================
+  # BUILD
+  # ===========================================================================
+  # Builds multi-arch container image (linux/amd64, linux/arm64) to OCI Layout.
+  # Two outputs are created:
+  # 1. OCI Layout directory - for multi-arch registry push
+  # 2. Docker tar (amd64 only) - for loading into Kind cluster for E2E tests
+  # The second build is instant due to buildx layer caching.
+  # ===========================================================================
   build:
     name: Build Controller
     runs-on: ubuntu-latest
@@ -130,6 +157,7 @@ jobs:
 
       - name: Compute VERSION
         id: version
+        # Extracts semantic version from git ref (tag: v0.21.0 -> 0.21.0, main: 0.0.0-main)
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           REF: ${{ env.REF }}
@@ -141,6 +169,7 @@ jobs:
 
       - name: Determine publish eligibility
         id: branch-check
+        # Only publish for: main, release branches, release tags, workflow_call (never for PRs)
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           REF: ${{ env.REF }}
@@ -167,6 +196,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+        # Two builds: OCI Layout for registry (multi-arch), Docker tar for Kind (amd64 only)
         run: |
           mkdir -p tmp/oci tmp/docker
           
@@ -187,6 +217,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         id: upload-artifacts
+        # Artifacts are used by E2E job and publish job
         with:
           if-no-files-found: error
           name: ${{ env.ARTIFACT_NAME }}
@@ -194,6 +225,13 @@ jobs:
             ${{ env.LOCATION }}/tmp/oci/
             ${{ env.LOCATION }}/tmp/docker/
 
+  # ===========================================================================
+  # E2E TESTS
+  # ===========================================================================
+  # Runs end-to-end tests in a Kind cluster. Loads the amd64 Docker tar image
+  # (not the multi-arch OCI layout) because Kind only supports single-platform
+  # images. Tests run BEFORE publishing to ensure no broken images in registry.
+  # ===========================================================================
   E2E:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -253,6 +291,7 @@ jobs:
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+        # Load amd64 image from Docker tar (not OCI layout) for Kind compatibility
         run: |
           echo "Loading image from Docker tar..."
           docker load < tmp/docker/controller-amd64.tar
@@ -267,6 +306,7 @@ jobs:
           echo "CONTROLLER_IMG=${IMAGE_NAME}:${VERSION}" >> "$GITHUB_ENV"
 
       - name: Run E2E tests
+        # Creates Kind cluster, loads image, runs tests via Helm chart
         run: |
           set -a && source ${{ env.LOCATION }}/.env && set +a
           bash ${{ env.LOCATION }}/test/e2e/hacks/setup.sh
@@ -277,8 +317,20 @@ jobs:
         if: always()
         run: docker system prune --force
 
+  # ===========================================================================
+  # PUBLISH
+  # ===========================================================================
+  # Publishes the multi-arch image and Helm chart to GHCR with attestations.
+  # Only runs after successful E2E tests and when should_publish is true.
+  # Steps:
+  # 1. Push multi-arch image from OCI Layout
+  # 2. Create image attestation (SLSA provenance)
+  # 3. Tag as 'edge' on main branch (development builds)
+  # 4. Package and push Helm chart with embedded image digest
+  # 5. Create chart attestation
+  # ===========================================================================
   publish:
-    name: Publish Image & Chart
+    name: Publish and Attest Image & Chart
     runs-on: ubuntu-latest
     needs: [build, E2E]
     if: ${{ needs.build.outputs.should_publish == 'true' }}
@@ -332,6 +384,7 @@ jobs:
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+        # Push multi-arch manifest from OCI layout directory to registry
         run: |
           oras cp --from-oci-layout tmp/oci/controller:${VERSION} ${IMAGE_NAME}:${VERSION}
 
@@ -340,11 +393,13 @@ jobs:
         env:
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
           VERSION: ${{ needs.build.outputs.version }}
+        # Get immutable digest for attestation and chart embedding
         run: |
           DIGEST=$(oras resolve "${IMAGE_NAME}:${VERSION}")
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Attest image
+        # Creates SLSA provenance attestation for supply chain security
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -352,18 +407,20 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
           push-to-registry: true
 
-      - name: Tag as latest on main
+      - name: Tag as edge on main
         if: ${{ env.REF == github.event.repository.default_branch }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
-        run: oras tag "${IMAGE_NAME}:${VERSION}" latest
+        # 'edge' tag for development builds (latest stable is set during release)
+        run: oras tag "${IMAGE_NAME}:${VERSION}" edge
 
       - name: Package and push Helm chart
         working-directory: ${{ env.LOCATION }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
+        # Chart embeds the image digest for reproducible deployments
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
           helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
@@ -372,11 +429,13 @@ jobs:
         id: chart-digest
         env:
           VERSION: ${{ needs.build.outputs.version }}
+        # Helm appends chart name to OCI path, so full path includes /ocm-k8s-toolkit
         run: |
           CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
           echo "digest=$(oras resolve ${CHART_REPO}:${VERSION})" >> "$GITHUB_OUTPUT"
 
       - name: Attest chart
+        # Creates SLSA provenance attestation for the Helm chart
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
