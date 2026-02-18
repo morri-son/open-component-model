@@ -29,7 +29,7 @@ jobs:
   # ============================================================
 
   # --------------------------------------------------------
-  # 1. Prepare: Compute RC version and generate changelog
+  # 1. PREPARE: Compute RC version and generate changelog
   # --------------------------------------------------------
   prepare:
     name: Prepare Release Metadata
@@ -40,7 +40,7 @@ jobs:
     secrets: inherit
 
   # --------------------------------------------------------
-  # 2. Tag RC: Create and push RC tag (skipped on dry-run)
+  # 2. TAG RC: Create and push RC tag (skipped on dry-run)
   # --------------------------------------------------------
   tag_rc:
     name: Create and Push RC Tag
@@ -59,22 +59,22 @@ jobs:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
-      # Checkout repository for tagging
       - name: Checkout Repository
+        # Checkout repository for tagging
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
 
-      # Set committer for git identity
       - name: Setup git config
+        # Set committer for git identity
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      # Create and push tag if not existing
       - name: Create ${{ needs.prepare.outputs.new_tag }}
+        # Create and push tag if not existing
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
@@ -83,18 +83,18 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execSync } = require("child_process");
+            const { execFileSync } = require("child_process");
             const tag = process.env.TAG;
             const msg = Buffer.from(process.env.CHANGELOG_B64, "base64").toString("utf8");
-            try { execSync(`git rev-parse "refs/tags/${tag}"`); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
+            try { execFileSync("git", ["rev-parse", `refs/tags/${tag}`], { stdio: "pipe" }); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
             require("fs").writeFileSync(".tagmsg", msg);
-            execSync(`git tag -a "${tag}" -F .tagmsg`);
-            execSync(`git push origin "refs/tags/${tag}"`);
+            execFileSync("git", ["tag", "-a", tag, "-F", ".tagmsg"]);
+            execFileSync("git", ["push", "origin", `refs/tags/${tag}`]);
             core.setOutput("pushed","true");
             core.info(`✅ Created RC tag ${tag}`);
 
   # --------------------------------------------------------
-  # 3. Build CLI
+  # 3. BUILD CLI
   # --------------------------------------------------------
   build:
     name: Build CLI for ${{ needs.prepare.outputs.new_tag }}
@@ -106,7 +106,7 @@ jobs:
       ref: ${{ needs.prepare.outputs.new_tag }}
 
   # --------------------------------------------------------
-  # 4. Release RC: Create GitHub pre-release
+  # 4. RELEASE RC: Create GitHub pre-release
   # --------------------------------------------------------
   release_rc:
     name: Create RC Pre-Release
@@ -116,8 +116,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Recreate changelog file from base64 string for release body
       - name: Decode changelog to file
+        # Recreate changelog file from base64 string for release body
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
@@ -183,7 +183,7 @@ jobs:
   # This gate blocks all Phase 2 jobs until approved.
 
   # -----------------------------------------------------------
-  # 5. Verify Attestations: Ensure RC artifacts are attestable
+  # 5. VERIFY ATTESTATIONS: Ensure RC artifacts are attestable
   # -----------------------------------------------------------
   verify_attestations:
     name: Verify RC Attestations
@@ -226,7 +226,7 @@ jobs:
           echo "✅ OCI image attestation verified"
 
   # ---------------------------------------------------------
-  # 6. Promote Final: Create final tag and promote OCI image
+  # 6. PROMOTE FINAL: Create final tag and promote OCI image
   # ---------------------------------------------------------
   promote_final:
     name: Promote to Final Release
@@ -281,7 +281,7 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execSync } = require("child_process");
+            const { execFileSync } = require("child_process");
             const rcTag = process.env.RC_TAG;
             const finalTag = process.env.FINAL_TAG;
 
@@ -291,19 +291,19 @@ jobs:
             }
 
             try {
-              execSync(`git rev-parse "refs/tags/${finalTag}"`, { stdio: "pipe" });
+              execFileSync("git", ["rev-parse", `refs/tags/${finalTag}`], { stdio: "pipe" });
               core.setFailed(`Final tag ${finalTag} already exists. Refusing to overwrite immutable tag.`);
               return;
             } catch {}
 
-            const rcSha = execSync(`git rev-parse "refs/tags/${rcTag}^{commit}"`, { stdio: "pipe" }).toString().trim();
+            const rcSha = execFileSync("git", ["rev-parse", `refs/tags/${rcTag}^{commit}`], { stdio: "pipe" }).toString().trim();
             if (!rcSha) {
               core.setFailed(`Could not resolve commit for RC tag ${rcTag}`);
               return;
             }
 
-            execSync(`git tag -a "${finalTag}" "${rcSha}" -m "Promote ${rcTag} to ${finalTag}"`);
-            execSync(`git push origin "refs/tags/${finalTag}"`);
+            execFileSync("git", ["tag", "-a", finalTag, rcSha, "-m", `Promote ${rcTag} to ${finalTag}`]);
+            execFileSync("git", ["push", "origin", `refs/tags/${finalTag}`]);
             core.info(`✅ Created final tag ${finalTag} from ${rcTag} at ${rcSha}`);
 
       - name: Setup ORAS
@@ -325,7 +325,7 @@ jobs:
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
         with:
           script: |
-            const { execSync } = require('child_process');
+            const { execFileSync } = require('child_process');
             const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
 
             if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
@@ -348,9 +348,9 @@ jobs:
 
             // Set :latest only if this version is >= the current highest
             const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
-            const tags = setLatest ? `"${final}" "latest"` : `"${final}"`;
+            const tagArgs = setLatest ? [final, "latest"] : [final];
 
-            execSync(`oras tag "${repo}:${rc}" ${tags}`, { stdio: 'inherit' });
+            execFileSync("oras", ["tag", `${repo}:${rc}`, ...tagArgs], { stdio: 'inherit' });
             core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
 
             // Export setLatest for use in release_final job
@@ -365,7 +365,7 @@ jobs:
             ]).write();
 
   # --------------------------------------------------------
-  # 7. Release Final: Create GitHub final release
+  # 7. RELEASE FINAL: Create GitHub final release
   # --------------------------------------------------------
   release_final:
     name: Create Final Release
@@ -374,8 +374,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Get release notes from RC release body to reuse for final release
       - name: Get release notes from RC
+        # Get release notes from RC release body to reuse for final release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -385,8 +385,8 @@ jobs:
             --json body \
             --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
 
-      # Download binaries from RC release assets to reuse for final release
       - name: Download RC release binaries
+        # Download binaries from RC release assets to reuse for final release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
