@@ -147,7 +147,7 @@ jobs:
             ${{ env.LOCATION }}/tmp/oci/*      
 
   publish:
-    name: Push & Attest
+    name: Publish and Attest
     needs: build
     if: ${{ needs.build.outputs.should_push_oci_image == 'true' }}  # Skip unless we should push
     runs-on: ubuntu-latest
