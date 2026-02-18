@@ -167,6 +167,7 @@ jobs:
       - name: Download Helm chart
         # Helm appends chart name to OCI path: .../chart/ocm-k8s-toolkit
         run: |
+          mkdir -p "${{ runner.temp }}/assets"
           helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.new_version }}" \
             --destination "${{ runner.temp }}/assets"
@@ -409,6 +410,7 @@ jobs:
       - name: Download final chart
         # Downloads newly published final chart version
         run: |
+          mkdir -p "${{ runner.temp }}/assets"
           helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.promotion_version }}" \
             --destination "${{ runner.temp }}/assets"
