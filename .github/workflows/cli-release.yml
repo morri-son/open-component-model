@@ -60,7 +60,6 @@ jobs:
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
       - name: Checkout Repository
-        # Checkout repository for tagging
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
@@ -68,13 +67,11 @@ jobs:
           token: ${{ steps.get_token.outputs.token }}
 
       - name: Setup git config
-        # Set committer for git identity
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Create ${{ needs.prepare.outputs.new_tag }}
-        # Create and push tag if not existing
+      - name: Create tag
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
@@ -116,8 +113,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Decode changelog to file
-        # Recreate changelog file from base64 string for release body
+      - name: Decode changelog
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
@@ -238,21 +234,6 @@ jobs:
     outputs:
       set_latest: ${{ steps.promote_oci.outputs.set_latest }}
     steps:
-      - name: Validate release preconditions
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
-          PROMOTION_TAG: ${{ needs.prepare.outputs.promotion_tag }}
-        run: |
-          if [ -z "$RC_TAG" ]; then
-            echo "::error::Missing RC tag from prepare step"
-            exit 1
-          fi
-          if [ -z "$PROMOTION_TAG" ]; then
-            echo "::error::Missing promotion tag"
-            exit 1
-          fi
-          echo "✅ RC: $RC_TAG → Final: $PROMOTION_TAG"
-
       - name: Generate App Token
         id: get_token
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
@@ -260,7 +241,7 @@ jobs:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
@@ -273,7 +254,8 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Create final tag from RC commit
+      - name: Create final tag
+        # Points final tag to same commit as RC tag (no rebuild needed)
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -282,29 +264,16 @@ jobs:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
             const { execFileSync } = require("child_process");
-            const rcTag = process.env.RC_TAG;
-            const finalTag = process.env.FINAL_TAG;
-
-            if (!rcTag || !finalTag) {
-              core.setFailed("Missing RC_TAG or FINAL_TAG");
-              return;
-            }
-
-            try {
-              execFileSync("git", ["rev-parse", `refs/tags/${finalTag}`], { stdio: "pipe" });
-              core.setFailed(`Final tag ${finalTag} already exists. Refusing to overwrite immutable tag.`);
-              return;
+            const { RC_TAG: rcTag, FINAL_TAG: finalTag } = process.env;
+            try { 
+              execFileSync("git", ["rev-parse", `refs/tags/${finalTag}`], { stdio: "pipe" }); 
+              core.setFailed(`Tag ${finalTag} already exists`); 
+              return; 
             } catch {}
-
             const rcSha = execFileSync("git", ["rev-parse", `refs/tags/${rcTag}^{commit}`], { stdio: "pipe" }).toString().trim();
-            if (!rcSha) {
-              core.setFailed(`Could not resolve commit for RC tag ${rcTag}`);
-              return;
-            }
-
             execFileSync("git", ["tag", "-a", finalTag, rcSha, "-m", `Promote ${rcTag} to ${finalTag}`]);
             execFileSync("git", ["push", "origin", `refs/tags/${finalTag}`]);
-            core.info(`✅ Created final tag ${finalTag} from ${rcTag} at ${rcSha}`);
+            core.info(`✅ Created final tag ${finalTag} from ${rcTag} (${rcSha.substring(0,7)})`);
 
       - name: Setup ORAS
         uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
