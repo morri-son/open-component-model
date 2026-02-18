@@ -231,8 +231,6 @@ jobs:
     permissions:
       contents: write
       packages: write
-    outputs:
-      set_latest: ${{ steps.promote_oci.outputs.set_latest }}
     steps:
       - name: Generate App Token
         id: get_token
@@ -286,52 +284,19 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote OCI image tags
-        id: promote_oci
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
           FINAL_VERSION: ${{ needs.prepare.outputs.promotion_version }}
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
-        with:
-          script: |
-            const { execFileSync } = require('child_process');
-            const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
-
-            if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
-
-            // Get highest existing final version from GitHub releases (not OCI)
-            let highest = '';
-            try {
-              const releases = await github.rest.repos.listReleases({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                per_page: 100,
-              });
-              highest = releases.data
-                .filter(r => !r.prerelease && r.tag_name.startsWith('cli/v'))
-                .map(r => r.tag_name.replace('cli/v', ''))
-                .filter(t => /^\d+\.\d+\.\d+$/.test(t))
-                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-                .pop() || '';
-            } catch (e) { core.warning(`Could not fetch existing releases: ${e.message}`); }
-
-            // Set :latest only if this version is >= the current highest
-            const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
-            const tagArgs = setLatest ? [final, "latest"] : [final];
-
-            execFileSync("oras", ["tag", `${repo}:${rc}`, ...tagArgs], { stdio: 'inherit' });
-            core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
-
-            // Export setLatest for use in release_final job
-            core.setOutput('set_latest', setLatest ? 'true' : 'false');
-
-            await core.summary.addHeading('OCI Image Promotion').addTable([
-              [{data: 'Field', header: true}, {data: 'Value', header: true}],
-              ['Source', `${repo}:${rc}`],
-              ['Final', `${repo}:${final}`],
-              ['Highest existing', highest || '(none)'],
-              ['Latest', setLatest ? 'Yes' : `No (${highest} > ${final})`],
-            ]).write();
+          SET_LATEST: ${{ needs.prepare.outputs.set_latest }}
+        run: |
+          if [ "$SET_LATEST" = "true" ]; then
+            oras tag "${TARGET_REPO}:${RC_VERSION}" "${FINAL_VERSION}" "latest"
+            echo "✅ Tagged :${FINAL_VERSION} and :latest"
+          else
+            oras tag "${TARGET_REPO}:${RC_VERSION}" "${FINAL_VERSION}"
+            echo "⚠️ Tagged :${FINAL_VERSION} (not setting :latest)"
+          fi
 
   # --------------------------------------------------------
   # 7. RELEASE FINAL: Create GitHub final release
@@ -374,7 +339,8 @@ jobs:
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
           BINARIES_DIR: ${{ runner.temp }}/binaries
           NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
-          SET_LATEST: ${{ needs.promote_final.outputs.set_latest }}
+          SET_LATEST: ${{ needs.prepare.outputs.set_latest }}
+          HIGHEST_FINAL_VERSION: ${{ needs.prepare.outputs.highest_final_version }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -436,6 +402,7 @@ jobs:
             }
 
             const releaseUrl = created.data.html_url;
+            const highestFinal = process.env.HIGHEST_FINAL_VERSION || '(none)';
             const ociTags = setLatest
               ? `${targetRepo}:${finalVersion}, ${targetRepo}:latest`
               : `${targetRepo}:${finalVersion}`;
@@ -446,6 +413,7 @@ jobs:
                 [{data: 'Field', header: true}, {data: 'Value', header: true}],
                 ['Final Tag', finalTag],
                 ['Promoted from RC', rcTag],
+                ['Highest Final Version', highestFinal],
                 ['OCI Tags', ociTags],
                 ['GitHub Latest', setLatest ? 'Yes' : 'No (older version)'],
               ])
