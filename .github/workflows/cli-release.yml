@@ -83,13 +83,13 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execSync } = require("child_process");
+            const { execFileSync } = require("child_process");
             const tag = process.env.TAG;
             const msg = Buffer.from(process.env.CHANGELOG_B64, "base64").toString("utf8");
-            try { execSync(`git rev-parse "refs/tags/${tag}"`); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
+            try { execFileSync("git", ["rev-parse", `refs/tags/${tag}`], { stdio: "pipe" }); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
             require("fs").writeFileSync(".tagmsg", msg);
-            execSync(`git tag -a "${tag}" -F .tagmsg`);
-            execSync(`git push origin "refs/tags/${tag}"`);
+            execFileSync("git", ["tag", "-a", tag, "-F", ".tagmsg"]);
+            execFileSync("git", ["push", "origin", `refs/tags/${tag}`]);
             core.setOutput("pushed","true");
             core.info(`✅ Created RC tag ${tag}`);
 
@@ -281,7 +281,7 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execSync } = require("child_process");
+            const { execFileSync } = require("child_process");
             const rcTag = process.env.RC_TAG;
             const finalTag = process.env.FINAL_TAG;
 
@@ -291,19 +291,19 @@ jobs:
             }
 
             try {
-              execSync(`git rev-parse "refs/tags/${finalTag}"`, { stdio: "pipe" });
+              execFileSync("git", ["rev-parse", `refs/tags/${finalTag}`], { stdio: "pipe" });
               core.setFailed(`Final tag ${finalTag} already exists. Refusing to overwrite immutable tag.`);
               return;
             } catch {}
 
-            const rcSha = execSync(`git rev-parse "refs/tags/${rcTag}^{commit}"`, { stdio: "pipe" }).toString().trim();
+            const rcSha = execFileSync("git", ["rev-parse", `refs/tags/${rcTag}^{commit}`], { stdio: "pipe" }).toString().trim();
             if (!rcSha) {
               core.setFailed(`Could not resolve commit for RC tag ${rcTag}`);
               return;
             }
 
-            execSync(`git tag -a "${finalTag}" "${rcSha}" -m "Promote ${rcTag} to ${finalTag}"`);
-            execSync(`git push origin "refs/tags/${finalTag}"`);
+            execFileSync("git", ["tag", "-a", finalTag, rcSha, "-m", `Promote ${rcTag} to ${finalTag}`]);
+            execFileSync("git", ["push", "origin", `refs/tags/${finalTag}`]);
             core.info(`✅ Created final tag ${finalTag} from ${rcTag} at ${rcSha}`);
 
       - name: Setup ORAS
@@ -325,7 +325,7 @@ jobs:
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
         with:
           script: |
-            const { execSync } = require('child_process');
+            const { execFileSync } = require('child_process');
             const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
 
             if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
@@ -348,9 +348,9 @@ jobs:
 
             // Set :latest only if this version is >= the current highest
             const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
-            const tags = setLatest ? `"${final}" "latest"` : `"${final}"`;
+            const tagArgs = setLatest ? [final, "latest"] : [final];
 
-            execSync(`oras tag "${repo}:${rc}" ${tags}`, { stdio: 'inherit' });
+            execFileSync("oras", ["tag", `${repo}:${rc}`, ...tagArgs], { stdio: 'inherit' });
             core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
 
             // Export setLatest for use in release_final job
