@@ -29,7 +29,7 @@ jobs:
   # ============================================================
 
   # --------------------------------------------------------
-  # 1. Prepare: Compute RC version and generate changelog
+  # 1. PREPARE: Compute RC version and generate changelog
   # --------------------------------------------------------
   prepare:
     name: Prepare Release Metadata
@@ -40,7 +40,7 @@ jobs:
     secrets: inherit
 
   # --------------------------------------------------------
-  # 2. Tag RC: Create and push RC tag (skipped on dry-run)
+  # 2. TAG RC: Create and push RC tag (skipped on dry-run)
   # --------------------------------------------------------
   tag_rc:
     name: Create and Push RC Tag
@@ -59,22 +59,22 @@ jobs:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
-      # Checkout repository for tagging
       - name: Checkout Repository
+        # Checkout repository for tagging
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
 
-      # Set committer for git identity
       - name: Setup git config
+        # Set committer for git identity
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      # Create and push tag if not existing
       - name: Create ${{ needs.prepare.outputs.new_tag }}
+        # Create and push tag if not existing
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
@@ -94,7 +94,7 @@ jobs:
             core.info(`✅ Created RC tag ${tag}`);
 
   # --------------------------------------------------------
-  # 3. Build CLI
+  # 3. BUILD CLI
   # --------------------------------------------------------
   build:
     name: Build CLI for ${{ needs.prepare.outputs.new_tag }}
@@ -106,7 +106,7 @@ jobs:
       ref: ${{ needs.prepare.outputs.new_tag }}
 
   # --------------------------------------------------------
-  # 4. Release RC: Create GitHub pre-release
+  # 4. RELEASE RC: Create GitHub pre-release
   # --------------------------------------------------------
   release_rc:
     name: Create RC Pre-Release
@@ -116,8 +116,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Recreate changelog file from base64 string for release body
       - name: Decode changelog to file
+        # Recreate changelog file from base64 string for release body
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
         run: echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
@@ -183,7 +183,7 @@ jobs:
   # This gate blocks all Phase 2 jobs until approved.
 
   # -----------------------------------------------------------
-  # 5. Verify Attestations: Ensure RC artifacts are attestable
+  # 5. VERIFY ATTESTATIONS: Ensure RC artifacts are attestable
   # -----------------------------------------------------------
   verify_attestations:
     name: Verify RC Attestations
@@ -226,7 +226,7 @@ jobs:
           echo "✅ OCI image attestation verified"
 
   # ---------------------------------------------------------
-  # 6. Promote Final: Create final tag and promote OCI image
+  # 6. PROMOTE FINAL: Create final tag and promote OCI image
   # ---------------------------------------------------------
   promote_final:
     name: Promote to Final Release
@@ -365,7 +365,7 @@ jobs:
             ]).write();
 
   # --------------------------------------------------------
-  # 7. Release Final: Create GitHub final release
+  # 7. RELEASE FINAL: Create GitHub final release
   # --------------------------------------------------------
   release_final:
     name: Create Final Release
@@ -374,8 +374,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Get release notes from RC release body to reuse for final release
       - name: Get release notes from RC
+        # Get release notes from RC release body to reuse for final release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -385,8 +385,8 @@ jobs:
             --json body \
             --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
 
-      # Download binaries from RC release assets to reuse for final release
       - name: Download RC release binaries
+        # Download binaries from RC release assets to reuse for final release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}

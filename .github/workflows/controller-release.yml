@@ -48,11 +48,7 @@ jobs:
   # ===========================================================================
 
   # ---------------------------------------------------------------------------
-  # PREPARE
-  # ---------------------------------------------------------------------------
-  # Computes the next RC version by analyzing existing tags on the release
-  # branch. Also generates changelog from commit messages since last tag.
-  # Outputs: new_version, new_tag, promotion_version, promotion_tag, changelog
+  # PREPARE - Computes next RC version and generates changelog
   # ---------------------------------------------------------------------------
   prepare:
     name: Prepare Release Metadata
@@ -63,11 +59,7 @@ jobs:
     secrets: inherit
 
   # ---------------------------------------------------------------------------
-  # TAG RC
-  # ---------------------------------------------------------------------------
-  # Creates the RC git tag with changelog as annotation message.
-  # Uses GitHub App token to bypass branch protection and trigger build workflow.
-  # Skips if tag already exists (idempotent).
+  # TAG RC - Creates RC git tag with changelog as annotation message.
   # ---------------------------------------------------------------------------
   tag_rc:
     name: Create RC Tag
@@ -80,8 +72,8 @@ jobs:
       pushed: ${{ steps.tag.outputs.pushed }}
     steps:
       - name: Generate App Token
-        id: get_token
         # App token required to push tags that trigger other workflows
+        id: get_token
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         with:
           app-id: ${{ secrets.OCMBOT_APP_ID }}
@@ -100,8 +92,8 @@ jobs:
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create tag
-        id: tag
         # Creates annotated tag with changelog; skips if already exists
+        id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -119,9 +111,8 @@ jobs:
             core.setOutput("pushed","true");
 
   # ---------------------------------------------------------------------------
-  # BUILD
+  # BUILD - Calls main controller build workflow
   # ---------------------------------------------------------------------------
-  # Calls the main controller build workflow which:
   # - Builds multi-arch image to OCI layout
   # - Runs E2E tests
   # - Publishes image + chart with attestations
@@ -136,10 +127,7 @@ jobs:
       ref: ${{ needs.prepare.outputs.new_tag }}
 
   # ---------------------------------------------------------------------------
-  # RELEASE RC
-  # ---------------------------------------------------------------------------
-  # Creates GitHub pre-release with the Helm chart as downloadable asset.
-  # Downloads chart from GHCR and attaches to release.
+  # RELEASE RC - Creates GitHub pre-release with Helm chart as asset.
   # ---------------------------------------------------------------------------
   release_rc:
     name: Create RC Release
@@ -165,7 +153,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Helm chart
-        # Helm appends chart name to OCI path: .../chart/ocm-k8s-toolkit
         run: |
           mkdir -p "${{ runner.temp }}/assets"
           helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
@@ -173,7 +160,6 @@ jobs:
             --destination "${{ runner.temp }}/assets"
 
       - name: Create RC Release
-        # Pre-release allows testing before promoting to final
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           name: Controller ${{ needs.prepare.outputs.new_version }}
@@ -186,13 +172,15 @@ jobs:
   # ===========================================================================
   # PHASE 2: FINAL RELEASE (after environment gate)
   # ===========================================================================
+  # Environment Gate:
+  # The "cli/release" environment must be configured in GitHub Settings → Environments:
+  # - Required reviewers: At least 1 reviewer must approve
+  # - Wait timer: 20160 minutes (14 days)
+  #
+  # This gate blocks all Phase 2 jobs until approved.
 
   # ---------------------------------------------------------------------------
-  # VERIFY ATTESTATIONS
-  # ---------------------------------------------------------------------------
-  # Verifies SLSA provenance attestations for both image and chart.
-  # This job requires approval from the 'controller/release' environment,
-  # creating a gate between RC and final release (default: 14-day timeout).
+  # VERIFY ATTESTATIONS - Ensure RC artifacts are attestable
   # ---------------------------------------------------------------------------
   verify_attestations:
     name: Verify RC Attestations
