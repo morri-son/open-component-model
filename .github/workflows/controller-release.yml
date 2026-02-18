@@ -117,7 +117,7 @@ jobs:
 
       - name: Download Helm chart
         run: |
-          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart" \
+          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.new_version }}" \
             --destination "${{ runner.temp }}/assets"
 
@@ -174,7 +174,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.new_version }}
         run: |
-          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
           DIGEST=$(oras resolve "${CHART_REPO}:${VERSION}")
           gh attestation verify "oci://${CHART_REPO}@${DIGEST}" --repo "${{ github.repository }}"
 
@@ -287,7 +287,7 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.promotion_version }}
         run: |
-          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
           echo "digest=$(oras resolve ${CHART_REPO}:${VERSION})" >> "$GITHUB_OUTPUT"
 
       - name: Attest final chart
@@ -295,7 +295,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           subject-digest: ${{ steps.chart-digest.outputs.digest }}
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit
           push-to-registry: true
 
   release_final:
@@ -326,7 +326,7 @@ jobs:
 
       - name: Download final chart
         run: |
-          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart" \
+          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.promotion_version }}" \
             --destination "${{ runner.temp }}/assets"
 
