@@ -125,7 +125,9 @@ PHASE 2: Final Release
 ## Published Artifacts
 
 **Image:** `ghcr.io/{owner}/kubernetes/controller:{version}`
-**Chart:** `oci://ghcr.io/{owner}/kubernetes/controller/chart:{version}`
+**Chart:** `oci://ghcr.io/{owner}/kubernetes/controller/chart/ocm-k8s-toolkit:{version}`
+
+> **Note:** Helm automatically appends the chart name (`ocm-k8s-toolkit`) to the OCI repository path when pushing. Therefore, `helm pull` must include the full path with the chart name.
 
 ---
 

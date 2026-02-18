@@ -116,21 +116,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Helm chart
-        env:
-          CHART_REPO: oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
-          VERSION: ${{ needs.prepare.outputs.new_version }}
         run: |
-          mkdir -p "${{ runner.temp }}/assets"
-          for i in 1 2 3 4 5; do
-            if helm pull "${CHART_REPO}" --version "${VERSION}" --destination "${{ runner.temp }}/assets"; then
-              echo "✓ Chart downloaded successfully"
-              exit 0
-            fi
-            echo "Attempt $i: Chart not yet available in registry, waiting..."
-            sleep 5
-          done
-          echo "::error::Failed to download chart after 5 attempts"
-          exit 1
+          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
+            --version "${{ needs.prepare.outputs.new_version }}" \
+            --destination "${{ runner.temp }}/assets"
 
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
@@ -185,7 +174,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.new_version }}
         run: |
-          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart"
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
           DIGEST=$(oras resolve "${CHART_REPO}:${VERSION}")
           gh attestation verify "oci://${CHART_REPO}@${DIGEST}" --repo "${{ github.repository }}"
 
@@ -285,7 +274,6 @@ jobs:
           version: v3.14.0
 
       - name: Package and push final chart
-        id: chart-push
         working-directory: ${{ env.COMPONENT_PATH }}
         env:
           VERSION: ${{ needs.prepare.outputs.promotion_version }}
@@ -293,13 +281,22 @@ jobs:
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
           helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
-          echo "chart_path=dist/ocm-k8s-toolkit-${VERSION}.tgz" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve chart digest
+        id: chart-digest
+        env:
+          VERSION: ${{ needs.prepare.outputs.promotion_version }}
+        run: |
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
+          echo "digest=$(oras resolve ${CHART_REPO}:${VERSION})" >> "$GITHUB_OUTPUT"
 
       - name: Attest final chart
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          subject-path: ${{ env.COMPONENT_PATH }}/${{ steps.chart-push.outputs.chart_path }}
+          subject-digest: ${{ steps.chart-digest.outputs.digest }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit
+          push-to-registry: true
 
   release_final:
     name: Create Final Release
@@ -329,7 +326,7 @@ jobs:
 
       - name: Download final chart
         run: |
-          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart" \
+          helm pull "oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit" \
             --version "${{ needs.prepare.outputs.promotion_version }}" \
             --destination "${{ runner.temp }}/assets"
 

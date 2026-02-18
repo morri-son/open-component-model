@@ -360,7 +360,6 @@ jobs:
         run: oras tag "${IMAGE_NAME}:${VERSION}" latest
 
       - name: Package and push Helm chart
-        id: chart-push
         working-directory: ${{ env.LOCATION }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
@@ -368,13 +367,22 @@ jobs:
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
           helm push dist/ocm-k8s-toolkit-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
-          echo "chart_path=dist/ocm-k8s-toolkit-${VERSION}.tgz" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve chart digest
+        id: chart-digest
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          CHART_REPO="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit"
+          echo "digest=$(oras resolve ${CHART_REPO}:${VERSION})" >> "$GITHUB_OUTPUT"
 
       - name: Attest chart
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          subject-path: ${{ env.LOCATION }}/${{ steps.chart-push.outputs.chart_path }}
+          subject-digest: ${{ steps.chart-digest.outputs.digest }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart/ocm-k8s-toolkit
+          push-to-registry: true
 
       - name: Cleanup
         if: always()
