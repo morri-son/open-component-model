@@ -10,7 +10,7 @@ on:
       component_path:
         required: true
         type: string
-        description: "Path to the CLI component, e.g. cli"
+        description: "Path to the component source code, e.g. cli or kubernetes/controller"
     outputs:
       new_tag:
         description: "New RC tag name (e.g. cli/v0.1.0-rc.3)"

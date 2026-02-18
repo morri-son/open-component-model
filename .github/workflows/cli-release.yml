@@ -60,6 +60,7 @@ jobs:
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
       - name: Checkout Repository
+        # Checkout repository for tagging
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
@@ -67,11 +68,13 @@ jobs:
           token: ${{ steps.get_token.outputs.token }}
 
       - name: Setup git config
+        # Set committer for git identity
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create ${{ needs.prepare.outputs.new_tag }}
+        # Create and push tag if not existing
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
