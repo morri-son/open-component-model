@@ -20,7 +20,7 @@ This repository follows a lockstep release model for multiple components — cur
 
 The default cadence is sprint-based. At the start of each sprint, create a Release Candidate (RC)
 for the current release branch. The workflow automatically handles final promotion after a 14-day
-waiting period and required approval.
+waiting period and required approval from a reviewer.
 
 Patch releases are handled out-of-band and created on demand for critical fixes.
 A scheduled release can be skipped if the branch is not ready or there are no meaningful changes.
@@ -60,7 +60,7 @@ Copy this checklist to your "Sprint Responsible" issue:
 
 | When | Action |
 |------|--------|
-| Sprint Start | Start release workflows (creates RCs) |
+| Sprint Start | Start release workflows (create RCs) |
 | After 14 Days | Approve final promotions in GitHub UI |
 | Sprint End | Assign next release responsible |
 
@@ -152,7 +152,7 @@ and final promotion in a single run, with a 14-day environment gate in between.
 2. Run workflow **Controller Release** with equivalent inputs
    (once `controller-release.yml` is available).
 3. Verify both pre-releases were created successfully on the GitHub Releases page.
-4. The workflow will now wait at the environment gate for 14 days + approval.
+4. The workflows will now wait at the environment gate for 14 days + approval.
 
 > ⚠️ **Always do a dry-run first** before the actual release.
 
@@ -194,7 +194,7 @@ and final promotion in a single run, with a 14-day environment gate in between.
 - **Environment Gate**: workflow pauses for 14 days, then requires approval.
 - **verify_attestations**: verify all attestations via `gh attestation verify`.
 - **promote_final**: create final tag from RC commit, promote OCI tags.
-- **release_final**: publish GitHub final release with same artifacts.
+- **release_final**: publish GitHub final release with same artifacts as in RC.
 
 </details>
 
@@ -206,7 +206,7 @@ with final promotion.
 1. Go to **Actions** → find the paused workflow run for CLI.
 2. Click **Review deployments** on the pending `cli/release` environment.
 3. Approve the deployment to continue with final promotion.
-4. Repeat for the Controller workflow.
+4. Repeat for the Controller workflow (once `controller-release.yml` is available).
 5. Verify both final releases are published on the GitHub Releases page.
 
 > 🔐 **Security:** The workflow automatically verifies all attestations from the RC build
@@ -231,10 +231,9 @@ The `cli/release` environment must be configured in GitHub Settings:
 Once approved, the workflow continues with:
 
 1. **Attestation verification**: All binaries and OCI image are verified using `gh attestation verify`
-2. **Validation**: Ensures RC tag and promotion tag are present
-3. **Final tag creation**: Creates immutable final tag from RC commit SHA
-4. **OCI promotion**: Tags the RC image as final version and `latest`
-5. **Release creation**: Publishes GitHub final release with release notes from RC release body
+2. **Final tag creation**: Creates immutable final tag from RC commit SHA
+3. **OCI promotion**: Tags the RC image as final version and `latest`
+4. **Release creation**: Publishes GitHub final release with release notes from RC release body
 
 </details>
 
@@ -291,12 +290,12 @@ Document the reason for expedited release in the workflow approval comment.
 
 ## Release notes
 
-Release notes are generated automatically by the release workflows using [git-cliff](https://git-cliff.org).
+Release notes are generated automatically by the release workflow using [git-cliff](https://git-cliff.org).
 The release responsible does not need to manually compose notes for normal RC or final runs—the
 changelog is derived from conventional commit messages.
 
-Both RC and final releases use git-cliff with the same configuration, ensuring consistent
-changelog generation throughout the release cycle.
+Both RC and final releases use the same release notes, which are published in the RC pre-release
+and then copied to the final release.
 
 ---
 
@@ -332,7 +331,7 @@ If something goes wrong during a release, check the following common issues.
 
 **Any failure after verify_attestations (tag/OCI/release)**
 
-⚠️ A workflow re-run is **not possible** for final phase failures—it would create a new RC.
+⚠️ A workflow re-run is **not possible** for final phase failures — it would create a new RC.
 
 **Recommended recovery (clean slate):**
 1. Delete the orphaned final tag (if created):
@@ -350,7 +349,7 @@ If something goes wrong during a release, check the following common issues.
 ### Common Issues
 
 **Workflow stuck at environment gate**
-- This is expected behavior—wait for the 14-day period to elapse.
+- This is expected behavior — wait for the 14-day grace period to elapse.
 - For urgent releases, request expedited approval (see patch release section).
 
 **Attestation verification failed**

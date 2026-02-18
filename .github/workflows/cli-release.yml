@@ -1,6 +1,6 @@
 name: CLI Release
 
-run-name: CLI Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && ' (dry-run)' || '' }}
+run-name: CLI Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && '(dry-run)' || '' }}
 
 on:
   workflow_dispatch:
@@ -29,18 +29,18 @@ jobs:
   # ============================================================
 
   # --------------------------------------------------------
-  # 1. Prepare: Compute RC version and generate changelog
+  # 1. PREPARE: Compute RC version and generate changelog
   # --------------------------------------------------------
   prepare:
     name: Prepare Release Metadata
     uses: ./.github/workflows/release-candidate-version.yml
     with:
       branch: ${{ github.event.inputs.branch }}
-      component_path: cli
+      component_path: cli # cannot use env here
     secrets: inherit
 
   # --------------------------------------------------------
-  # 2. Tag RC: Create and push RC tag (skipped on dry-run)
+  # 2. TAG RC: Create and push RC tag (skipped on dry-run)
   # --------------------------------------------------------
   tag_rc:
     name: Create and Push RC Tag
@@ -60,6 +60,7 @@ jobs:
           private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
 
       - name: Checkout Repository
+        # Checkout repository for tagging
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: ${{ env.COMPONENT_PATH }}
@@ -67,11 +68,13 @@ jobs:
           token: ${{ steps.get_token.outputs.token }}
 
       - name: Setup git config
+        # Set committer for git identity
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create ${{ needs.prepare.outputs.new_tag }}
+        # Create and push tag if not existing
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
@@ -80,18 +83,18 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execSync } = require("child_process");
+            const { execFileSync } = require("child_process");
             const tag = process.env.TAG;
             const msg = Buffer.from(process.env.CHANGELOG_B64, "base64").toString("utf8");
-            try { execSync(`git rev-parse "refs/tags/${tag}"`); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
+            try { execFileSync("git", ["rev-parse", `refs/tags/${tag}`], { stdio: "pipe" }); core.info(`Tag ${tag} exists`); core.setOutput("pushed","false"); return; } catch {}
             require("fs").writeFileSync(".tagmsg", msg);
-            execSync(`git tag -a "${tag}" -F .tagmsg`);
-            execSync(`git push origin "refs/tags/${tag}"`);
+            execFileSync("git", ["tag", "-a", tag, "-F", ".tagmsg"]);
+            execFileSync("git", ["push", "origin", `refs/tags/${tag}`]);
             core.setOutput("pushed","true");
             core.info(`✅ Created RC tag ${tag}`);
 
   # --------------------------------------------------------
-  # 3. Build CLI
+  # 3. BUILD CLI
   # --------------------------------------------------------
   build:
     name: Build CLI for ${{ needs.prepare.outputs.new_tag }}
@@ -103,7 +106,7 @@ jobs:
       ref: ${{ needs.prepare.outputs.new_tag }}
 
   # --------------------------------------------------------
-  # 4. Release RC: Create GitHub pre-release
+  # 4. RELEASE RC: Create GitHub pre-release
   # --------------------------------------------------------
   release_rc:
     name: Create RC Pre-Release
@@ -114,14 +117,10 @@ jobs:
       contents: write
     steps:
       - name: Decode changelog to file
+        # Recreate changelog file from base64 string for release body
         env:
           CHANGELOG_B64: ${{ needs.prepare.outputs.changelog_b64 }}
-        run: |
-          if [ -z "$CHANGELOG_B64" ]; then
-            echo "::error::changelog_b64 is empty - release-candidate-version workflow failed"
-            exit 1
-          fi
-          echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
+        run: echo "$CHANGELOG_B64" | base64 --decode > "${{ runner.temp }}/CHANGELOG.md"
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -173,9 +172,9 @@ jobs:
               .addEOL()
               .write();
 
-  # ============================================================
+  # ================================================
   # PHASE 2: FINAL RELEASE (after environment gate)
-  # ============================================================
+  # ================================================
   # Environment Gate:
   # The "cli/release" environment must be configured in GitHub Settings → Environments:
   # - Required reviewers: At least 1 reviewer must approve
@@ -183,9 +182,9 @@ jobs:
   #
   # This gate blocks all Phase 2 jobs until approved.
 
-  # --------------------------------------------------------
-  # 5. Verify Attestations: Ensure RC artifacts are attestable
-  # --------------------------------------------------------
+  # -----------------------------------------------------------
+  # 5. VERIFY ATTESTATIONS: Ensure RC artifacts are attestable
+  # -----------------------------------------------------------
   verify_attestations:
     name: Verify RC Attestations
     needs: [prepare, build, release_rc]
@@ -226,9 +225,9 @@ jobs:
           gh attestation verify "oci://${TARGET_REPO}@${IMAGE_DIGEST}" --repo "${{ github.repository }}"
           echo "✅ OCI image attestation verified"
 
-  # --------------------------------------------------------
-  # 6. Promote Final: Create final tag and promote OCI image
-  # --------------------------------------------------------
+  # ---------------------------------------------------------
+  # 6. PROMOTE FINAL: Create final tag and promote OCI image
+  # ---------------------------------------------------------
   promote_final:
     name: Promote to Final Release
     needs: [prepare, build, verify_attestations]
@@ -236,6 +235,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+    outputs:
+      set_latest: ${{ steps.promote_oci.outputs.set_latest }}
     steps:
       - name: Validate release preconditions
         env:
@@ -280,7 +281,7 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execSync } = require("child_process");
+            const { execFileSync } = require("child_process");
             const rcTag = process.env.RC_TAG;
             const finalTag = process.env.FINAL_TAG;
 
@@ -290,19 +291,19 @@ jobs:
             }
 
             try {
-              execSync(`git rev-parse "refs/tags/${finalTag}"`, { stdio: "pipe" });
+              execFileSync("git", ["rev-parse", `refs/tags/${finalTag}`], { stdio: "pipe" });
               core.setFailed(`Final tag ${finalTag} already exists. Refusing to overwrite immutable tag.`);
               return;
             } catch {}
 
-            const rcSha = execSync(`git rev-parse "refs/tags/${rcTag}^{commit}"`, { stdio: "pipe" }).toString().trim();
+            const rcSha = execFileSync("git", ["rev-parse", `refs/tags/${rcTag}^{commit}`], { stdio: "pipe" }).toString().trim();
             if (!rcSha) {
               core.setFailed(`Could not resolve commit for RC tag ${rcTag}`);
               return;
             }
 
-            execSync(`git tag -a "${finalTag}" "${rcSha}" -m "Promote ${rcTag} to ${finalTag}"`);
-            execSync(`git push origin "refs/tags/${finalTag}"`);
+            execFileSync("git", ["tag", "-a", finalTag, rcSha, "-m", `Promote ${rcTag} to ${finalTag}`]);
+            execFileSync("git", ["push", "origin", `refs/tags/${finalTag}`]);
             core.info(`✅ Created final tag ${finalTag} from ${rcTag} at ${rcSha}`);
 
       - name: Setup ORAS
@@ -316,6 +317,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote OCI image tags
+        id: promote_oci
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
@@ -323,39 +325,47 @@ jobs:
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
         with:
           script: |
-            const { execSync } = require('child_process');
+            const { execFileSync } = require('child_process');
             const { RC_VERSION: rc, FINAL_VERSION: final, TARGET_REPO: repo } = process.env;
 
             if (!rc || !final) { core.setFailed('Missing RC_VERSION or FINAL_VERSION'); return; }
 
-            // Get highest existing final version from GHCR
+            // Get highest existing final version from GitHub releases (not OCI)
             let highest = '';
             try {
-              const { data } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
-                package_type: 'container', package_name: 'cli', org: context.repo.owner
+              const releases = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
               });
-              highest = data.flatMap(v => v.metadata?.container?.tags || [])
-                .filter(t => /^v\d+\.\d+\.\d+$/.test(t))
+              highest = releases.data
+                .filter(r => !r.prerelease && r.tag_name.startsWith('cli/v'))
+                .map(r => r.tag_name.replace('cli/v', ''))
+                .filter(t => /^\d+\.\d+\.\d+$/.test(t))
                 .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                 .pop() || '';
-            } catch (e) { core.warning(`Could not fetch existing tags: ${e.message}`); }
+            } catch (e) { core.warning(`Could not fetch existing releases: ${e.message}`); }
 
             // Set :latest only if this version is >= the current highest
             const setLatest = !highest || final.localeCompare(highest, undefined, { numeric: true }) >= 0;
-            const tags = setLatest ? `"${final}" "latest"` : `"${final}"`;
+            const tagArgs = setLatest ? [final, "latest"] : [final];
 
-            execSync(`oras tag "${repo}:${rc}" ${tags}`, { stdio: 'inherit' });
+            execFileSync("oras", ["tag", `${repo}:${rc}`, ...tagArgs], { stdio: 'inherit' });
             core.info(setLatest ? `✅ Tagged :${final} and :latest` : `⚠️ Tagged :${final} (${highest} is higher)`);
+
+            // Export setLatest for use in release_final job
+            core.setOutput('set_latest', setLatest ? 'true' : 'false');
 
             await core.summary.addHeading('OCI Image Promotion').addTable([
               [{data: 'Field', header: true}, {data: 'Value', header: true}],
               ['Source', `${repo}:${rc}`],
               ['Final', `${repo}:${final}`],
+              ['Highest existing', highest || '(none)'],
               ['Latest', setLatest ? 'Yes' : `No (${highest} > ${final})`],
             ]).write();
 
   # --------------------------------------------------------
-  # 7. Release Final: Create GitHub final release
+  # 7. RELEASE FINAL: Create GitHub final release
   # --------------------------------------------------------
   release_final:
     name: Create Final Release
@@ -364,8 +374,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Get release notes from RC release body (no separate asset needed)
       - name: Get release notes from RC
+        # Get release notes from RC release body to reuse for final release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -375,8 +385,8 @@ jobs:
             --json body \
             --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
 
-      # Download binaries from RC release assets (same binaries that were tested)
       - name: Download RC release binaries
+        # Download binaries from RC release assets to reuse for final release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -395,6 +405,7 @@ jobs:
           TARGET_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/cli
           BINARIES_DIR: ${{ runner.temp }}/binaries
           NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
+          SET_LATEST: ${{ needs.promote_final.outputs.set_latest }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -407,6 +418,7 @@ jobs:
             const targetRepo = process.env.TARGET_REPO;
             const binariesDir = process.env.BINARIES_DIR;
             const notesFile = process.env.NOTES_FILE;
+            const setLatest = process.env.SET_LATEST === 'true';
 
             let notes = fs.existsSync(notesFile)
               ? fs.readFileSync(notesFile, 'utf8').trim()
@@ -421,6 +433,8 @@ jobs:
               `[${finalTag}] - promoted from [${rcTag}] on ${today}`
             );
 
+            // Use make_latest to control whether this release is marked as "latest"
+            // Only set as latest if this version >= highest existing final version
             const created = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -428,9 +442,14 @@ jobs:
               name: `CLI ${finalVersion}`,
               body: notes,
               prerelease: false,
+              make_latest: setLatest ? 'true' : 'false',
             });
 
-            // Upload binaries from RC release (same binaries that were tested)
+            core.info(setLatest
+              ? `✅ Release marked as Latest`
+              : `⚠️ Release NOT marked as Latest (older patch release)`);
+
+            // Upload binaries from RC release
             const binaries = fs.readdirSync(binariesDir).filter(f => f.startsWith('ocm-'));
             for (const file of binaries) {
               const filePath = path.join(binariesDir, file);
@@ -448,16 +467,20 @@ jobs:
             }
 
             const releaseUrl = created.data.html_url;
+            const ociTags = setLatest
+              ? `${targetRepo}:${finalVersion}, ${targetRepo}:latest`
+              : `${targetRepo}:${finalVersion}`;
+
             await core.summary
               .addHeading('Final Release Published')
               .addTable([
                 [{data: 'Field', header: true}, {data: 'Value', header: true}],
                 ['Final Tag', finalTag],
                 ['Promoted from RC', rcTag],
-                ['OCI Tags', `${targetRepo}:${finalVersion}, ${targetRepo}:latest`],
+                ['OCI Tags', ociTags],
+                ['GitHub Latest', setLatest ? 'Yes' : 'No (older version)'],
               ])
               .addEOL()
               .addLink(releaseUrl, releaseUrl)
               .addEOL()
               .write();
-
