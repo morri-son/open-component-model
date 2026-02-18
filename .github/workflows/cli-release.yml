@@ -340,8 +340,8 @@ jobs:
               });
               highest = releases.data
                 .filter(r => !r.prerelease && r.tag_name.startsWith('cli/v'))
-                .map(r => r.tag_name.replace('cli/', ''))
-                .filter(t => /^v\d+\.\d+\.\d+$/.test(t))
+                .map(r => r.tag_name.replace('cli/v', ''))
+                .filter(t => /^\d+\.\d+\.\d+$/.test(t))
                 .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                 .pop() || '';
             } catch (e) { core.warning(`Could not fetch existing releases: ${e.message}`); }
