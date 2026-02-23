@@ -30,6 +30,7 @@ A scheduled release can be skipped if the branch is not ready or there are no me
 The release responsible coordinates and executes the release flow.
 This role rotates each sprint and involves:
 
+- Agreeing with the team, if a new release has to be produced
 - Triggering and supervising release branch creation
 - Creating release candidates for all lockstep components
 - Promoting release candidates to final releases
@@ -59,15 +60,16 @@ Copy this checklist to your "Sprint Responsible" issue:
 
 | When | Action |
 |------|--------|
-| Sprint Start | Create RCs for both components |
+
+| Sprint Start | Create new release branch and RCs for both components |
 | Sprint End | Assign next release responsible |
 | Next Sprint Start | Promote previous RCs to Final |
 
 ### Guardrails
 
 Once a release branch is created, it enters cut-off mode:
-no feature or breaking-change work is accepted.
-All fixes must go to `main` first, then be cherry-picked to the release branch.
+No feature or breaking-change work is accepted on the release branch.
+All fixes must go to `main` branch first, then be cherry-picked to the release branch.
 
 ---
 
@@ -115,7 +117,7 @@ A new release branch marks the cut-off point for that minor release line.
 Once created, only bug fixes and documentation changes are allowed.
 
 1. Run workflow **[Release Branch Creation](./.github/workflows/release-branch.yml)**.
-2. Set target branch to `releases/v0.X`.
+2. Set target branch to `releases/vX.Y`.
 3. Confirm the branch was created successfully.
 
 <details>
@@ -123,19 +125,20 @@ Once created, only bug fixes and documentation changes are allowed.
 
 - No feature or breaking-change work is accepted.
 - Non-bugfix and non-documentation changes require release responsible approval.
-- Non-critical bug fixes require release responsible approval.
+- Any change that is not a bug fix or a documentation change require release responsible approval.
+- Any bug fix that is not deemed critical must be approved by the release manager.
 - Fixes must be merged to `main` first, then cherry-picked to this branch.
-- Do not introduce release-branch-only commits unless explicitly approved.
 
 </details>
 
 <details>
 <summary>What happens in the background?</summary>
 
-- Validate `target_branch` against `releases/v0.X`.
-- Normalize `source_branch` (default `main`) and resolve its HEAD SHA.
-- Create `refs/heads/<target_branch>` from source SHA, or skip if target already exists.
-- Publish source, target, and commit SHA in the workflow summary.
+- Validate `target_branch` against regex pattern `releases/v0.[0-9]+`
+- Check if `target_branch` already exists; if yes, skip creation and report success
+- Check out the repository and identify the latest commit on `source_branch` (default: `main`)
+- Create a new branch `refs/heads/<target_branch>` pointing to this commit
+- Publish workflow summary with source branch, target branch, and commit SHA
 
 </details>
 
