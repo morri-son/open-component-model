@@ -125,7 +125,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	ctx, cancel = context.WithCancel(context.Background())
-	DeferCleanup(cancel)
+	mgrDone := make(chan struct{})
+	DeferCleanup(func() {
+		cancel()
+		<-mgrDone
+	})
 
 	events := make(chan string)
 	recorder = &record.FakeRecorder{
@@ -188,6 +192,7 @@ var _ = BeforeSuite(func() {
 
 	go func() {
 		defer GinkgoRecover()
+		defer close(mgrDone)
 		Expect(k8sManager.Start(ctx)).To(Succeed())
 	}()
 })
