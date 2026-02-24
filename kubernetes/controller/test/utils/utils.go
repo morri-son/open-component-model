@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -185,7 +186,11 @@ func CheckOCMComponent(ctx context.Context, componentReference, ocmConfigPath st
 
 // DumpLogs dumps pod logs and resource status for the given namespace and resource type.
 // Intended for use in AfterEach to capture state on test failure.
-func DumpLogs(ctx context.Context, namespace, resourceType string) {
+// Creates its own context with a 30s timeout to survive parent context cancellation.
+func DumpLogs(namespace, resourceType string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	GinkgoLogr.Info(fmt.Sprintf("=== Diagnostic dump: %s pods in namespace %s ===", resourceType, namespace))
 
 	cmd := exec.CommandContext(ctx, "kubectl", "get", "pods", "-n", namespace, "-o", "wide")
