@@ -220,78 +220,38 @@ export function parseVersion(tag) {
 // Latest release determination
 // --------------------------
 
-/**
- * GitHub Actions entrypoint for determining if release should be :latest.
- * @param {import('@actions/github-script').AsyncFunctionArguments} args
- */
+/** GitHub Actions entrypoint for determining if release should be latest */
 export async function determineLatestRelease({ core, github, context }) {
-    const componentPath = process.env.COMPONENT_PATH;
-    const promotionVersion = process.env.PROMOTION_VERSION;
-    if (!componentPath || !promotionVersion) {
-        core.setFailed("Missing COMPONENT_PATH or PROMOTION_VERSION");
-        return;
-    }
+    const { COMPONENT_PATH: componentPath, PROMOTION_VERSION: promotionVersion } = process.env;
+    if (!componentPath || !promotionVersion) return core.setFailed("Missing COMPONENT_PATH or PROMOTION_VERSION");
 
     const tagPrefix = `${componentPath}/v`;
-
-    // Fetch existing releases
     let releases = [];
     try {
-        const response = await github.rest.repos.listReleases({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            per_page: 100,
-        });
-        releases = response.data;
-    } catch (e) {
-        core.warning(`Could not fetch releases: ${e.message}`);
-    }
+        releases = (await github.rest.repos.listReleases({ owner: context.repo.owner, repo: context.repo.repo, per_page: 100 })).data;
+    } catch (e) { core.warning(`Could not fetch releases: ${e.message}`); }
 
     const highestFinal = extractHighestFinalVersion(releases, tagPrefix);
     const setLatest = shouldSetLatest(promotionVersion, highestFinal);
 
     core.setOutput('set_latest', setLatest ? 'true' : 'false');
     core.setOutput('highest_final_version', highestFinal || '(none)');
+    core.info(setLatest ? `✅ Will set :latest (${promotionVersion} >= ${highestFinal || 'none'})` : `⚠️ Will NOT set :latest (${promotionVersion} < ${highestFinal})`);
 
-    core.info(setLatest
-        ? `✅ Will set :latest (${promotionVersion} >= ${highestFinal || 'none'})`
-        : `⚠️ Will NOT set :latest (${promotionVersion} < ${highestFinal})`);
-
-    await core.summary
-        .addRaw('---')
-        .addEOL()
-        .addHeading('Latest Tag Decision', 2)
-        .addTable([
-            [{ data: 'Field', header: true }, { data: 'Value', header: true }],
-            ['Final Version', promotionVersion],
-            ['Highest Final Version', highestFinal || '(none)'],
-            ['Will Set Latest', setLatest ? '✅ Yes' : '⚠️ No'],
-        ])
-        .write();
+    await core.summary.addRaw('---').addEOL().addHeading('Latest Tag Decision', 2)
+        .addTable([[{ data: 'Field', header: true }, { data: 'Value', header: true }], ['Final Version', promotionVersion], ['Highest Final Version', highestFinal || '(none)'], ['Will Set Latest', setLatest ? '✅ Yes' : '⚠️ No']]).write();
 }
 
-/**
- * Extract highest final (non-prerelease) version from releases.
- * @param {Array<{prerelease: boolean, tag_name: string}>} releases
- * @param {string} tagPrefix - Tag prefix (e.g., "cli/v")
- * @returns {string} Highest version or empty string
- */
+/** Extract highest final (non-prerelease) version from releases */
 export function extractHighestFinalVersion(releases, tagPrefix) {
-    return releases
-        .filter(r => !r.prerelease && r.tag_name.startsWith(tagPrefix))
+    return releases.filter(r => !r.prerelease && r.tag_name.startsWith(tagPrefix))
         .map(r => r.tag_name.replace(tagPrefix, ''))
         .filter(v => /^\d+\.\d+\.\d+$/.test(v))
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
         .pop() || '';
 }
 
-/**
- * Determine if promotion version should be tagged as :latest.
- * @param {string} promotionVersion - Version being promoted
- * @param {string} highestFinal - Current highest final version
- * @returns {boolean}
- */
+/** Determine if promotion version should be tagged as latest */
 export function shouldSetLatest(promotionVersion, highestFinal) {
-    if (!highestFinal) return true;
-    return promotionVersion.localeCompare(highestFinal, undefined, { numeric: true }) >= 0;
+    return !highestFinal || promotionVersion.localeCompare(highestFinal, undefined, { numeric: true }) >= 0;
 }
