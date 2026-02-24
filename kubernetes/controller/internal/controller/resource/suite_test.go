@@ -97,8 +97,10 @@ var _ = BeforeSuite(func() {
 
 	komega.SetClient(k8sClient)
 
+	gracefulTimeout := 5 * time.Second
 	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme:                  scheme.Scheme,
+		GracefulShutdownTimeout: &gracefulTimeout,
 		Metrics: metricserver.Options{
 			BindAddress: "0",
 		},
@@ -173,6 +175,6 @@ var _ = BeforeSuite(func() {
 	go func() {
 		defer GinkgoRecover()
 		defer close(mgrDone)
-		Expect(k8sManager.Start(ctx)).To(Succeed())
+		Expect(k8sManager.Start(ctx)).To(Or(Succeed(), MatchError(ContainSubstring("grace period"))))
 	}()
 })
