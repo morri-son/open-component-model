@@ -2,8 +2,6 @@ package utils
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -185,61 +183,34 @@ func CheckOCMComponent(ctx context.Context, componentReference, ocmConfigPath st
 	return nil
 }
 
-// GetOCMResourceImageRef returns the image reference of a specified resource of a component version.
-// For the format of component reference see OCM CLI documentation.
-func GetOCMResourceImageRef(ctx context.Context, componentReference, resourceName, ocmConfigPath string) (string, error) {
-	// Construct the command 'ocm get resources', which is used here to get the image reference of a resource.
-	// See also: https://github.com/open-component-model/ocm/blob/main/docs/reference/ocm_get_resources.md
-	c := []string{"ocm", "--loglevel", "error"}
-	if len(ocmConfigPath) > 0 {
-		c = append(c, "--config", ocmConfigPath)
-	}
-	c = append(c, "get", "resources", componentReference, resourceName, "-oJSON") // -oJSON is used to get the output in JSON format.
+// DumpLogs dumps pod logs and resource status for the given namespace and resource type.
+// Intended for use in AfterEach to capture state on test failure.
+func DumpLogs(ctx context.Context, namespace, resourceType string) {
+	GinkgoLogr.Info(fmt.Sprintf("=== Diagnostic dump: %s pods in namespace %s ===", resourceType, namespace))
 
-	cmd := exec.CommandContext(ctx, c[0], c[1:]...) //nolint:gosec // The argument list is constructed right above.
+	cmd := exec.CommandContext(ctx, "kubectl", "get", "pods", "-n", namespace, "-o", "wide")
 	output, err := Run(cmd)
 	if err != nil {
-		return "", err
+		GinkgoLogr.Info(fmt.Sprintf("Failed to get pods in %s: %v", namespace, err))
+	} else {
+		GinkgoLogr.Info(string(output))
 	}
 
-	// This struct corresponds to the json format of the command output.
-	// We are only interested in one specific field, the image reference. All other fields are omitted.
-	type Result struct {
-		Items []struct {
-			Element struct {
-				Access struct {
-					ImageReference string `json:"imageReference"`
-				} `json:"access"`
-			} `json:"element"`
-		} `json:"items"`
-	}
-
-	var r Result
-	err = json.Unmarshal(output, &r)
+	cmd = exec.CommandContext(ctx, "kubectl", "logs", "-n", namespace, "--all-containers", "--tail=200", "-l", "app.kubernetes.io/name=kro")
+	output, err = Run(cmd)
 	if err != nil {
-		return "", errors.New("could not unmarshal command output: " + string(output))
+		GinkgoLogr.Info(fmt.Sprintf("Failed to get kro logs in %s: %v", namespace, err))
+	} else {
+		GinkgoLogr.Info(fmt.Sprintf("=== KRO logs (last 200 lines) ===\n%s", string(output)))
 	}
-	if len(r.Items) != 1 {
-		return "", errors.New("exactly one item is expected in command output: " + string(output))
+
+	cmd = exec.CommandContext(ctx, "kubectl", "get", resourceType, "-o", "yaml")
+	output, err = Run(cmd)
+	if err != nil {
+		GinkgoLogr.Info(fmt.Sprintf("Failed to get %s resources: %v", resourceType, err))
+	} else {
+		GinkgoLogr.Info(fmt.Sprintf("=== %s resource status ===\n%s", resourceType, string(output)))
 	}
-
-	return r.Items[0].Element.Access.ImageReference, nil
-}
-
-// CreateNamespace creates Kubernetes namespace.
-func CreateNamespace(ctx context.Context, ns string) error {
-	cmd := exec.CommandContext(ctx, "kubectl", "create", "ns", ns)
-	_, err := Run(cmd)
-
-	return err
-}
-
-// DeleteNamespace deletes Kubernetes namespace.
-func DeleteNamespace(ctx context.Context, ns string) error {
-	cmd := exec.CommandContext(ctx, "kubectl", "delete", "ns", ns, "--ignore-not-found=true", "--cascade=foreground")
-	_, err := Run(cmd)
-
-	return err
 }
 
 // CompareResourceField compares the value of a specific field in a Kubernetes resource
