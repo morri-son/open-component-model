@@ -244,14 +244,13 @@ export async function determineLatestRelease({ core, github, context }) {
 
 /** Extract highest final (non-prerelease) version from releases */
 export function extractHighestFinalVersion(releases, tagPrefix) {
-    return releases.filter(r => !r.prerelease && r.tag_name.startsWith(tagPrefix))
-        .map(r => r.tag_name.replace(tagPrefix, ''))
-        .filter(v => /^\d+\.\d+\.\d+$/.test(v))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-        .pop() || '';
+    const versions = releases.filter(r => !r.prerelease && r.tag_name.startsWith(tagPrefix))
+        .map(r => r.tag_name.replace(tagPrefix, '')).filter(v => /^\d+\.\d+\.\d+$/.test(v));
+    if (!versions.length) return '';
+    return versions.sort((a, b) => isStableNewer(`v${a}`, `v${b}`) ? 1 : -1).pop();
 }
 
 /** Determine if promotion version should be tagged as latest */
 export function shouldSetLatest(promotionVersion, highestFinal) {
-    return !highestFinal || promotionVersion.localeCompare(highestFinal, undefined, { numeric: true }) >= 0;
+    return !highestFinal || !isStableNewer(`v${highestFinal}`, `v${promotionVersion}`);
 }
