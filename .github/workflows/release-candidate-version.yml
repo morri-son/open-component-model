@@ -24,6 +24,9 @@ on:
       promotion_tag:
         description: "Tag to be used for promotion later, eg. cli/v0.1.0-rc.1 -> cli/v0.1.0"
         value: ${{ jobs.prepare.outputs.promotion_tag }}
+      promotion_version:
+        description: "Version to be used for promotion later, eg. 0.1.0-rc.1 -> 0.1.0"
+        value: ${{ jobs.prepare.outputs.promotion_version }}
       changelog_b64:
         description: "Changelog encoded in base64 for release body"
         value: ${{ jobs.prepare.outputs.changelog_b64 }}
@@ -39,6 +42,7 @@ jobs:
       new_version: ${{ steps.compute.outputs.new_version }}
       base_version: ${{ steps.compute.outputs.base_version }}
       promotion_tag: ${{ steps.compute.outputs.promotion_tag }}
+      promotion_version: ${{ steps.compute.outputs.promotion_version }}
       changelog_b64: ${{ steps.summarize.outputs.changelog_b64 }}
     steps:
       # Checkout the repository and target branch
