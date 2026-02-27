@@ -79,3 +79,6 @@ CLAUDE.local.md
 .aider.input.history
 .aider.tags.cache.v3
 .aider.tags.cache.v3/
+
+# --- OpenAI Codex
+.codex/
