@@ -47,38 +47,3 @@ go.work.sum
 
 # gitguardian
 .cache_ggshield
-
-# Configuration files for different AI agents
-# --- Cline ---
-.clineignore
-.clinerules/
-memory-bank/
-
-# --- Cursor ---
-.cursorrules
-.cursor/
-
-# --- Windsurf / Codeium ---
-.windsurfrules
-*.windsurfrules
-
-# --- Continue ---
-.continue/
-
-# --- Claude Code ---
-.claude/
-CLAUDE.md
-CLAUDE.local.md
-
-# --- GitHub Copilot ---
-.github/copilot-instructions.md
-
-# --- Aider ---
-.aider.conf.yml
-.aider.chat.history.md
-.aider.input.history
-.aider.tags.cache.v3
-.aider.tags.cache.v3/
-
-# --- OpenAI Codex
-.codex/
