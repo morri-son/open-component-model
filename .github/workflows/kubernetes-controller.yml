@@ -358,7 +358,7 @@ jobs:
           IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
         run: |
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
-          helm push dist/chart-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+          task helm/push VERSION="${VERSION}" REGISTRY="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller"
 
       - name: Resolve chart digest
         id: chart-digest

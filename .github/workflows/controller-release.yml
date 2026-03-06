@@ -1,9 +1,4 @@
 name: Controller Release
-
-# =============================================================================
-# CONTROLLER RELEASE WORKFLOW
-# =============================================================================
-
 run-name: Controller Release from ${{ github.event.inputs.branch }}${{ github.event.inputs.dry_run == 'true' && ' (dry-run)' || '' }}
 
 on:
@@ -343,8 +338,13 @@ jobs:
         with:
           version: v3.14.0
 
-      - name: Package and push final chart
-        # Re-packages chart with final version but SAME image digest for reproducibility
+      - name: Download RC chart artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ${{ needs.build.outputs.chart_artifact_name }}
+          path: ${{ runner.temp }}/rc-chart
+
+      - name: Package final chart
         working-directory: ${{ env.COMPONENT_PATH }}
         env:
           VERSION: ${{ needs.prepare.outputs.base_version }}
@@ -352,7 +352,26 @@ jobs:
         run: |
           set -euo pipefail
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
-          helm push dist/chart-${VERSION}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+
+      - name: Verify promote
+        # Ensures the final chart only differs from the RC in allowed fields
+        # (Chart.yaml version/appVersion, values.yaml tag) while digest stays identical
+        working-directory: ${{ env.COMPONENT_PATH }}
+        env:
+          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
+          VERSION: ${{ needs.prepare.outputs.base_version }}
+        run: |
+          set -euo pipefail
+          RC_CHART="${{ runner.temp }}/rc-chart/chart-${RC_VERSION}.tgz"
+          task helm/verify-promote RC_CHART="${RC_CHART}" FINAL_CHART="dist/chart-${VERSION}.tgz"
+
+      - name: Push final chart
+        working-directory: ${{ env.COMPONENT_PATH }}
+        env:
+          VERSION: ${{ needs.prepare.outputs.base_version }}
+        run: |
+          set -euo pipefail
+          task helm/push VERSION="${VERSION}" REGISTRY="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller"
 
       - name: Resolve chart digest
         id: chart-digest
