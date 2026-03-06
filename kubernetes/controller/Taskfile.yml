@@ -190,7 +190,7 @@ tasks:
 
 
   helm/package:
-    desc: "Package the Helm chart with the specified version and/or digest
+    desc: "Package the Helm chart with the specified version and/or digest"
     deps: [yq]
     cmds:
       - mkdir -p dist
