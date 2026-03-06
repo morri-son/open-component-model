@@ -222,13 +222,6 @@ jobs:
       - name: Set up docker
         uses: docker/setup-docker-action@e43656e248c0bd0647d3f5c195d116aacf6fcaf4 # v4
 
-      - name: Setup Skopeo
-        # ORAS cannot extract platform-specific images from multi-arch indexes
-        # in the right Docker Archive format (docker-archive) which kind can load directly.
-        # Skopeo can do both: extract by platform (--override-arch) AND convert to docker-archive
-        run: |
-          sudo apt-get update && sudo apt-get install -y skopeo
-
       - name: Setup ocm
         uses: open-component-model/ocm-setup-action@655f3525fd283ca7d22e6b2ceec42324331df401 # v1.0.0
 
@@ -247,6 +240,10 @@ jobs:
           path: ${{ env.LOCATION }}/tmp/oci
 
       - name: Extract linux/amd64 image for E2E testing
+        # ORAS cannot extract platform-specific images from multi-arch indexes
+        # in the right Docker Archive format (docker-archive) which kind can load directly.
+        # Skopeo can do both: extract by platform (--override-arch) AND convert to docker-archive.
+        # Skopeo is pre-installed on ubuntu-latest runners.
         working-directory: ${{ env.LOCATION }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
