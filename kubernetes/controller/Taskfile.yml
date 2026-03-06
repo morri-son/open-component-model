@@ -133,6 +133,12 @@ tasks:
         args+=(--push)
       fi
 
+      # If OCI_OUTPUT is set, write OCI layout tar to that path
+      if [ -n "{{.OCI_OUTPUT | default ""}}" ]; then
+        mkdir -p "$(dirname '{{.OCI_OUTPUT}}')"
+        args+=(--output "type=oci,dest={{.OCI_OUTPUT}},oci-mediatypes=true")
+      fi
+
       # Run docker (or podman) buildx with the constructed args
       {{.CONTAINER_TOOL}} buildx build "${args[@]}"
 

@@ -77,13 +77,18 @@ jobs:
         with:
           version: v3.14.0
 
-      - name: Validate Helm chart
+      - name: Generate values schema
         working-directory: ${{ env.LOCATION }}
-        run: |
-          task helm/schema
-          task helm/docs
-          task helm/lint
-          task helm/template
+        run: task helm/schema
+      - name: Generate chart documentation
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/docs
+      - name: Lint chart
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/lint
+      - name: Render chart templates
+        working-directory: ${{ env.LOCATION }}
+        run: task helm/template
 
       - name: Verify no uncommitted changes
         run: |
@@ -170,13 +175,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          mkdir -p tmp/oci
-          # Build multi-arch OCI image (amd64 + arm64) to OCI Layout tar archive
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag "${IMAGE_NAME}:${VERSION}" \
-            --output type=oci,dest=tmp/oci/controller.tar,oci-mediatypes=true \
-            -f Dockerfile .
+          task docker-build/multi-arch \
+            CONTROLLER_IMG="${IMAGE_NAME}:${VERSION}" \
+            OCI_OUTPUT=tmp/oci/controller.tar
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
