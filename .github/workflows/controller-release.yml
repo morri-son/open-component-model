@@ -79,7 +79,7 @@ jobs:
           name: ${{ needs.prepare.outputs.changelog_artifact }}
           path: ${{ runner.temp }}
 
-      - name: Create tag
+      - name: Create RC tag
         # Creates annotated tag with changelog; skips if already exists
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -89,16 +89,8 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execFileSync } = require("child_process");
-            const fs = require("fs");
-            const tag = process.env.TAG;
-            const msg = fs.readFileSync(process.env.CHANGELOG_FILE, "utf8");
-            try { execFileSync("git", ["rev-parse", `refs/tags/${tag}`], { stdio: "pipe" }); core.info(`Tag ${tag} already exists`); core.setOutput("pushed","true"); return; } catch {}
-            fs.writeFileSync(".tagmsg", msg);
-            execFileSync("git", ["tag", "-a", tag, "-F", ".tagmsg"]);
-            execFileSync("git", ["push", "origin", `refs/tags/${tag}`]);
-            core.setOutput("pushed","true");
-            core.info(`✅ Created RC tag ${tag}`);
+            const script = await import('${{ github.workspace }}/.github/scripts/create-tag.js');
+            await script.createRcTag({ core });
 
   # ---------------------------------------------------------------------------
   # BUILD - Calls main controller build workflow
@@ -266,39 +258,8 @@ jobs:
         with:
           github-token: ${{ steps.get_token.outputs.token }}
           script: |
-            const { execFileSync } = require("child_process");
-            const { RC_TAG: rcTag, FINAL_TAG: finalTag } = process.env;
-
-            // Pre-flight checks
-            if (!rcTag || !finalTag) {
-              core.setFailed("Missing RC_TAG or FINAL_TAG");
-              return;
-            }
-
-            // Resolve RC commit
-            const rcSha = execFileSync("git", ["rev-parse", `refs/tags/${rcTag}^{commit}`], { stdio: "pipe" }).toString().trim();
-            if (!rcSha) {
-              core.setFailed(`Could not resolve commit for RC tag ${rcTag}`);
-              return;
-            }
-
-            // Check if final tag already exists (idempotent for reruns)
-            try {
-              const existingSha = execFileSync("git", ["rev-parse", `refs/tags/${finalTag}^{commit}`], { stdio: "pipe" }).toString().trim();
-              if (existingSha === rcSha) {
-                core.info(`Tag ${finalTag} already exists at expected commit ${rcSha.substring(0,7)}, continuing (idempotent rerun)`);
-                return;
-              }
-              core.setFailed(`Tag ${finalTag} already exists but points to ${existingSha.substring(0,7)}, expected ${rcSha.substring(0,7)}`);
-              return;
-            } catch {
-              // Expected: tag doesn't exist, continue
-            }
-
-            // Create and push final tag
-            execFileSync("git", ["tag", "-a", finalTag, rcSha, "-m", `Promote ${rcTag} to ${finalTag}`]);
-            execFileSync("git", ["push", "origin", `refs/tags/${finalTag}`]);
-            core.info(`✅ Created final tag ${finalTag} from ${rcTag} (${rcSha.substring(0,7)})`);
+            const script = await import('${{ github.workspace }}/.github/scripts/create-tag.js');
+            await script.createFinalTag({ core });
 
       - name: Setup ORAS
         uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
