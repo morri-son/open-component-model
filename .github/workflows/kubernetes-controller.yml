@@ -438,6 +438,7 @@ jobs:
     with:
       constructor_artifact_name: controller-constructor-artifact
       ocm_repository: ghcr.io/${{ github.repository_owner }}
+      version_conflict_policy: ${{ startsWith(needs.build.outputs.version, '0.0.0-') && 'replace' || '' }}
 
   conformance:
     name: Conformance
