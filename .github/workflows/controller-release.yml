@@ -17,6 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   COMPONENT_PATH: kubernetes/controller
+  COMPONENT_NAME: OCM Controller
 
 concurrency:
   cancel-in-progress: false
@@ -53,7 +54,6 @@ jobs:
       pushed: ${{ steps.tag.outputs.pushed }}
     steps:
       - name: Generate App Token
-        # App token required to push tags that trigger other workflows
         id: get_token
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         with:
@@ -63,7 +63,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          sparse-checkout: ${{ env.COMPONENT_PATH }}
+          sparse-checkout: |
+            ${{ env.COMPONENT_PATH }}
+            .github/scripts
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
           fetch-tags: true
@@ -80,7 +82,6 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Create RC tag
-        # Creates annotated tag with changelog; skips if already exists
         id: tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
@@ -123,7 +124,6 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Download chart artifact
-        # Use artifact from build instead of pulling from registry
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.build.outputs.chart_artifact_name }}
@@ -132,7 +132,7 @@ jobs:
       - name: Create RC Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
-          name: Controller ${{ needs.prepare.outputs.new_version }}
+          name: ${{ env.COMPONENT_NAME }} ${{ needs.prepare.outputs.new_version }}
           tag_name: ${{ needs.prepare.outputs.new_tag }}
           body_path: ${{ runner.temp }}/CHANGELOG.md
           fail_on_unmatched_files: true
@@ -195,7 +195,6 @@ jobs:
       packages: read
     steps:
       - name: Verify image attestation
-        # Validates SLSA provenance was created by this repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
@@ -205,7 +204,6 @@ jobs:
             --repo "${{ github.repository }}"
 
       - name: Verify chart attestation
-        # Uses chart digest from build output (no need to resolve again)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHART_DIGEST: ${{ needs.build.outputs.chart_digest }}
@@ -217,7 +215,8 @@ jobs:
   # PROMOTE AND RELEASE FINAL - Promotes RC artifacts and creates final release
   # ---------------------------------------------------------------------------
   # Combined job: Avoids duplicate tool setup and registry pull.
-  # The chart is built locally and used directly for both push and release asset.
+  # The chart must be re-packaged with the final version (Chart.yaml, values.yaml)
+  # and re-attested, since the Helm chart embeds version strings.
   promote_and_release_final:
     name: Promote and Release Final
     needs: [prepare, build, verify_attestations]
@@ -238,7 +237,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          sparse-checkout: ${{ env.COMPONENT_PATH }}
+          sparse-checkout: |
+            ${{ env.COMPONENT_PATH }}
+            .github/scripts
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
           token: ${{ steps.get_token.outputs.token }}
@@ -250,7 +251,6 @@ jobs:
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Create final tag
-        # Points final tag to same commit as RC tag (no rebuild needed)
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
@@ -272,7 +272,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote image tags
-        # Re-tags existing image; adds 'latest' only if this is the highest version
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
           FINAL_VERSION: ${{ needs.prepare.outputs.base_version }}
@@ -315,8 +314,6 @@ jobs:
           task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
 
       - name: Verify promote
-        # Ensures the final chart only differs from the RC in allowed fields
-        # (Chart.yaml version/appVersion, values.yaml tag) while digest stays identical
         working-directory: ${{ env.COMPONENT_PATH }}
         env:
           RC_VERSION: ${{ needs.prepare.outputs.new_version }}
@@ -359,19 +356,28 @@ jobs:
           gh release view "${{ needs.prepare.outputs.new_tag }}" \
             --repo "${{ github.repository }}" --json body --jq '.body' > "${{ runner.temp }}/CHANGELOG.md"
 
+      - name: Prepare final chart assets
+        env:
+          VERSION: ${{ needs.prepare.outputs.base_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ runner.temp }}/final-assets"
+          cp "${{ env.COMPONENT_PATH }}/dist/chart-${VERSION}.tgz" "${{ runner.temp }}/final-assets/"
+
       - name: Publish final release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
           FINAL_TAG: ${{ needs.prepare.outputs.promotion_tag }}
           FINAL_VERSION: ${{ needs.prepare.outputs.base_version }}
-          IMAGE_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
-          CHART_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
-          IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
-          CHART_DIR: ${{ env.COMPONENT_PATH }}/dist
+          COMPONENT_NAME: ${{ env.COMPONENT_NAME }}
+          ASSETS_DIR: ${{ runner.temp }}/final-assets
           NOTES_FILE: ${{ runner.temp }}/CHANGELOG.md
           SET_LATEST: ${{ needs.prepare.outputs.set_latest }}
           HIGHEST_FINAL_VERSION: ${{ needs.prepare.outputs.highest_final_version }}
+          IMAGE_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
+          IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+          CHART_REPO: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller/chart
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
