@@ -29,7 +29,7 @@ you can use our Helm chart:
 helm install ocm-k8s-toolkit oci://ghcr.io/open-component-model/charts/ocm-k8s-toolkit \
   --namespace ocm-k8s-toolkit-system \
   --create-namespace
-``
+```
 
 Check out our [guide](https://ocm.software/dev/docs/getting-started/set-up-controller-environments/) on how to set up
 OCM Controller environments for more details.
