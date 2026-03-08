@@ -51,6 +51,9 @@ env:
   ARTIFACT_NAME: ${{ inputs.artifact_name || 'controller-artifacts' }}
   CHECKOUT_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
 
+permissions:
+  contents: read # for actions/checkout to fetch code
+
 jobs:
   verify-chart:
     name: Verify Chart
@@ -195,6 +198,7 @@ jobs:
     timeout-minutes: 20
     needs: build
     permissions:
+      contents: read
       actions: read
     steps:
       - name: Checkout
@@ -279,6 +283,7 @@ jobs:
       chart_artifact_name: controller-chart-${{ needs.build.outputs.version }}
       chart_version: ${{ needs.build.outputs.version }}
     permissions:
+      contents: read
       actions: read
       packages: write
       id-token: write
