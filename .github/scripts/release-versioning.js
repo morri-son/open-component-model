@@ -2,7 +2,76 @@
 import { execFileSync } from "child_process";
 
 // --------------------------
-// Helpers
+// GitHub Actions entrypoint
+// --------------------------
+// noinspection JSUnusedGlobalSymbols
+/** @param {import('@actions/github-script').AsyncFunctionArguments} args */
+export default async function computeRcVersion({ core }) {
+    const componentPath = process.env.COMPONENT_PATH;
+    const releaseBranch = process.env.BRANCH;
+    if (!componentPath || !releaseBranch) {
+        core.setFailed("Missing COMPONENT_PATH or BRANCH");
+        return;
+    }
+
+    const basePrefix = parseBranch(releaseBranch);
+    const tagPrefix = `${componentPath}/v`;
+
+    // Get latest stable tag using Git's native version sort (descending)
+    // Filter out RC tags after fetching since git doesn't support negative pattern matching
+    const stableTags = run(core, "git", [
+        "tag", "--list", `${tagPrefix}${basePrefix}.*`,
+        "--sort=-version:refname"
+    ]);
+    const latestStable = stableTags
+        .split("\n")
+        .filter(tag => tag && !/-rc\.\d+$/.test(tag))[0] || "";
+
+    // Get latest RC tag using Git's native version sort (descending)
+    const rcTags = run(core, "git", [
+        "tag", "--list", `${tagPrefix}${basePrefix}.*-rc.*`,
+        "--sort=-version:refname"
+    ]);
+    const latestRc = rcTags.split("\n").filter(Boolean)[0] || "";
+
+    core.info(`Latest stable: ${latestStable || "(none)"}`);
+    core.info(`Latest RC: ${latestRc || "(none)"}`);
+
+    const { baseVersion, rcVersion } = computeNextVersions(basePrefix, latestStable, latestRc, false);
+
+    const rcTag = `${tagPrefix}${rcVersion}`;
+    const promotionTag = `${tagPrefix}${baseVersion}`;
+
+    core.setOutput("new_tag", rcTag);
+    core.setOutput("new_version", rcVersion);
+    core.setOutput("base_version", baseVersion);
+    core.setOutput("promotion_tag", promotionTag);
+
+    // --------------------------
+    // Step summary
+    // --------------------------
+    await core.summary
+        .addHeading("📦 RC Version Computation")
+        .addTable([
+            [
+                { data: "Field", header: true },
+                { data: "Value", header: true },
+            ],
+            ["Component Path", componentPath],
+            ["Release Branch", releaseBranch],
+            ["Base Prefix", basePrefix],
+            ["Latest Stable", latestStable || "(none)"],
+            ["Latest RC", latestRc || "(none)"],
+            ["Next Base Version", baseVersion],
+            ["Next RC Version", rcVersion],
+            ["RC Tag", rcTag],
+            ["Promotion Tag", promotionTag],
+        ])
+        .write();
+}
+
+// --------------------------
+// Core helpers
 // --------------------------
 /**
  * Run a shell command safely using execFileSync.
@@ -188,73 +257,3 @@ export function extractHighestFinalVersion(releases, tagPrefix) {
 export function shouldSetLatest(promotionVersion, highestFinal) {
     return !highestFinal || !isStableNewer(`v${highestFinal}`, `v${promotionVersion}`);
 }
-
-// --------------------------
-// GitHub Actions entrypoint
-// --------------------------
-// noinspection JSUnusedGlobalSymbols
-/** @param {import('@actions/github-script').AsyncFunctionArguments} args */
-export default async function computeRcVersion({ core }) {
-    const componentPath = process.env.COMPONENT_PATH;
-    const releaseBranch = process.env.BRANCH;
-    if (!componentPath || !releaseBranch) {
-        core.setFailed("Missing COMPONENT_PATH or BRANCH");
-        return;
-    }
-
-    const basePrefix = parseBranch(releaseBranch);
-    const tagPrefix = `${componentPath}/v`;
-
-    // Get latest stable tag using Git's native version sort (descending)
-    // Filter out RC tags after fetching since git doesn't support negative pattern matching
-    const stableTags = run(core, "git", [
-        "tag", "--list", `${tagPrefix}${basePrefix}.*`,
-        "--sort=-version:refname"
-    ]);
-    const latestStable = stableTags
-        .split("\n")
-        .filter(tag => tag && !/-rc\.\d+$/.test(tag))[0] || "";
-
-    // Get latest RC tag using Git's native version sort (descending)
-    const rcTags = run(core, "git", [
-        "tag", "--list", `${tagPrefix}${basePrefix}.*-rc.*`,
-        "--sort=-version:refname"
-    ]);
-    const latestRc = rcTags.split("\n").filter(Boolean)[0] || "";
-
-    core.info(`Latest stable: ${latestStable || "(none)"}`);
-    core.info(`Latest RC: ${latestRc || "(none)"}`);
-
-    const { baseVersion, rcVersion } = computeNextVersions(basePrefix, latestStable, latestRc, false);
-
-    const rcTag = `${tagPrefix}${rcVersion}`;
-    const promotionTag = `${tagPrefix}${baseVersion}`;
-
-    core.setOutput("new_tag", rcTag);
-    core.setOutput("new_version", rcVersion);
-    core.setOutput("base_version", baseVersion);
-    core.setOutput("promotion_tag", promotionTag);
-
-    // --------------------------
-    // Step summary
-    // --------------------------
-    await core.summary
-        .addHeading("📦 RC Version Computation")
-        .addTable([
-            [
-                { data: "Field", header: true },
-                { data: "Value", header: true },
-            ],
-            ["Component Path", componentPath],
-            ["Release Branch", releaseBranch],
-            ["Base Prefix", basePrefix],
-            ["Latest Stable", latestStable || "(none)"],
-            ["Latest RC", latestRc || "(none)"],
-            ["Next Base Version", baseVersion],
-            ["Next RC Version", rcVersion],
-            ["RC Tag", rcTag],
-            ["Promotion Tag", promotionTag],
-        ])
-        .write();
-}
-
