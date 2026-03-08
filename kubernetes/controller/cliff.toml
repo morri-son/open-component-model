@@ -20,9 +20,19 @@ body = """
     {% endfor %}
 {% endfor %}
 
-### Installation
+### Quick installation and usage guide
 
-TODO: Add controller-specific installation instructions here.
+To install the latest version of the OCM Controllers into an existing kubernetes cluster,
+you can use our Helm chart:
+
+```bash
+helm install ocm-k8s-toolkit oci://ghcr.io/open-component-model/charts/ocm-k8s-toolkit \
+  --namespace ocm-k8s-toolkit-system \
+  --create-namespace
+``
+
+Check out our [guide](https://ocm.software/dev/docs/getting-started/set-up-controller-environments/) on how to set up
+OCM Controller environments for more details.
 
 {% if github.contributors | length > 0 %}
 ### Community & Contributors
