@@ -3,57 +3,15 @@ import fs from "fs";
 import path from "path";
 
 // --------------------------
-// GitHub Actions entrypoint
-// --------------------------
-/** @param {import('@actions/github-script').AsyncFunctionArguments} args */
-export default async function publishFinalRelease({ github, context, core }) {
-  const {
-    FINAL_TAG: finalTag,
-    FINAL_VERSION: finalVersion,
-    RC_TAG: rcTag,
-    IMAGE_REPO: imageRepo,
-    CHART_REPO: chartRepo,
-    IMAGE_DIGEST: imageDigest,
-    CHART_DIR: chartDir,
-    NOTES_FILE: notesFile,
-    SET_LATEST: setLatest,
-    HIGHEST_FINAL_VERSION: highestFinalVersion,
-  } = process.env;
-
-  if (!finalTag || !finalVersion || !rcTag || !chartDir || !notesFile) {
-    core.setFailed("Missing required environment variables");
-    return;
-  }
-
-  const isLatest = setLatest === "true";
-  const notes = prepareReleaseNotes(notesFile, rcTag, finalTag);
-  const release = await getOrCreateRelease(github, context, {
-    finalTag,
-    finalVersion,
-    notes,
-    isLatest,
-  });
-  await uploadChartAssets(github, context, core, release.id, chartDir);
-  await writeSummary(core, {
-    finalTag,
-    rcTag,
-    finalVersion,
-    imageRepo,
-    chartRepo,
-    imageDigest,
-    isLatest,
-    highestFinalVersion,
-    releaseUrl: release.html_url,
-  });
-}
-
-// --------------------------
 // Helpers
 // --------------------------
 
 /**
- * Read the RC changelog and rewrite the header for the final release.
- * Falls back to a simple "Promoted from …" message if the file is missing.
+ * Promote changelog from RC: Read RC changelog and rewrite header for the final release.
+ * Falls back to a simple "Promoted from …" message if file is missing.
+ *
+ * The header pattern is derived dynamically from the RC tag, so it works for
+ * any component prefix (cli/v…, kubernetes/controller/v…, etc.).
  *
  * @param {string} notesFile - Path to the changelog markdown file.
  * @param {string} rcTag - The RC tag being promoted (e.g. "kubernetes/controller/v0.1.0-rc.1").
@@ -73,9 +31,22 @@ export function prepareReleaseNotes(notesFile, rcTag, finalTag) {
   }
 
   const today = new Date().toISOString().split("T")[0];
+
+  // Build a regex that matches the RC header line produced by git-cliff.
+  // Example header: "## [kubernetes/controller/v0.1.0-rc.1] - 2026-03-08"
+  // We escape the RC tag for safe regex usage, then match the full line.
+  const escapedRcTag = rcTag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const rcHeaderPattern = new RegExp(`^## \\[${escapedRcTag}\\].*$`, "m");
+
+  if (!rcHeaderPattern.test(notes)) {
+    // If no RC header found, prepend a final header instead of failing.
+    // This handles edge cases like manually edited release notes.
+    return `## [${finalTag}] - promoted from [${rcTag}] on ${today}\n\n${notes}`;
+  }
+
   return notes.replace(
-    /^\[([^\]]+)\]\s*-\s*[\d-]+/,
-    `[${finalTag}] - promoted from [${rcTag}] on ${today}`,
+    rcHeaderPattern,
+    `## [${finalTag}] - promoted from [${rcTag}] on ${today}`,
   );
 }
 
@@ -87,14 +58,16 @@ export function prepareReleaseNotes(notesFile, rcTag, finalTag) {
  * @param {object} opts
  * @param {string} opts.finalTag
  * @param {string} opts.finalVersion
+ * @param {string} opts.componentName
  * @param {string} opts.notes
  * @param {boolean} opts.isLatest
  * @returns {Promise<{id: number, html_url: string}>}
  */
 export async function getOrCreateRelease(github, context, opts) {
-  const { finalTag, finalVersion, notes, isLatest } = opts;
+  const { finalTag, finalVersion, componentName, notes, isLatest } = opts;
   const repo = { owner: context.repo.owner, repo: context.repo.repo };
   const makeLatest = isLatest ? "true" : "false";
+  const releaseName = `${componentName} ${finalVersion}`;
 
   try {
     const existing = await github.rest.repos.getReleaseByTag({
@@ -105,7 +78,7 @@ export async function getOrCreateRelease(github, context, opts) {
       ...repo,
       release_id: existing.data.id,
       tag_name: finalTag,
-      name: `Controller ${finalVersion}`,
+      name: releaseName,
       body: notes,
       prerelease: false,
       make_latest: makeLatest,
@@ -116,7 +89,7 @@ export async function getOrCreateRelease(github, context, opts) {
     const created = await github.rest.repos.createRelease({
       ...repo,
       tag_name: finalTag,
-      name: `Controller ${finalVersion}`,
+      name: releaseName,
       body: notes,
       prerelease: false,
       make_latest: makeLatest,
@@ -126,15 +99,16 @@ export async function getOrCreateRelease(github, context, opts) {
 }
 
 /**
- * Upload .tgz chart files as release assets, replacing duplicates.
+ * Upload all files from assets directory as release assets, replacing duplicates.
  *
  * @param {object} github - Octokit instance.
  * @param {object} context - GitHub Actions context.
  * @param {object} core - GitHub Actions core module.
  * @param {number} releaseId - The release to attach assets to.
- * @param {string} chartDir - Directory containing chart .tgz files.
+ * @param {string} assetsDir - Directory containing files to upload.
+ * @returns {Promise<number>} Number of uploaded files.
  */
-export async function uploadChartAssets(github, context, core, releaseId, chartDir) {
+export async function uploadAssets(github, context, core, releaseId, assetsDir) {
   const repo = { owner: context.repo.owner, repo: context.repo.repo };
   const existing = (
     await github.rest.repos.listReleaseAssets({
@@ -144,7 +118,11 @@ export async function uploadChartAssets(github, context, core, releaseId, chartD
     })
   ).data;
 
-  const files = fs.readdirSync(chartDir).filter((f) => f.endsWith(".tgz"));
+  const files = fs.readdirSync(assetsDir).filter((f) => {
+    const stat = fs.statSync(path.join(assetsDir, f));
+    return stat.isFile();
+  });
+
   for (const file of files) {
     const dup = existing.find((a) => a.name === file);
     if (dup) {
@@ -154,18 +132,21 @@ export async function uploadChartAssets(github, context, core, releaseId, chartD
         asset_id: dup.id,
       });
     }
-    const data = fs.readFileSync(path.join(chartDir, file));
+    const data = fs.readFileSync(path.join(assetsDir, file));
     await github.rest.repos.uploadReleaseAsset({
       ...repo,
       release_id: releaseId,
       name: file,
       data,
       headers: {
-        "content-type": "application/gzip",
+        "content-type": "application/octet-stream",
         "content-length": data.length,
       },
     });
+    core.info(`Uploaded: ${file}`);
   }
+
+  return files.length;
 }
 
 /**
@@ -179,38 +160,112 @@ export async function writeSummary(core, data) {
     finalTag,
     rcTag,
     finalVersion,
+    componentName,
     imageRepo,
     chartRepo,
     imageDigest,
     isLatest,
     highestFinalVersion,
+    uploadedCount,
     releaseUrl,
   } = data;
 
-  const imageTags = isLatest
-    ? `${imageRepo}:${finalVersion}, ${imageRepo}:latest`
-    : `${imageRepo}:${finalVersion}`;
+  const rows = [
+    [
+      { data: "Field", header: true },
+      { data: "Value", header: true },
+    ],
+    ["Component", componentName],
+    ["Final Tag", finalTag],
+    ["Promoted from RC", rcTag],
+    ["Highest Final Version", highestFinalVersion || "(none)"],
+    ["GitHub Latest", isLatest ? "Yes" : "No (older version)"],
+    ["Uploaded Assets", String(uploadedCount)],
+  ];
+
+  // Add optional OCI/Helm fields when present
+  if (imageRepo) {
+    const imageTags = isLatest
+      ? `${imageRepo}:${finalVersion}, ${imageRepo}:latest`
+      : `${imageRepo}:${finalVersion}`;
+    rows.push(["Image Tags", imageTags]);
+  }
+  if (imageDigest) {
+    rows.push(["Image Digest", imageDigest.substring(0, 19) + "..."]);
+  }
+  if (chartRepo) {
+    rows.push(["Helm Chart", `${chartRepo}:${finalVersion}`]);
+  }
 
   await core.summary
     .addHeading("Final Release Published")
-    .addTable([
-      [
-        { data: "Field", header: true },
-        { data: "Value", header: true },
-      ],
-      ["Final Tag", finalTag],
-      ["Promoted from RC", rcTag],
-      ["Highest Final Version", highestFinalVersion || "(none)"],
-      ["Image Tags", imageTags],
-      ["Helm Chart", `${chartRepo}:${finalVersion}`],
-      [
-        "Image Digest",
-        imageDigest ? imageDigest.substring(0, 19) + "..." : "N/A",
-      ],
-      ["GitHub Latest", isLatest ? "Yes" : "No (older version)"],
-    ])
+    .addTable(rows)
     .addEOL()
     .addLink("View Release", releaseUrl)
     .addEOL()
     .write();
+}
+
+// --------------------------
+// GitHub Actions entrypoint
+// --------------------------
+
+/**
+ * Publish a final GitHub release by promoting an RC.
+ *
+ * Required env vars:
+ *   FINAL_TAG, FINAL_VERSION, RC_TAG, COMPONENT_NAME, ASSETS_DIR, NOTES_FILE,
+ *   SET_LATEST, HIGHEST_FINAL_VERSION
+ *
+ * Optional env vars (for summary):
+ *   IMAGE_REPO, IMAGE_DIGEST, CHART_REPO
+ *
+ * @param {import('@actions/github-script').AsyncFunctionArguments} args
+ */
+export default async function publishFinalRelease({ github, context, core }) {
+  const {
+    FINAL_TAG: finalTag,
+    FINAL_VERSION: finalVersion,
+    RC_TAG: rcTag,
+    COMPONENT_NAME: componentName,
+    ASSETS_DIR: assetsDir,
+    NOTES_FILE: notesFile,
+    SET_LATEST: setLatest,
+    HIGHEST_FINAL_VERSION: highestFinalVersion,
+    // Optional — only used in summary
+    IMAGE_REPO: imageRepo,
+    IMAGE_DIGEST: imageDigest,
+    CHART_REPO: chartRepo,
+  } = process.env;
+
+  if (!finalTag || !finalVersion || !rcTag || !componentName || !assetsDir || !notesFile) {
+    core.setFailed(
+        "Missing required env vars: FINAL_TAG, FINAL_VERSION, RC_TAG, COMPONENT_NAME, ASSETS_DIR, NOTES_FILE",
+    );
+    return;
+  }
+
+  const isLatest = setLatest === "true";
+  const notes = prepareReleaseNotes(notesFile, rcTag, finalTag);
+  const release = await getOrCreateRelease(github, context, {
+    finalTag,
+    finalVersion,
+    componentName,
+    notes,
+    isLatest,
+  });
+  const uploadedCount = await uploadAssets(github, context, core, release.id, assetsDir);
+  await writeSummary(core, {
+    finalTag,
+    rcTag,
+    finalVersion,
+    componentName,
+    imageRepo,
+    chartRepo,
+    imageDigest,
+    isLatest,
+    highestFinalVersion,
+    uploadedCount,
+    releaseUrl: release.html_url,
+  });
 }

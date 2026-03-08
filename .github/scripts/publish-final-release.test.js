@@ -5,7 +5,7 @@ import os from "os";
 import {
   prepareReleaseNotes,
   getOrCreateRelease,
-  uploadChartAssets,
+  uploadAssets,
   writeSummary,
 } from "./publish-final-release.js";
 
@@ -15,7 +15,7 @@ import {
 
 /** Create a temp directory with optional files. */
 function tmpDir(files = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pfr-test-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "publish-final-release-test-"));
   for (const [name, content] of Object.entries(files)) {
     fs.writeFileSync(path.join(dir, name), content);
   }
@@ -72,27 +72,47 @@ function mockCore() {
   assert.strictEqual(result, "Promoted from rc-tag");
 }
 
-// Rewrites header line with final tag and today's date
+// Rewrites git-cliff header line for controller tags
 {
-  const dir = tmpDir({ "notes.md": "[controller/v0.1.0-rc.1] - 2025-01-01\n\n- Some change" });
+  const dir = tmpDir({ "notes.md": "## [kubernetes/controller/v0.1.0-rc.1] - 2025-01-01\n\n- Some change" });
   const result = prepareReleaseNotes(
     path.join(dir, "notes.md"),
-    "controller/v0.1.0-rc.1",
-    "controller/v0.1.0",
+    "kubernetes/controller/v0.1.0-rc.1",
+    "kubernetes/controller/v0.1.0",
   );
   const today = new Date().toISOString().split("T")[0];
   assert.ok(
-    result.startsWith(`[controller/v0.1.0] - promoted from [controller/v0.1.0-rc.1] on ${today}`),
+    result.startsWith(`## [kubernetes/controller/v0.1.0] - promoted from [kubernetes/controller/v0.1.0-rc.1] on ${today}`),
     `Expected header rewrite, got: ${result.split("\n")[0]}`,
   );
   assert.ok(result.includes("- Some change"), "Body should be preserved");
 }
 
-// Preserves notes that don't match the header pattern
+// Rewrites git-cliff header line for CLI tags
+{
+  const dir = tmpDir({ "notes.md": "## [cli/v0.17.0-rc.1] - 2025-02-02\n\n- Fix bug" });
+  const result = prepareReleaseNotes(
+    path.join(dir, "notes.md"),
+    "cli/v0.17.0-rc.1",
+    "cli/v0.17.0",
+  );
+  const today = new Date().toISOString().split("T")[0];
+  assert.ok(
+    result.startsWith(`## [cli/v0.17.0] - promoted from [cli/v0.17.0-rc.1] on ${today}`),
+    `Expected header rewrite for CLI, got: ${result.split("\n")[0]}`,
+  );
+}
+
+// Prepends header when notes don't match the RC header pattern
 {
   const dir = tmpDir({ "notes.md": "Just some plain notes\n\n- Fix bug" });
-  const result = prepareReleaseNotes(path.join(dir, "notes.md"), "rc", "final");
-  assert.strictEqual(result, "Just some plain notes\n\n- Fix bug");
+  const today = new Date().toISOString().split("T")[0];
+  const result = prepareReleaseNotes(path.join(dir, "notes.md"), "rc-tag", "final-tag");
+  assert.ok(
+    result.startsWith(`## [final-tag] - promoted from [rc-tag] on ${today}`),
+    `Expected prepended header, got: ${result.split("\n")[0]}`,
+  );
+  assert.ok(result.includes("- Fix bug"), "Original body should be preserved");
 }
 
 // ----------------------------------------------------------
@@ -111,12 +131,14 @@ function mockCore() {
   const result = await getOrCreateRelease(gh, mockContext, {
     finalTag: "v1.0.0",
     finalVersion: "1.0.0",
+    componentName: "OCM Controller",
     notes: "notes",
     isLatest: true,
   });
   assert.strictEqual(result.id, 42);
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].opts.make_latest, "true");
+  assert.strictEqual(calls[0].opts.name, "OCM Controller 1.0.0");
 }
 
 // Updates existing release when tag already exists
@@ -132,12 +154,14 @@ function mockCore() {
   const result = await getOrCreateRelease(gh, mockContext, {
     finalTag: "v1.0.0",
     finalVersion: "1.0.0",
+    componentName: "OCM CLI",
     notes: "notes",
     isLatest: false,
   });
   assert.strictEqual(result.id, 10);
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].opts.make_latest, "false");
+  assert.strictEqual(calls[0].opts.name, "OCM CLI 1.0.0");
 }
 
 // Rethrows non-404 errors
@@ -147,17 +171,17 @@ function mockCore() {
   });
   await assert.rejects(
     () => getOrCreateRelease(gh, mockContext, {
-      finalTag: "v1.0.0", finalVersion: "1.0.0", notes: "", isLatest: false,
+      finalTag: "v1.0.0", finalVersion: "1.0.0", componentName: "Test", notes: "", isLatest: false,
     }),
     (err) => err.status === 500,
   );
 }
 
 // ----------------------------------------------------------
-// uploadChartAssets tests
+// uploadAssets tests
 // ----------------------------------------------------------
 
-// Uploads new files
+// Uploads all files from directory
 {
   const dir = tmpDir({ "chart-1.0.0.tgz": "fake-chart-data" });
   const uploaded = [];
@@ -165,8 +189,9 @@ function mockCore() {
     listReleaseAssets: async () => ({ data: [] }),
     uploadReleaseAsset: async (opts) => uploaded.push(opts.name),
   });
-  await uploadChartAssets(gh, mockContext, mockCore(), 1, dir);
+  const count = await uploadAssets(gh, mockContext, mockCore(), 1, dir);
   assert.deepStrictEqual(uploaded, ["chart-1.0.0.tgz"]);
+  assert.strictEqual(count, 1);
 }
 
 // Replaces duplicate assets
@@ -179,21 +204,38 @@ function mockCore() {
     deleteReleaseAsset: async (opts) => deleted.push(opts.asset_id),
     uploadReleaseAsset: async (opts) => uploaded.push(opts.name),
   });
-  await uploadChartAssets(gh, mockContext, mockCore(), 1, dir);
+  const count = await uploadAssets(gh, mockContext, mockCore(), 1, dir);
   assert.deepStrictEqual(deleted, [99]);
   assert.deepStrictEqual(uploaded, ["chart-1.0.0.tgz"]);
+  assert.strictEqual(count, 1);
 }
 
-// Ignores non-.tgz files
+// Uploads all files (no pattern filtering)
 {
-  const dir = tmpDir({ "chart-1.0.0.tgz": "data", "README.md": "ignore me" });
+  const dir = tmpDir({ "chart-1.0.0.tgz": "data", "ocm-linux-amd64": "binary" });
   const uploaded = [];
   const gh = mockGitHub({
     listReleaseAssets: async () => ({ data: [] }),
     uploadReleaseAsset: async (opts) => uploaded.push(opts.name),
   });
-  await uploadChartAssets(gh, mockContext, mockCore(), 1, dir);
-  assert.deepStrictEqual(uploaded, ["chart-1.0.0.tgz"]);
+  const count = await uploadAssets(gh, mockContext, mockCore(), 1, dir);
+  assert.strictEqual(count, 2);
+  assert.ok(uploaded.includes("chart-1.0.0.tgz"));
+  assert.ok(uploaded.includes("ocm-linux-amd64"));
+}
+
+// Skips subdirectories
+{
+  const dir = tmpDir({ "chart.tgz": "data" });
+  fs.mkdirSync(path.join(dir, "subdir"));
+  const uploaded = [];
+  const gh = mockGitHub({
+    listReleaseAssets: async () => ({ data: [] }),
+    uploadReleaseAsset: async (opts) => uploaded.push(opts.name),
+  });
+  const count = await uploadAssets(gh, mockContext, mockCore(), 1, dir);
+  assert.strictEqual(count, 1);
+  assert.deepStrictEqual(uploaded, ["chart.tgz"]);
 }
 
 // ----------------------------------------------------------
@@ -209,17 +251,19 @@ function mockCore() {
     finalTag: "v1.0.0",
     rcTag: "v1.0.0-rc.1",
     finalVersion: "1.0.0",
+    componentName: "OCM Controller",
     imageRepo: "ghcr.io/org/img",
     chartRepo: "ghcr.io/org/chart",
     imageDigest: "sha256:abc123def456789012345",
     isLatest: true,
     highestFinalVersion: "0.9.0",
+    uploadedCount: 2,
     releaseUrl: "https://example.com",
   });
   assert.ok(written, "summary.write() should have been called");
 }
 
-// Handles missing imageDigest gracefully
+// Handles missing optional fields gracefully
 {
   let written = false;
   const core = mockCore();
@@ -228,11 +272,13 @@ function mockCore() {
     finalTag: "v1.0.0",
     rcTag: "v1.0.0-rc.1",
     finalVersion: "1.0.0",
-    imageRepo: "ghcr.io/org/img",
-    chartRepo: "ghcr.io/org/chart",
+    componentName: "OCM CLI",
+    imageRepo: "",
+    chartRepo: "",
     imageDigest: "",
     isLatest: false,
     highestFinalVersion: "",
+    uploadedCount: 0,
     releaseUrl: "https://example.com",
   });
   assert.ok(written, "summary.write() should have been called");

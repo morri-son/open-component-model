@@ -3,7 +3,7 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 
 // --------------------------
-// Shared helpers
+// Helpers
 // --------------------------
 
 /**
