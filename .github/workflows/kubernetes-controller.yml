@@ -357,8 +357,9 @@ jobs:
         env:
           VERSION: ${{ needs.build.outputs.version }}
           IMAGE_DIGEST: ${{ steps.image-digest.outputs.digest }}
+          IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
-          task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
+          task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}" IMAGE_REPOSITORY="${IMAGE_NAME}"
           task helm/push VERSION="${VERSION}" REGISTRY="${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller"
 
       - name: Resolve chart digest
