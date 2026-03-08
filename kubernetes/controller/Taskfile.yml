@@ -10,10 +10,6 @@ vars:
   # Tool versions from local .env.
   # We read values with grep/cut instead of shell sourcing to avoid
   # interference from Task's own environment during sh: evaluation.
-  # dotenv: is not used because it only populates the environment for
-  # task commands (not vars:) and loading the root .env (which sets
-  # TASK_X_ENV_PRECEDENCE=1) can interfere with built-in variable
-  # resolution (e.g. TASKFILE_DIR).
   KUSTOMIZE_VERSION:
     sh: "grep '^KUSTOMIZE_VERSION=' .env | cut -d= -f2"
   CONTROLLER_TOOLS_VERSION:
