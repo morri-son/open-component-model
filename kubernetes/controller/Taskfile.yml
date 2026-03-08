@@ -1,7 +1,5 @@
 version: '3'
 
-dotenv: ['../../.env', '.env']
-
 env:
   CONTROLLER_IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:latest" }}'
 
@@ -12,8 +10,10 @@ vars:
   # Tool versions from local .env.
   # Task v3 does not guarantee sh: evaluation order, so referencing other
   # sh:-based vars (e.g. PROJECT_ROOT) can race and produce empty values.
-  # We source .env explicitly here because dotenv: only populates the
-  # environment for task commands, not for vars: evaluation.
+  # We source .env explicitly because dotenv: only populates the environment
+  # for task commands, not for vars: evaluation; and loading the root .env
+  # (which sets TASK_X_ENV_PRECEDENCE=1) via dotenv: can interfere with
+  # built-in variable resolution (e.g. TASKFILE_DIR).
   KUSTOMIZE_VERSION:
     sh: '. .env; echo "$KUSTOMIZE_VERSION"'
   CONTROLLER_TOOLS_VERSION:
