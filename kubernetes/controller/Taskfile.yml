@@ -1,7 +1,7 @@
 version: '3'
 
 env:
-  CONTROLLER_IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:latest" }}'
+  CONTROLLER_IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:0.0.0-main" }}'
 
 vars:
   GOBIN:
@@ -188,10 +188,11 @@ tasks:
 
 
   helm/package:
-    desc: "Package the Helm chart with the specified version and/or digest"
+    desc: "Package the Helm chart with the specified version, digest and repository (if provided)"
     deps: [yq]
     cmds:
       - mkdir -p dist
+      - '{{ if .IMAGE_REPOSITORY }}{{.YQ}} -i ".manager.image.repository = \"{{.IMAGE_REPOSITORY}}\"" chart/values.yaml{{end}}'
       - '{{ if .VERSION }}{{.YQ}} -i ".manager.image.tag = \"{{.VERSION}}\"" chart/values.yaml{{end}}'
       - '{{ if .IMAGE_DIGEST }}{{.YQ}} -i ".manager.image.digest = \"{{.IMAGE_DIGEST}}\"" chart/values.yaml{{end}}'
       - helm package chart/ --destination dist/ {{if .VERSION}}--version {{.VERSION}}{{end}} {{if .APP_VERSION}}--app-version {{.APP_VERSION}}{{end}}
@@ -243,8 +244,17 @@ tasks:
       - helm template ocm-k8s-toolkit chart/ --namespace ocm-k8s-toolkit-system -f chart/test-values.yaml > dist/generated.yaml
 
   helm/install:
-    desc: "Install the Helm chart"
+    desc: "Install the Helm chart into the cluster with test values (using CONTROLLER_IMG if set, otherwise default)"
+    deps: [yq]
+    vars:
+      _IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:0.0.0-main" }}'
+      _REPO:
+        sh: 'echo "{{._IMG}}" | sed "s/:[^:]*$//"'
+      _TAG:
+        sh: 'echo "{{._IMG}}" | grep -o ":[^:]*$" | tr -d ":"'
     cmds:
+      - '{{.YQ}} -i ".manager.image.repository = \"{{._REPO}}\"" chart/test-values.yaml'
+      - '{{.YQ}} -i ".manager.image.tag = \"{{._TAG}}\"" chart/test-values.yaml'
       - |
         helm upgrade --install ocm-k8s-toolkit chart/ \
           -f chart/test-values.yaml \
