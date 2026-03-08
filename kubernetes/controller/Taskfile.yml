@@ -1,31 +1,35 @@
 version: '3'
 
+dotenv: ['../../.env', '.env']
+
 env:
   CONTROLLER_IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:latest" }}'
 
 vars:
   GOBIN:
     sh: 'go env GOBIN || echo $(go env GOPATH)/bin'
-  PROJECT_ROOT:
-    sh: 'git rev-parse --show-toplevel'
 
-  # Tool versions: load from project root, then override with local .env if set
+  # Tool versions from local .env.
+  # Task v3 does not guarantee sh: evaluation order, so referencing other
+  # sh:-based vars (e.g. PROJECT_ROOT) can race and produce empty values.
+  # We source .env explicitly here because dotenv: only populates the
+  # environment for task commands, not for vars: evaluation.
   KUSTOMIZE_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$KUSTOMIZE_VERSION"'
+    sh: '. .env; echo "$KUSTOMIZE_VERSION"'
   CONTROLLER_TOOLS_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$CONTROLLER_TOOLS_VERSION"'
+    sh: '. .env; echo "$CONTROLLER_TOOLS_VERSION"'
   ENVTEST_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$ENVTEST_VERSION"'
+    sh: '. .env; echo "$ENVTEST_VERSION"'
   ENVTEST_K8S_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$ENVTEST_K8S_VERSION"'
+    sh: '. .env; echo "$ENVTEST_K8S_VERSION"'
   KIND_NODE_IMAGE_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$KIND_NODE_IMAGE_VERSION"'
+    sh: '. .env; echo "$KIND_NODE_IMAGE_VERSION"'
   HELM_DOCS_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "${HELM_DOCS_VERSION:-v1.14.2}"'
+    sh: '. .env; echo "${HELM_DOCS_VERSION:-v1.14.2}"'
   KUBEBUILDER_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "${KUBEBUILDER_VERSION:-v4.11.1}"'
+    sh: '. .env; echo "${KUBEBUILDER_VERSION:-v4.11.1}"'
   YQ_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "${YQ_VERSION:-v4.49.2}"'
+    sh: '. .env; echo "${YQ_VERSION:-v4.49.2}"'
   
   CONTAINER_TOOL: '{{.CONTAINER_TOOL | default "docker"}}'
   LOCALBIN: '{{.TASKFILE_DIR}}/bin'
