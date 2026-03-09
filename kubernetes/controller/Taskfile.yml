@@ -140,12 +140,19 @@ tasks:
       # Run docker (or podman) buildx with the constructed args
       {{.CONTAINER_TOOL}} buildx build "${args[@]}"
 
+  oci/extract:
+    desc: "Extract an OCI layout tar archive into a directory"
+    requires:
+      vars: [TAR_PATH, OUTPUT_DIR]
+    cmds:
+      - mkdir -p "{{.OUTPUT_DIR}}"
+      - tar -xf "{{.TAR_PATH}}" -C "{{.OUTPUT_DIR}}"
+
   build-installer:
     deps: [manifests, generate, kustomize]
     cmds:
       - mkdir -p dist
       - '{{.KUSTOMIZE}} build config/default > dist/install.yaml'
-
 
   # Helm chart tasks
   helm/sync-manifests:
