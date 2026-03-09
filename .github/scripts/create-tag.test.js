@@ -14,6 +14,24 @@ import {
 // Helpers
 // ----------------------------------------------------------
 
+/** Run fn with temporary env vars, restoring originals via try/finally. */
+async function withEnv(vars, fn) {
+  const saved = {};
+  for (const key of Object.keys(vars)) {
+    saved[key] = process.env[key];
+    if (vars[key] === undefined) delete process.env[key];
+    else process.env[key] = vars[key];
+  }
+  try {
+    await fn();
+  } finally {
+    for (const key of Object.keys(saved)) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  }
+}
+
 /** Create a mock execGit that returns predefined results per command pattern. */
 function mockExecGit(responses = {}) {
   const calls = [];
@@ -115,48 +133,42 @@ function tmpDir(files = {}) {
 // Missing env vars → setFailed
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  delete process.env.TAG;
-  delete process.env.CHANGELOG_FILE;
-  await createRcTag({ core });
-  assert.ok(core._state.failed?.includes("Missing"), `Expected setFailed, got: ${core._state.failed}`);
-  process.env = origEnv;
+  await withEnv({ TAG: undefined, CHANGELOG_FILE: undefined }, async () => {
+    await createRcTag({ core });
+    assert.ok(core._state.failed?.includes("Missing"), `Expected setFailed, got: ${core._state.failed}`);
+  });
 }
 
 // Tag already exists → idempotent skip with pushed=true
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  process.env.TAG = "controller/v0.1.0-rc.1";
-  process.env.CHANGELOG_FILE = "/tmp/dummy.md";
-  const git = mockExecGit({ "refs/tags/controller/v0.1.0-rc.1": "abc123" });
-  await createRcTag({ core, execGit: git });
-  assert.strictEqual(core._state.failed, null);
-  assert.strictEqual(core._state.outputs.pushed, "true");
-  assert.ok(core._state.logs.some((l) => l.includes("already exists")));
-  process.env = origEnv;
+  await withEnv({ TAG: "controller/v0.1.0-rc.1", CHANGELOG_FILE: "/tmp/dummy.md" }, async () => {
+    const git = mockExecGit({ "refs/tags/controller/v0.1.0-rc.1": "abc123" });
+    await createRcTag({ core, execGit: git });
+    assert.strictEqual(core._state.failed, null);
+    assert.strictEqual(core._state.outputs.pushed, "true");
+    assert.ok(core._state.logs.some((l) => l.includes("already exists")));
+  });
 }
 
 // Tag does not exist → creates and pushes
 {
   const core = mockCore();
   const dir = tmpDir({ "CHANGELOG.md": "## v0.1.0-rc.1\n\n- Initial release" });
-  const origEnv = { ...process.env };
-  process.env.TAG = "controller/v0.1.0-rc.1";
-  process.env.CHANGELOG_FILE = path.join(dir, "CHANGELOG.md");
-  const git = mockExecGit({
-    "rev-parse refs/tags/controller/v0.1.0-rc.1": new Error("not found"),
+  await withEnv({ TAG: "controller/v0.1.0-rc.1", CHANGELOG_FILE: path.join(dir, "CHANGELOG.md") }, async () => {
+    const git = mockExecGit({
+      "rev-parse refs/tags/controller/v0.1.0-rc.1": new Error("not found"),
+    });
+    await createRcTag({ core, execGit: git });
+    assert.strictEqual(core._state.failed, null);
+    assert.strictEqual(core._state.outputs.pushed, "true");
+    assert.ok(core._state.logs.some((l) => l.includes("✅ Created RC tag")));
+    // Verify tag and push commands were called
+    const tagCall = git.calls.find((c) => c[0] === "tag");
+    assert.ok(tagCall, "Expected a git tag command");
+    const pushCall = git.calls.find((c) => c[0] === "push");
+    assert.ok(pushCall, "Expected a git push command");
   });
-  await createRcTag({ core, execGit: git });
-  assert.strictEqual(core._state.failed, null);
-  assert.strictEqual(core._state.outputs.pushed, "true");
-  assert.ok(core._state.logs.some((l) => l.includes("✅ Created RC tag")));
-  // Verify tag and push commands were called
-  const tagCall = git.calls.find((c) => c[0] === "tag");
-  assert.ok(tagCall, "Expected a git tag command");
-  const pushCall = git.calls.find((c) => c[0] === "push");
-  assert.ok(pushCall, "Expected a git push command");
-  process.env = origEnv;
 }
 
 // ----------------------------------------------------------
@@ -166,89 +178,79 @@ function tmpDir(files = {}) {
 // Missing env vars → setFailed
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  delete process.env.RC_TAG;
-  delete process.env.FINAL_TAG;
-  await createFinalTag({ core });
-  assert.ok(core._state.failed?.includes("Missing"));
-  process.env = origEnv;
+  await withEnv({ RC_TAG: undefined, FINAL_TAG: undefined }, async () => {
+    await createFinalTag({ core });
+    assert.ok(core._state.failed?.includes("Missing"));
+  });
 }
 
 // RC tag cannot be resolved → setFailed
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  process.env.RC_TAG = "controller/v0.1.0-rc.1";
-  process.env.FINAL_TAG = "controller/v0.1.0";
-  const git = mockExecGit({
-    "rc.1^{commit}": new Error("not found"),
+  await withEnv({ RC_TAG: "controller/v0.1.0-rc.1", FINAL_TAG: "controller/v0.1.0" }, async () => {
+    const git = mockExecGit({
+      "rc.1^{commit}": new Error("not found"),
+    });
+    await createFinalTag({ core, execGit: git });
+    assert.ok(core._state.failed !== null, "Expected setFailed on unresolvable RC tag");
   });
-  await createFinalTag({ core, execGit: git });
-  assert.ok(core._state.failed !== null, "Expected setFailed on unresolvable RC tag");
-  process.env = origEnv;
 }
 
 // Final tag exists at correct commit → idempotent success
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  process.env.RC_TAG = "controller/v0.1.0-rc.1";
-  process.env.FINAL_TAG = "controller/v0.1.0";
-  const git = mockExecGit({
-    "rc.1^{commit}": "abc1234567890",
-    "v0.1.0^{commit}": "abc1234567890",
-    "refs/tags/controller/v0.1.0": "something", // tagExists check
+  await withEnv({ RC_TAG: "controller/v0.1.0-rc.1", FINAL_TAG: "controller/v0.1.0" }, async () => {
+    const git = mockExecGit({
+      "rc.1^{commit}": "abc1234567890",
+      "v0.1.0^{commit}": "abc1234567890",
+      "refs/tags/controller/v0.1.0": "something", // tagExists check
+    });
+    await createFinalTag({ core, execGit: git });
+    assert.strictEqual(core._state.failed, null);
+    assert.ok(core._state.logs.some((l) => l.includes("idempotent rerun")));
   });
-  await createFinalTag({ core, execGit: git });
-  assert.strictEqual(core._state.failed, null);
-  assert.ok(core._state.logs.some((l) => l.includes("idempotent rerun")));
-  process.env = origEnv;
 }
 
 // Final tag exists at wrong commit → setFailed
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  process.env.RC_TAG = "controller/v0.1.0-rc.1";
-  process.env.FINAL_TAG = "controller/v0.1.0";
-  const git = mockExecGit({
-    "rc.1^{commit}": "abc1234567890",
-    "v0.1.0^{commit}": "def9876543210",
-    "refs/tags/controller/v0.1.0": "something", // tagExists check
+  await withEnv({ RC_TAG: "controller/v0.1.0-rc.1", FINAL_TAG: "controller/v0.1.0" }, async () => {
+    const git = mockExecGit({
+      "rc.1^{commit}": "abc1234567890",
+      "v0.1.0^{commit}": "def9876543210",
+      "refs/tags/controller/v0.1.0": "something", // tagExists check
+    });
+    await createFinalTag({ core, execGit: git });
+    assert.ok(core._state.failed?.includes("already exists but points to"));
   });
-  await createFinalTag({ core, execGit: git });
-  assert.ok(core._state.failed?.includes("already exists but points to"));
-  process.env = origEnv;
 }
 
 // Final tag does not exist → creates and pushes
 {
   const core = mockCore();
-  const origEnv = { ...process.env };
-  process.env.RC_TAG = "controller/v0.1.0-rc.1";
-  process.env.FINAL_TAG = "controller/v0.1.0";
-  // Use a custom mock that only throws for the tagExists rev-parse check
-  const calls = [];
-  const git = (args) => {
-    calls.push(args);
-    const key = args.join(" ");
-    // resolveTagCommit for RC tag
-    if (key.includes("rc.1^{commit}")) return "abc1234567890";
-    // tagExists check for final tag (rev-parse without ^{commit})
-    if (key === "rev-parse refs/tags/controller/v0.1.0") throw new Error("not found");
-    // All other commands (tag, push) succeed
-    return "";
-  };
-  git.calls = calls;
-  await createFinalTag({ core, execGit: git });
-  assert.strictEqual(core._state.failed, null);
-  assert.ok(core._state.logs.some((l) => l.includes("✅ Created final tag")));
-  const tagCall = calls.find((c) => c[0] === "tag");
-  assert.ok(tagCall, "Expected a git tag command");
-  assert.ok(tagCall.includes("abc1234567890"), "Tag should be created at RC commit");
-  const pushCall = calls.find((c) => c[0] === "push");
-  assert.ok(pushCall, "Expected a git push command");
-  process.env = origEnv;
+  await withEnv({ RC_TAG: "controller/v0.1.0-rc.1", FINAL_TAG: "controller/v0.1.0" }, async () => {
+    // Use a custom mock that only throws for the tagExists rev-parse check
+    const calls = [];
+    const git = (args) => {
+      calls.push(args);
+      const key = args.join(" ");
+      // resolveTagCommit for RC tag
+      if (key.includes("rc.1^{commit}")) return "abc1234567890";
+      // tagExists check for final tag (rev-parse without ^{commit})
+      if (key === "rev-parse refs/tags/controller/v0.1.0") throw new Error("not found");
+      // All other commands (tag, push) succeed
+      return "";
+    };
+    git.calls = calls;
+    await createFinalTag({ core, execGit: git });
+    assert.strictEqual(core._state.failed, null);
+    assert.ok(core._state.logs.some((l) => l.includes("✅ Created final tag")));
+    const tagCall = calls.find((c) => c[0] === "tag");
+    assert.ok(tagCall, "Expected a git tag command");
+    assert.ok(tagCall.includes("abc1234567890"), "Tag should be created at RC commit");
+    const pushCall = calls.find((c) => c[0] === "push");
+    assert.ok(pushCall, "Expected a git push command");
+  });
 }
 
 console.log("✅ All create-tag tests passed.");

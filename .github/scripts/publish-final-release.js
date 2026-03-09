@@ -114,7 +114,7 @@ export async function uploadAssets(github, context, core, releaseId, assetsDir) 
     await github.rest.repos.listReleaseAssets({
       ...repo,
       release_id: releaseId,
-      per_page: 100,
+      per_page: 100, // Note: does not paginate — assumes ≤100 assets per release
     })
   ).data;
 
