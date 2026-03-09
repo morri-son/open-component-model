@@ -192,10 +192,16 @@ tasks:
     deps: [yq]
     cmds:
       - mkdir -p dist
-      - '{{ if .IMAGE_REPOSITORY }}{{.YQ}} -i ".manager.image.repository = \"{{.IMAGE_REPOSITORY}}\"" chart/values.yaml{{end}}'
-      - '{{ if .VERSION }}{{.YQ}} -i ".manager.image.tag = \"{{.VERSION}}\"" chart/values.yaml{{end}}'
-      - '{{ if .IMAGE_DIGEST }}{{.YQ}} -i ".manager.image.digest = \"{{.IMAGE_DIGEST}}\"" chart/values.yaml{{end}}'
-      - helm package chart/ --destination dist/ {{if .VERSION}}--version {{.VERSION}}{{end}} {{if .APP_VERSION}}--app-version {{.APP_VERSION}}{{end}}
+      - |
+        # Snapshot values.yaml so in-place yq edits never leak into the worktree.
+        cp chart/values.yaml chart/values.yaml.bak
+        trap 'mv chart/values.yaml.bak chart/values.yaml' EXIT
+
+        {{ if .IMAGE_REPOSITORY }}{{.YQ}} -i '.manager.image.repository = "{{.IMAGE_REPOSITORY}}"' chart/values.yaml{{end}}
+        {{ if .VERSION }}{{.YQ}} -i '.manager.image.tag = "{{.VERSION}}"' chart/values.yaml{{end}}
+        {{ if .IMAGE_DIGEST }}{{.YQ}} -i '.manager.image.digest = "{{.IMAGE_DIGEST}}"' chart/values.yaml{{end}}
+
+        helm package chart/ --destination dist/ {{if .VERSION}}--version {{.VERSION}}{{end}} {{if .APP_VERSION}}--app-version {{.APP_VERSION}}{{end}}
 
   helm/push:
     desc: "Push packaged Helm chart to OCI registry"
