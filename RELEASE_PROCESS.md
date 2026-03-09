@@ -209,7 +209,7 @@ The final promotion is triggered automatically after the RC phase completes
 and the respective environment gate is approved.
 
 1. Wait for the RC to be tested (typically 1 sprint).
-2. Go to the **CLI Release** workflow run in GitHub Actions.
+2. Go to the **[CLI Release](https://github.com/open-component-model/open-component-model/actions/workflows/cli-release.yml)** workflow run in GitHub Actions.
 3. Approve the `cli/release` environment gate (requires reviewer approval + wait timer).
 4. The CLI workflow will automatically:
    - Verify binary and OCI image attestations
