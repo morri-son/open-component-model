@@ -11,8 +11,10 @@ manager:
   image:
     # -- Controller image repository
     repository: ghcr.io/open-component-model/kubernetes/controller
-    # -- Controller image tag
-    tag: latest@sha256:5580df055651f7d28557d502157d29d6b11bc7b303d110dd9e605220b1481759
+    # -- Controller image tag (used when digest is not set)
+    tag: latest
+    # -- Controller image digest (e.g. sha256:...). When set, takes precedence over tag.
+    digest: ""
     # -- Image pull policy
     pullPolicy: IfNotPresent
   ## Controller concurrency settings

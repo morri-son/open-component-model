@@ -1,31 +1,29 @@
 version: '3'
 
 env:
-  CONTROLLER_IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:latest" }}'
+  CONTROLLER_IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:0.0.0-main" }}'
 
 vars:
   GOBIN:
     sh: 'go env GOBIN || echo $(go env GOPATH)/bin'
-  PROJECT_ROOT:
-    sh: 'git rev-parse --show-toplevel'
 
-  # Tool versions: load from project root, then override with local .env if set
+  # Tool versions from local .env.
+  # We read values with grep/cut instead of shell sourcing to avoid
+  # interference from Task's own environment during sh: evaluation.
   KUSTOMIZE_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$KUSTOMIZE_VERSION"'
+    sh: "grep '^KUSTOMIZE_VERSION=' .env | cut -d= -f2"
   CONTROLLER_TOOLS_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$CONTROLLER_TOOLS_VERSION"'
+    sh: "grep '^CONTROLLER_TOOLS_VERSION=' .env | cut -d= -f2"
   ENVTEST_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$ENVTEST_VERSION"'
+    sh: "grep '^ENVTEST_VERSION=' .env | cut -d= -f2"
   ENVTEST_K8S_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$ENVTEST_K8S_VERSION"'
+    sh: "grep '^ENVTEST_K8S_VERSION=' .env | cut -d= -f2"
   KIND_NODE_IMAGE_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "$KIND_NODE_IMAGE_VERSION"'
-  HELM_DOCS_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "${HELM_DOCS_VERSION:-v1.14.2}"'
-  KUBEBUILDER_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "${KUBEBUILDER_VERSION:-v4.11.1}"'
-  YQ_VERSION:
-    sh: 'source {{.PROJECT_ROOT}}/.env && [ -f .env ] && source .env; echo "${YQ_VERSION:-v4.49.2}"'
+    sh: "grep '^KIND_NODE_IMAGE_VERSION=' .env | cut -d= -f2"
+  # These three are not in .env; plain defaults, no sh: needed.
+  HELM_DOCS_VERSION: 'v1.14.2'
+  KUBEBUILDER_VERSION: 'v4.11.1'
+  YQ_VERSION: 'v4.49.2'
   
   CONTAINER_TOOL: '{{.CONTAINER_TOOL | default "docker"}}'
   LOCALBIN: '{{.TASKFILE_DIR}}/bin'
@@ -133,15 +131,28 @@ tasks:
         args+=(--push)
       fi
 
+      # If OCI_OUTPUT is set, write OCI layout tar to that path
+      if [ -n "{{.OCI_OUTPUT | default ""}}" ]; then
+        mkdir -p "$(dirname '{{.OCI_OUTPUT}}')"
+        args+=(--output "type=oci,dest={{.OCI_OUTPUT}},oci-mediatypes=true")
+      fi
+
       # Run docker (or podman) buildx with the constructed args
       {{.CONTAINER_TOOL}} buildx build "${args[@]}"
+
+  oci/extract:
+    desc: "Extract an OCI layout tar archive into a directory"
+    requires:
+      vars: [TAR_PATH, OUTPUT_DIR]
+    cmds:
+      - mkdir -p "{{.OUTPUT_DIR}}"
+      - tar -xf "{{.TAR_PATH}}" -C "{{.OUTPUT_DIR}}"
 
   build-installer:
     deps: [manifests, generate, kustomize]
     cmds:
       - mkdir -p dist
       - '{{.KUSTOMIZE}} build config/default > dist/install.yaml'
-
 
   # Helm chart tasks
   helm/sync-manifests:
@@ -182,13 +193,61 @@ tasks:
           exit 1
         fi
 
+
   helm/package:
-    desc: "Package the Helm chart with the specified version"
+    desc: "Package the Helm chart with the specified version, digest and repository (if provided)"
     deps: [yq]
     cmds:
       - mkdir -p dist
-      - '{{ if .VERSION }}{{.YQ}} -i ".manager.image.tag = \"{{.VERSION}}\"" chart/values.yaml{{end}}'
-      - helm package chart/ --destination dist/ {{if .VERSION}}--version {{.VERSION}}{{end}} {{if .APP_VERSION}}--app-version {{.APP_VERSION}}{{end}}
+      - |
+        # Snapshot values.yaml so in-place yq edits never leak into the worktree.
+        cp chart/values.yaml chart/values.yaml.bak
+        trap 'mv chart/values.yaml.bak chart/values.yaml' EXIT
+
+        {{ if .IMAGE_REPOSITORY }}{{.YQ}} -i '.manager.image.repository = "{{.IMAGE_REPOSITORY}}"' chart/values.yaml{{end}}
+        {{ if .VERSION }}{{.YQ}} -i '.manager.image.tag = "{{.VERSION}}"' chart/values.yaml{{end}}
+        {{ if .IMAGE_DIGEST }}{{.YQ}} -i '.manager.image.digest = "{{.IMAGE_DIGEST}}"' chart/values.yaml{{end}}
+
+        helm package chart/ --destination dist/ {{if .VERSION}}--version {{.VERSION}}{{end}} {{if .APP_VERSION}}--app-version {{.APP_VERSION}}{{end}}
+
+  helm/push:
+    desc: "Push packaged Helm chart to OCI registry"
+    requires:
+      vars: [VERSION, REGISTRY]
+    cmds:
+      - helm push dist/chart-{{.VERSION}}.tgz oci://{{.REGISTRY}}
+
+  helm/verify-promote:
+    desc: "Verify that the final chart only differs from the RC in allowed metadata fields (digest stay the same)"
+    requires:
+      vars: [RC_CHART, FINAL_CHART]
+    deps: [yq]
+    cmds:
+      - |
+        set -euo pipefail
+
+        work=$(mktemp -d)
+        mkdir -p "$work/rc" "$work/final"
+        trap 'rm -rf "$work"' EXIT
+
+        tar -xzf "{{.RC_CHART}}" -C "$work/rc" --strip-components=1
+        tar -xzf "{{.FINAL_CHART}}" -C "$work/final" --strip-components=1
+
+        # 1) All files except Chart.yaml and values.yaml must be identical
+        echo "--- Comparing non-metadata files ---"
+        diff -r --exclude=Chart.yaml --exclude=values.yaml "$work/rc" "$work/final"
+
+        # 2) Chart.yaml: only version and appVersion may differ
+        echo "--- Comparing Chart.yaml (version/appVersion masked) ---"
+        mask_chart() { sed -E 's/^(version|appVersion):.*/\1: MASKED/' "$1"; }
+        diff <(mask_chart "$work/rc/Chart.yaml") <(mask_chart "$work/final/Chart.yaml")
+
+        # 3) values.yaml: only manager.image.tag may differ; digest must match
+        echo "--- Comparing values.yaml (tag masked) ---"
+        mask_values() { {{.YQ}} '.manager.image.tag = "MASKED"' "$1"; }
+        diff <(mask_values "$work/rc/values.yaml") <(mask_values "$work/final/values.yaml")
+
+        echo "✅ Promote verification passed"
 
   helm/template:
     desc: "Render Helm chart templates with test values"
@@ -198,8 +257,17 @@ tasks:
       - helm template ocm-k8s-toolkit chart/ --namespace ocm-k8s-toolkit-system -f chart/test-values.yaml > dist/generated.yaml
 
   helm/install:
-    desc: "Install the Helm chart"
+    desc: "Install the Helm chart into the cluster with test values (using CONTROLLER_IMG if set, otherwise default)"
+    deps: [yq]
+    vars:
+      _IMG: '{{ env "CONTROLLER_IMG" | default "ghcr.io/open-component-model/kubernetes/controller:0.0.0-main" }}'
+      _REPO:
+        sh: 'echo "{{._IMG}}" | sed "s/:[^:]*$//"'
+      _TAG:
+        sh: 'echo "{{._IMG}}" | grep -o ":[^:]*$" | tr -d ":"'
     cmds:
+      - '{{.YQ}} -i ".manager.image.repository = \"{{._REPO}}\"" chart/test-values.yaml'
+      - '{{.YQ}} -i ".manager.image.tag = \"{{._TAG}}\"" chart/test-values.yaml'
       - |
         helm upgrade --install ocm-k8s-toolkit chart/ \
           -f chart/test-values.yaml \
