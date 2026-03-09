@@ -309,9 +309,10 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.base_version }}
           IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+          IMAGE_REPOSITORY: ${{ env.REGISTRY }}/${{ github.repository_owner }}/kubernetes/controller
         run: |
           set -euo pipefail
-          task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}"
+          task helm/package VERSION="${VERSION}" APP_VERSION="${VERSION}" IMAGE_DIGEST="${IMAGE_DIGEST}" IMAGE_REPOSITORY="${IMAGE_REPOSITORY}"
 
       - name: Verify promote
         working-directory: ${{ env.COMPONENT_PATH }}
