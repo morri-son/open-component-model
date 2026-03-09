@@ -215,7 +215,7 @@ and the `cli/release` environment gate is approved.
 5. Repeat for **Controller Release** once `controller-release.yml` is available.
 6. Verify both final releases are published on the GitHub Releases page.
 
-[!IMPORTANT]
+>[!IMPORTANT]
 > 🔐 **Security:** The workflow automatically verifies all attestations from the RC release
 > before proceeding. If verification fails, the promotion is aborted.
 
@@ -238,6 +238,7 @@ and the `cli/release` environment gate is approved.
 Patch releases address critical fixes for an already-released version.
 The fix must always land on `main` first, then be cherry-picked to the release branch.
 
+>[!IMPORTANT]
 > ⚠️ **Older version lines:** When creating a patch for an older release line
 > (e.g., `v0.16.1` when `v0.17.0` exists), the release will NOT be marked as "latest"
 > on GitHub and the `latest` OCI tags will remain on the newer version.
