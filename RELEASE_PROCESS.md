@@ -215,6 +215,7 @@ and the `cli/release` environment gate is approved.
 5. Repeat for **Controller Release** once `controller-release.yml` is available.
 6. Verify both final releases are published on the GitHub Releases page.
 
+[!IMPORTANT]
 > 🔐 **Security:** The workflow automatically verifies all attestations from the RC release
 > before proceeding. If verification fails, the promotion is aborted.
 
