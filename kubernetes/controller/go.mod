@@ -1,6 +1,6 @@
 module ocm.software/open-component-model/kubernetes/controller
 
-go 1.25.7
+go 1.26.1
 
 // Replace digest lib to master to gather access to BLAKE3.
 // xref: https://github.com/opencontainers/go-digest/pull/66
@@ -8,12 +8,12 @@ replace github.com/opencontainers/go-digest => github.com/opencontainers/go-dige
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/fluxcd/pkg/apis/event v0.22.0
+	github.com/fluxcd/pkg/apis/event v0.24.0
 	github.com/fluxcd/pkg/apis/meta v1.25.0
-	github.com/fluxcd/pkg/runtime v0.97.0
+	github.com/fluxcd/pkg/runtime v0.99.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/cel-go v0.27.0
-	github.com/onsi/ginkgo/v2 v2.28.0
+	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
@@ -30,21 +30,21 @@ require (
 
 require (
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
-	github.com/docker/cli v29.2.0+incompatible
+	github.com/docker/cli v29.2.1+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	ocm.software/open-component-model/bindings/go/blob v0.0.11
 	ocm.software/open-component-model/bindings/go/configuration v0.0.10
 	ocm.software/open-component-model/bindings/go/credentials v0.0.7
 	ocm.software/open-component-model/bindings/go/ctf v0.3.0
-	ocm.software/open-component-model/bindings/go/descriptor/normalisation v0.0.0-20260304112256-b1226ed291db
-	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260304112256-b1226ed291db
+	ocm.software/open-component-model/bindings/go/descriptor/normalisation v0.0.0-20260310160452-6205a8a9f970
+	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260310160452-6205a8a9f970
 	ocm.software/open-component-model/bindings/go/descriptor/v2 v2.0.1-alpha9
-	ocm.software/open-component-model/bindings/go/oci v0.0.33
+	ocm.software/open-component-model/bindings/go/oci v0.0.34
 	ocm.software/open-component-model/bindings/go/plugin v0.0.14
 	ocm.software/open-component-model/bindings/go/repository v0.0.8
-	ocm.software/open-component-model/bindings/go/rsa v0.0.0-20260304112256-b1226ed291db
+	ocm.software/open-component-model/bindings/go/rsa v0.0.0-20260310160452-6205a8a9f970
 	ocm.software/open-component-model/bindings/go/runtime v0.0.6
-	ocm.software/open-component-model/bindings/go/signing v0.0.0-20260304112256-b1226ed291db
+	ocm.software/open-component-model/bindings/go/signing v0.0.0-20260310160452-6205a8a9f970
 	sigs.k8s.io/release-utils v0.12.3
 )
 
@@ -93,7 +93,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
