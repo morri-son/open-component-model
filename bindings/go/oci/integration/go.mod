@@ -14,11 +14,11 @@ require (
 	ocm.software/open-component-model/bindings/go/configuration v0.0.10
 	ocm.software/open-component-model/bindings/go/credentials v0.0.7
 	ocm.software/open-component-model/bindings/go/ctf v0.3.0
-	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260313084546-9b60a41e6785
+	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260315004445-3a9a2ffcd6be
 	ocm.software/open-component-model/bindings/go/descriptor/v2 v2.0.1-alpha9
 	ocm.software/open-component-model/bindings/go/oci v0.0.35
 	ocm.software/open-component-model/bindings/go/repository v0.0.8
-	ocm.software/open-component-model/bindings/go/runtime v0.0.6
+	ocm.software/open-component-model/bindings/go/runtime v0.0.7
 	oras.land/oras-go/v2 v2.6.0
 )
 
