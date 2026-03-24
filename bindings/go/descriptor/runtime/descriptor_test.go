@@ -42,7 +42,7 @@ const jsonData = `
         "type": "ociImage",
         "version": "v0.14.1",
         "access": {
-          "type": "ociArtifact",
+          "type": "OCIImage",
           "imageReference": "ghcr.io/weaveworks/wego-app:v0.14.1"
         },
         "digest": {

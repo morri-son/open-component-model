@@ -12,7 +12,7 @@ components:
         relation: local
         version: "${VERSION}"
         input:
-          type: file
+          type: File
           mediaType: application/vnd.ocm.software.oci.layout.v1+tar+gzip
           path: "${OCI_LAYOUT}"
 
@@ -21,7 +21,7 @@ components:
         type: helmChart
         relation: local
         input:
-          type: helm
+          type: Helm
           path: ./deploy/chart
           
       # OpenAPI specification for the notes API
@@ -29,7 +29,7 @@ components:
         type: blob
         relation: local
         input:
-          type: file
+          type: File
           path: ./deploy/openapi/spec.yaml
           mediaType: application/vnd.oai.openapi+yaml
           
@@ -38,6 +38,6 @@ components:
         type: blob
         relation: local
         input:
-          type: file
+          type: File
           path: ./deploy/ord/document.json
           mediaType: application/vnd.open-resource-discovery.v1+json

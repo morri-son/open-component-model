@@ -44,7 +44,7 @@ const jsonData = `
         "type": "ociImage",
         "version": "v0.14.1",
         "access": {
-          "type": "ociArtifact",
+          "type": "OCIImage",
           "imageReference": "ghcr.io/weaveworks/wego-app:v0.14.1"
         },
         "digest": {
@@ -583,9 +583,9 @@ func TestResource_Struct(t *testing.T) {
 		Relation: descriptorv2.LocalRelation,
 		Access: &runtime.Raw{
 			Type: runtime.Type{
-				Name: "ociArtifact",
+				Name: "OCIImage",
 			},
-			Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+			Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 		},
 		Digest: &descriptorv2.Digest{
 			HashAlgorithm:          "SHA-256",
@@ -603,7 +603,7 @@ func TestResource_Struct(t *testing.T) {
 	assert.Contains(t, string(jsonData), `"version":"1.0.0"`)
 	assert.Contains(t, string(jsonData), `"type":"ociImage"`)
 	assert.Contains(t, string(jsonData), `"relation":"local"`)
-	assert.Contains(t, string(jsonData), `"access":{"type":"ociArtifact","imageReference":"test/image:1.0"}`)
+	assert.Contains(t, string(jsonData), `"access":{"type":"OCIImage","imageReference":"test/image:1.0"}`)
 	assert.Contains(t, string(jsonData), `"digest":{"hashAlgorithm":"SHA-256","normalisationAlgorithm":"OciArtifactDigest","value":"abcdef1234567890"}`)
 }
 
@@ -742,7 +742,7 @@ func TestComponentDeserialization(t *testing.T) {
 					"type": "ociImage",
 					"relation": "local",
 					"access": {
-						"type": "ociArtifact",
+						"type": "OCIImage",
 						"imageReference": "example/image:1.0.0"
 					}
 				}
@@ -1027,9 +1027,9 @@ func TestSchemaConformance(t *testing.T) {
 					Relation: "invalid",
 					Access: &runtime.Raw{
 						Type: runtime.Type{
-							Name: "ociArtifact",
+							Name: "OCIImage",
 						},
-						Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+						Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 					},
 				},
 				expectedError: "value must be one of 'local', 'external'",
@@ -1288,9 +1288,9 @@ func TestSchemaConformance(t *testing.T) {
 								Relation: descriptorv2.LocalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name: "ociArtifact",
+										Name: "OCIImage",
 									},
-									Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+									Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 								},
 								Digest: &tt.digest,
 							},

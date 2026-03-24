@@ -126,7 +126,7 @@ func TestComponentConstructorSchema(t *testing.T) {
 						"name": "res1",
 						"type": "plain",
 						"access": {
-							"type": "ociArtifact"
+							"type": "OCIImage"
 						}
 					}
 				]
@@ -219,7 +219,7 @@ func TestComponentConstructorSchema(t *testing.T) {
           "name": "mylocalfile",
           "type": "blob",
           "input": {
-            "type": "file",
+            "type": "File",
             "path": "./my-local-resource.txt"
           }
         },
@@ -228,7 +228,7 @@ func TestComponentConstructorSchema(t *testing.T) {
           "type": "ociImage",
           "version": "1.0.0",
           "access": {
-            "type": "ociArtifact",
+            "type": "OCIImage",
             "imageReference": "ghcr.io/stefanprodan/podinfo:6.9.1"
           }
         }

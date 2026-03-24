@@ -374,7 +374,7 @@ func Test_Integration_HelmTransformer(t *testing.T) {
       version: %[4]s
       type: helmChart
       input:
-        type: helm/v1
+        type: Helm/v1
         path: %[5]s
 `, name, version, resourceName, resourceVersion, chartPath)
 		r.NoError(os.WriteFile(constructorPath, []byte(constructor), os.ModePerm), "constructor file must be written without error")

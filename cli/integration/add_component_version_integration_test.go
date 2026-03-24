@@ -421,7 +421,7 @@ func Test_Integration_HelmInput_LocalPath(t *testing.T) {
     version: 0.1.0
     type: helmChart
     input:
-      type: helm/v1
+      type: Helm/v1
       path: %s
 `, componentName, componentVersion, chartPath)
 
@@ -481,7 +481,7 @@ func Test_Integration_HelmInput_RemoteRepository(t *testing.T) {
     version: 0.1.0
     type: helmChart
     input:
-      type: helm/v1
+      type: Helm/v1
       helmRepository: %s/mychart-0.1.0.tgz
 `, componentName, componentVersion, srv.URL)
 

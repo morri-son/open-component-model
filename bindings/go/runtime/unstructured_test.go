@@ -22,7 +22,7 @@ var (
 			},
 		},
 		"access": map[string]any{
-			"type":           "ociArtifact",
+			"type":           "OCIImage",
 			"imageReference": "ghcr.io/test/image:v1.0.0",
 		},
 		"digest": map[string]any{
@@ -45,7 +45,7 @@ var (
 			Version:  "2.0.0",
 			Type:     "ociImage",
 			Relation: "external",
-			Access:   json.RawMessage(`{"type":"ociArtifact","imageReference":"ghcr.io/test/image:v2.0.0"}`),
+			Access:   json.RawMessage(`{"type":"OCIImage","imageReference":"ghcr.io/test/image:v2.0.0"}`),
 			Digest: &testDigest{
 				HashAlgorithm:          "SHA-256",
 				NormalisationAlgorithm: "ociArtifactDigest/v1",
@@ -309,7 +309,7 @@ func TestUnstructured_DeepCopyWithStructValues(t *testing.T) {
 		},
 		Type:     "ociImage",
 		Relation: "external",
-		Access:   json.RawMessage(`{"imageReference":"ghcr.io/test/image:v1.0.0","type":"ociArtifact"}`),
+		Access:   json.RawMessage(`{"imageReference":"ghcr.io/test/image:v1.0.0","type":"OCIImage"}`),
 		Digest: &testDigest{
 			HashAlgorithm:          "SHA-256",
 			NormalisationAlgorithm: "ociArtifactDigest/v1",

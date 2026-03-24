@@ -59,7 +59,7 @@ func (m *mockResourceRepositoryForAddOCI) UploadResource(ctx context.Context, re
 }
 
 func (m *mockResourceRepositoryForAddOCI) GetResourceCredentialConsumerIdentity(ctx context.Context, res *descriptor.Resource) (runtime.Identity, error) {
-	return runtime.Identity{"type": "ociRegistry", "hostname": "ghcr.io"}, nil
+	return runtime.Identity{"type": "OCIRegistry", "hostname": "ghcr.io"}, nil
 }
 
 // mockCredentialResolver implements credentials.Resolver for testing

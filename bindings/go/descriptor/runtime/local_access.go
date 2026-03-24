@@ -6,8 +6,11 @@ import (
 
 // LocalBlobAccessType is the access type of blob local to a component.
 const (
-	LocalBlobAccessType        = "localBlob"
+	LocalBlobAccessType        = "LocalBlob"
 	LocalBlobAccessTypeVersion = "v1"
+
+	// LegacyLocalBlobAccessType is the legacy lowerCamelCase form kept for backward compatibility.
+	LegacyLocalBlobAccessType = "localBlob"
 )
 
 var typ = runtime.Type{

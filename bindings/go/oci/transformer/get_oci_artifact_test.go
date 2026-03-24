@@ -70,7 +70,7 @@ func TestGetOCIArtifact_Transform_OCI(t *testing.T) {
 				Relation: "external",
 				Access: &runtime.Raw{
 					Type: runtime.Type{
-						Name:    "ociArtifact",
+						Name:    "OCIImage",
 						Version: "v1",
 					},
 					Data: []byte(`{ "imageReference": "ghcr.io/open-component-model/helmexample/charts/mariadb:12.2.7" }`),
@@ -146,7 +146,7 @@ func TestGetOCIArtifact_Transform_OCI_WithOutputPath(t *testing.T) {
 				Relation: "external",
 				Access: &runtime.Raw{
 					Type: runtime.Type{
-						Name:    "ociArtifact",
+						Name:    "OCIImage",
 						Version: "v1",
 					},
 					Data: []byte(`{ "imageReference": "ghcr.io/open-component-model/helmexample/charts/mariadb:12.2.7" }`),
@@ -221,7 +221,7 @@ func TestGetOCIArtifact_Transform_OCI_Should_Default_No_Ext(t *testing.T) {
 				Relation: "external",
 				Access: &runtime.Raw{
 					Type: runtime.Type{
-						Name:    "ociArtifact",
+						Name:    "OCIImage",
 						Version: "v1",
 					},
 					Data: []byte(`{ "imageReference": "ghcr.io/open-component-model/helmexample/charts/mariadb:12.2.7" }`),

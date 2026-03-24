@@ -18,10 +18,17 @@ func (o UploadAs) String() string {
 	case UploadAsDefault:
 		return "default"
 	case UploadAsLocalBlob:
-		return "localBlob"
+		return "LocalBlob"
 	case UploadAsOciArtifact:
-		return "ociArtifact"
+		return "OCIArtifact"
 	default:
 		return fmt.Sprintf("unknown(%d)", o)
 	}
 }
+
+const (
+	// LegacyUploadAsLocalBlob is the legacy flag value for uploading as local blobs.
+	LegacyUploadAsLocalBlob = "localBlob"
+	// LegacyUploadAsOciArtifact is the legacy flag value for uploading as OCI artifacts.
+	LegacyUploadAsOciArtifact = "ociArtifact"
+)

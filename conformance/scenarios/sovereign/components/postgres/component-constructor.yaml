@@ -11,7 +11,7 @@ components:
         type: ociImage
         version: "${POSTGRES_VERSION}"
         access:
-          type: ociArtifact
+          type: OCIImage/v1
           imageReference: docker.io/library/postgres:${POSTGRES_VERSION}
 
       # Helm chart for StatefulSet deployment
@@ -19,6 +19,6 @@ components:
         type: helmChart
         relation: local
         input:
-          type: helm
+          type: Helm
           path: ./deploy/chart
 

@@ -32,7 +32,7 @@ func TestIsLocalBlob_Raw(t *testing.T) {
 			Name:    descriptorv2.LocalBlobAccessType,
 			Version: descriptorv2.LocalBlobAccessTypeVersion,
 		},
-		Data: []byte(`{"type":"localBlob/v1","localReference":"sha256:abc123","mediaType":"application/octet-stream","globalAccess":{"type":"ociArtifact","imageReference":"test/image:1.0"},"referenceName":"test/repo:1.0"}`),
+		Data: []byte(`{"type":"LocalBlob/v1","localReference":"sha256:abc123","mediaType":"application/octet-stream","globalAccess":{"type":"OCIImage","imageReference":"test/image:1.0"},"referenceName":"test/repo:1.0"}`),
 	}
 
 	assert.True(t, descriptorv2.IsLocalBlob(raw))
@@ -41,7 +41,7 @@ func TestIsLocalBlob_Raw(t *testing.T) {
 func TestIsLocalBlob_RawOCIArtifact(t *testing.T) {
 	raw := &runtime.Raw{
 		Type: runtime.Type{
-			Name:    "ociArtifact",
+			Name:    "OCIImage",
 			Version: "v1",
 		},
 		Data: []byte(`{"type":"ociArtifact/v1","imageReference":"ghcr.io/example/image:v1"}`),

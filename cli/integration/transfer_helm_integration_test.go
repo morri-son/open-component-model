@@ -133,7 +133,7 @@ configurations:
     version: 0.1.0
     type: helmChart
     access:
-      type: helm/v1
+      type: Helm/v1
       helmRepository: %s
       helmChart: mychart-0.1.0.tgz
 `, componentName, componentVersion, srv.URL)
@@ -205,7 +205,7 @@ configurations:
 			targetRef,
 			"--config", cfgPath,
 			"--copy-resources",
-			"--upload-as", "localBlob",
+			"--upload-as", "LocalBlob",
 		})
 
 		ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
@@ -242,7 +242,7 @@ configurations:
 			targetRef,
 			"--config", cfgPath,
 			"--copy-resources",
-			"--upload-as", "ociArtifact",
+			"--upload-as", "OCIArtifact",
 		})
 
 		ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
@@ -314,7 +314,7 @@ configurations:
 			finalRef,
 			"--config", cfgPath,
 			"--copy-resources",
-			"--upload-as", "ociArtifact",
+			"--upload-as", "OCIArtifact",
 		})
 
 		r.NoError(transferCMD2.ExecuteContext(ctx), "second hop transfer should succeed")
@@ -353,7 +353,7 @@ configurations:
     version: 0.1.0
     type: helmChart
     input:
-      type: helm/v1
+      type: Helm/v1
       path: %s
 `, componentName, componentVersion, chartFile)
 
@@ -480,7 +480,7 @@ configurations:
     version: 0.1.0
     type: helmChart
     access:
-      type: helm/v1
+      type: Helm/v1
       helmRepository: %s
       helmChart: mychart-0.1.0.tgz
 `, componentName, componentVersion, srv.URL)

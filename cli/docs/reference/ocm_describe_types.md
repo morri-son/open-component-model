@@ -37,7 +37,7 @@ HOW TO USE SUBSYSTEMS:
       baseUrl: ghcr.io
 
   In an input specification:
-    type: dir/v1                  # Type from input subsystem
+    type: Dir/v1                   # Type from input subsystem
     spec:
       path: ./my-content
 
@@ -87,7 +87,7 @@ ocm describe types [subsystem [type [field-path]]] [flags]
   ocm describe types input
 
   # Step 2: Learn about the directory input type
-  ocm describe types input dir/v1
+  ocm describe types input Dir/v1
 
   # Other useful commands:
   # List all subsystems to see what's available
@@ -97,10 +97,10 @@ ocm describe types [subsystem [type [field-path]]] [flags]
   ocm describe types ocm-repository oci/v1 baseUrl
 
   # List all available field paths for navigation
-  ocm describe types input file/v1 --show-paths
+  ocm describe types input File/v1 --show-paths
 
   # Export documentation as markdown for your team
-  ocm describe types input file -o markdown > signing-docs.md
+  ocm describe types input File -o markdown > signing-docs.md
 ```
 
 ### Options

@@ -43,13 +43,13 @@ transfer component-version ctf::./my-archive//ocm.software/mycomponent:1.0.0 ghc
 transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm
 
 # Transfer from one OCI to another using localBlobs
-transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as localBlob
+transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as LocalBlob
 
 # Transfer from one OCI to another using OCI artifacts (default)
-transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as ociArtifact
+transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as OCIArtifact
 
-# Transfer a component version containing Helm charts (access-type: helm/v1) as an OCI artifact
-transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as ociArtifact
+# Transfer a component version containing Helm charts (access-type: Helm/v1) as an OCI artifact
+transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as OCIArtifact
 
 # Transfer including all resources (e.g. OCI artifacts)
 transfer component-version ctf::./my-archive//ocm.software/mycomponent:1.0.0 ghcr.io/my-org/ocm --copy-resources
@@ -68,7 +68,7 @@ transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.
                          (must be one of [json ndjson yaml]) (default yaml)
   -r, --recursive        recursively discover and transfer component versions
   -u, --upload-as enum   Define whether copied resources should be uploaded as OCI artifacts (instead of local blob resources). This option is only relevant if --copy-resources is set.
-                         (must be one of [default localBlob ociArtifact]) (default default)
+                         (must be one of [LocalBlob OCIArtifact default localBlob ociArtifact]) (default default)
 ```
 
 ### Options inherited from parent commands

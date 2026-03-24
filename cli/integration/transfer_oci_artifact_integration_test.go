@@ -120,7 +120,7 @@ configurations:
 	r.NotNil(access)
 
 	access.Type = ocmruntime.Type{
-		Name:    "ociArtifact",
+		Name:    "OCIImage",
 		Version: "v1",
 	}
 
@@ -177,7 +177,7 @@ components:
     version: v1.0.0
     type: ociArtifact
     input:
-      type: file
+      type: File
       path: %s
       mediaType: %s
 `, componentName, componentVersion, ociArtifactAccess.Type, ociArtifactAccess.ImageReference, ociLayoutPath, layout.MediaTypeOCIImageLayoutTarV1)
@@ -252,7 +252,7 @@ components:
 			targetRef,
 			"--config", cfgPath,
 			"--copy-resources", // required, otherwise we wouldn't transfer oci artifacts
-			"--upload-as", "localBlob",
+			"--upload-as", "LocalBlob",
 		})
 
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
@@ -293,7 +293,7 @@ components:
 			targetRef,
 			"--config", cfgPath,
 			"--copy-resources",           // required, otherwise we wouldn't transfer oci artifacts
-			"--upload-as", "ociArtifact", // This is the new flag we are testing
+			"--upload-as", "OCIArtifact", // This is the new flag we are testing
 		})
 
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
@@ -369,7 +369,7 @@ components:
 			targetRef,
 			"--config", cfgPath,
 			"--copy-resources",           // required, otherwise we wouldn't transfer oci artifacts
-			"--upload-as", "ociArtifact", // This is the new flag we are testing
+			"--upload-as", "OCIArtifact", // This is the new flag we are testing
 		})
 
 		// Executes transfer
@@ -465,7 +465,7 @@ configurations:
 	originalData := []byte("signed-artifact-data")
 	data, access := createSingleLayerOCIImage(t, originalData, "ghcr.io/test-signed:v1.0.0")
 	r.NotNil(access)
-	access.Type = ocmruntime.Type{Name: "ociArtifact", Version: "v1"}
+	access.Type = ocmruntime.Type{Name: "OCIImage", Version: "v1"}
 
 	resource := descriptor.Resource{
 		ElementMeta: descriptor.ElementMeta{
@@ -553,7 +553,7 @@ components:
 		sourceRef, targetRef,
 		"--config", cfgPath,
 		"--copy-resources",
-		"--upload-as", "localBlob",
+		"--upload-as", "LocalBlob",
 	})
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)

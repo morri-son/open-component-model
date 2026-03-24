@@ -461,7 +461,7 @@ func Test_Integration_Transformers(t *testing.T) {
 	})
 	t.Logf("Test registry started")
 
-	t.Run("ociArtifact", func(t *testing.T) {
+	t.Run("OCIImage", func(t *testing.T) {
 		r := require.New(t)
 		registryAddress, err := registryContainer.HostAddress(ctx)
 		r.NoError(err)
@@ -1034,7 +1034,7 @@ func transformGetOCIArtifact(t *testing.T, repo repository.ResourceRepository, u
 	r.NotNil(access)
 
 	access.Type = ocmruntime.Type{
-		Name:    "ociArtifact",
+		Name:    "OCIImage",
 		Version: "v1",
 	}
 
@@ -1126,7 +1126,7 @@ func transformAddOCIArtifact(t *testing.T, repo repository.ResourceRepository, u
 	r.NotNil(access)
 
 	access.Type = ocmruntime.Type{
-		Name:    "ociArtifact",
+		Name:    "OCIImage",
 		Version: "v1",
 	}
 	access.ImageReference = fmt.Sprintf("http://%s", to)
@@ -1208,7 +1208,7 @@ func transformAddOCIArtifact(t *testing.T, repo repository.ResourceRepository, u
 	r.NotNil(resultAccess)
 
 	r.Equal(fmt.Sprintf("http://%s", to), resultAccess.ImageReference)
-	r.Equal("ociArtifact", resultAccess.Type.Name)
+	r.Equal("OCIImage", resultAccess.Type.Name)
 	r.Equal("v1", resultAccess.Type.Version)
 	r.Equal(fmt.Sprintf("http://%s", to), resultAccess.ImageReference)
 }

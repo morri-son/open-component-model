@@ -193,7 +193,7 @@ var _ = Describe("Resource Controller", func() {
 				ctfPath := filepath.Join(tempDir, ctfName)
 				access := ocispec.OCIImage{
 					Type: runtime.Type{
-						Name:    "ociArtifact",
+						Name:    "OCIImage",
 						Version: "v1",
 					},
 					ImageReference: "ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.24.0",
@@ -442,7 +442,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.LocalRelation,
 								Access: &ocispec.OCIImage{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									ImageReference: "ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.24.0",
@@ -542,7 +542,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.LocalRelation,
 								Access: &ocispec.OCIImage{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									ImageReference: "ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.24.0",
@@ -689,7 +689,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -813,7 +813,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -922,7 +922,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -941,7 +941,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -1057,7 +1057,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -1153,7 +1153,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -1246,7 +1246,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -1435,7 +1435,7 @@ var _ = Describe("Resource Controller", func() {
 							Relation: descruntime.ExternalRelation,
 							Access: &runtime.Raw{
 								Type: runtime.Type{
-									Name:    "ociArtifact",
+									Name:    "OCIImage",
 									Version: "v1",
 								},
 								Data: mustMarshalJSON(map[string]any{
@@ -1479,7 +1479,7 @@ var _ = Describe("Resource Controller", func() {
 							Relation: descruntime.ExternalRelation,
 							Access: &runtime.Raw{
 								Type: runtime.Type{
-									Name:    "ociArtifact",
+									Name:    "OCIImage",
 									Version: "v1",
 								},
 								Data: mustMarshalJSON(map[string]any{
@@ -1704,7 +1704,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.ExternalRelation,
 								Access: &runtime.Raw{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									Data: mustMarshalJSON(map[string]any{
@@ -1878,7 +1878,7 @@ var _ = Describe("Resource Controller", func() {
 								Relation: descruntime.LocalRelation,
 								Access: &ocispec.OCIImage{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									ImageReference: "ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.24.0",
@@ -2027,7 +2027,7 @@ consumers:
 								Relation: descruntime.LocalRelation,
 								Access: &ocispec.OCIImage{
 									Type: runtime.Type{
-										Name:    "ociArtifact",
+										Name:    "OCIImage",
 										Version: "v1",
 									},
 									ImageReference: "ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.24.0",
@@ -2227,7 +2227,7 @@ var _ = Describe("Resource Controller Error Handling", func() {
 		namespace := test.NamespaceForTest(ctx)
 		Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
 
-		repoSpec := apiextensionsv1.JSON{Raw: []byte(`{"type":"ociRegistry","url":"ghcr.io/test"}`)}
+		repoSpec := apiextensionsv1.JSON{Raw: []byte(`{"type":"OCIRepository","url":"ghcr.io/test"}`)}
 		component := &v1alpha1.Component{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "deleting-component",

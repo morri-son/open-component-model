@@ -58,9 +58,9 @@ func (m *TestPlugin) GetComponentVersion(ctx context.Context, request repov1.Get
 					Relation:   "local",
 					Access: &runtime.Raw{
 						Type: runtime.Type{
-							Name: "ociArtifact",
+							Name: "OCIImage",
 						},
-						Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+						Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 					},
 					Digest: &descriptor.Digest{
 						HashAlgorithm:          "SHA-256",

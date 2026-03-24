@@ -74,13 +74,13 @@ transfer component-version ctf::./my-archive//ocm.software/mycomponent:1.0.0 ghc
 transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm
 
 # Transfer from one OCI to another using localBlobs
-transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as localBlob
+transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as LocalBlob
 
 # Transfer from one OCI to another using OCI artifacts (default)
-transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as ociArtifact
+transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as OCIArtifact
 
-# Transfer a component version containing Helm charts (access-type: helm/v1) as an OCI artifact
-transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as ociArtifact
+# Transfer a component version containing Helm charts (access-type: Helm/v1) as an OCI artifact
+transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.0 ghcr.io/target-org/ocm --copy-resources --upload-as OCIArtifact
 
 # Transfer including all resources (e.g. OCI artifacts)
 transfer component-version ctf::./my-archive//ocm.software/mycomponent:1.0.0 ghcr.io/my-org/ocm --copy-resources
@@ -97,7 +97,7 @@ transfer component-version ghcr.io/source-org/ocm//ocm.software/mycomponent:1.0.
 	cmd.Flags().Bool(FlagDryRun, false, "build and validate the graph but do not execute")
 	cmd.Flags().BoolP(FlagRecursive, "r", false, "recursively discover and transfer component versions")
 	cmd.Flags().Bool(FlagCopyResources, false, "copy all resources in the component version")
-	enum.VarP(cmd.Flags(), FlagUploadAs, "u", []string{UploadAsDefault.String(), UploadAsLocalBlob.String(), UploadAsOciArtifact.String()}, "Define whether copied resources should be uploaded as OCI artifacts (instead of local blob resources). This option is only relevant if --copy-resources is set.")
+	enum.VarP(cmd.Flags(), FlagUploadAs, "u", []string{UploadAsDefault.String(), UploadAsLocalBlob.String(), UploadAsOciArtifact.String(), LegacyUploadAsLocalBlob, LegacyUploadAsOciArtifact}, "Define whether copied resources should be uploaded as OCI artifacts (instead of local blob resources). This option is only relevant if --copy-resources is set.")
 
 	return cmd
 }
@@ -176,9 +176,9 @@ func TransferComponentVersion(cmd *cobra.Command, args []string) error {
 
 	upTyp := internal.UploadAsDefault
 	switch uploadType {
-	case UploadAsLocalBlob.String():
+	case UploadAsLocalBlob.String(), LegacyUploadAsLocalBlob:
 		upTyp = internal.UploadAsLocalBlob
-	case UploadAsOciArtifact.String():
+	case UploadAsOciArtifact.String(), LegacyUploadAsOciArtifact:
 		upTyp = internal.UploadAsOciArtifact
 	}
 

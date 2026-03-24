@@ -26,7 +26,7 @@ const jsonArrayData = `{
           "type": "ociImage",
           "relation": "local",
           "access": {
-            "type": "ociArtifact",
+            "type": "OCIImage",
             "imageReference": "example/image:1.0.0"
           }
         }
@@ -66,7 +66,7 @@ const jsonSingleData = `{
       "type": "ociImage",
       "relation": "local",
       "access": {
-        "type": "ociArtifact",
+        "type": "OCIImage",
         "imageReference": "example/image:1.0.0"
       }
     }
@@ -127,8 +127,8 @@ func TestAccessOrInput_Validate(t *testing.T) {
 			name: "ValidAccess",
 			accessOrInput: v1.AccessOrInput{
 				Access: &runtime.Raw{
-					Type: runtime.Type{Name: "ociArtifact"},
-					Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+					Type: runtime.Type{Name: "OCIImage"},
+					Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 				},
 			},
 			expectError: false,
@@ -137,8 +137,8 @@ func TestAccessOrInput_Validate(t *testing.T) {
 			name: "ValidInput",
 			accessOrInput: v1.AccessOrInput{
 				Input: &runtime.Raw{
-					Type: runtime.Type{Name: "ociArtifact"},
-					Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+					Type: runtime.Type{Name: "OCIImage"},
+					Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 				},
 			},
 			expectError: false,
@@ -152,12 +152,12 @@ func TestAccessOrInput_Validate(t *testing.T) {
 			name: "BothAccessAndInput",
 			accessOrInput: v1.AccessOrInput{
 				Access: &runtime.Raw{
-					Type: runtime.Type{Name: "ociArtifact"},
-					Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+					Type: runtime.Type{Name: "OCIImage"},
+					Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 				},
 				Input: &runtime.Raw{
-					Type: runtime.Type{Name: "ociArtifact"},
-					Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+					Type: runtime.Type{Name: "OCIImage"},
+					Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 				},
 			},
 			expectError: true,
@@ -397,8 +397,8 @@ func TestResource_Struct(t *testing.T) {
 		Relation: v1.LocalRelation,
 		AccessOrInput: v1.AccessOrInput{
 			Access: &runtime.Raw{
-				Type: runtime.Type{Name: "ociArtifact"},
-				Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+				Type: runtime.Type{Name: "OCIImage"},
+				Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 			},
 		},
 	}
@@ -409,7 +409,7 @@ func TestResource_Struct(t *testing.T) {
 	assert.Contains(t, string(jsonData), `"version":"1.0.0"`)
 	assert.Contains(t, string(jsonData), `"type":"ociImage"`)
 	assert.Contains(t, string(jsonData), `"relation":"local"`)
-	assert.Contains(t, string(jsonData), `"access":{"type":"ociArtifact","imageReference":"test/image:1.0"}`)
+	assert.Contains(t, string(jsonData), `"access":{"type":"OCIImage","imageReference":"test/image:1.0"}`)
 }
 
 func TestSource_Struct(t *testing.T) {

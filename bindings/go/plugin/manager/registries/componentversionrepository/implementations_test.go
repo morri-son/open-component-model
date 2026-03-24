@@ -364,9 +364,9 @@ func defaultDescriptor() *v2.Descriptor {
 					Relation:   "local",
 					Access: &runtime.Raw{
 						Type: runtime.Type{
-							Name: "ociArtifact",
+							Name: "OCIImage",
 						},
-						Data: []byte(`{"type":"ociArtifact","imageReference":"test/image:1.0"}`),
+						Data: []byte(`{"type":"OCIImage","imageReference":"test/image:1.0"}`),
 					},
 					Digest: &v2.Digest{
 						HashAlgorithm:          "SHA-256",
