@@ -249,7 +249,7 @@ func TestResourceBlob(t *testing.T) {
 			},
 			resource: &descriptor.Resource{
 				Access: &v2.LocalBlob{
-					Type:           runtime.NewVersionedType(v2.LocalBlobType, v2.LocalBlobAccessTypeVersion),
+					Type:           runtime.NewVersionedType(v2.LocalBlobAccessType, v2.LocalBlobAccessTypeVersion),
 					LocalReference: digest.String(),
 					MediaType:      "application/vnd.test",
 				},
@@ -268,7 +268,7 @@ func TestResourceBlob(t *testing.T) {
 			},
 			resource: &descriptor.Resource{
 				Access: &v2.LocalBlob{
-					Type:           runtime.NewVersionedType(v2.LocalBlobType, v2.LocalBlobAccessTypeVersion),
+					Type:           runtime.NewVersionedType(v2.LocalBlobAccessType, v2.LocalBlobAccessTypeVersion),
 					LocalReference: digest.String(),
 					MediaType:      "application/vnd.test",
 				},
@@ -288,7 +288,7 @@ func TestResourceBlob(t *testing.T) {
 			},
 			resource: &descriptor.Resource{
 				Access: &v2.LocalBlob{
-					Type:           runtime.NewVersionedType(v2.LocalBlobType, v2.LocalBlobAccessTypeVersion),
+					Type:           runtime.NewVersionedType(v2.LocalBlobAccessType, v2.LocalBlobAccessTypeVersion),
 					LocalReference: digest.String(),
 				},
 			},
@@ -306,7 +306,7 @@ func TestResourceBlob(t *testing.T) {
 			},
 			resource: &descriptor.Resource{
 				Access: &v2.LocalBlob{
-					Type:           runtime.NewVersionedType(v2.LocalBlobType, v2.LocalBlobAccessTypeVersion),
+					Type:           runtime.NewVersionedType(v2.LocalBlobAccessType, v2.LocalBlobAccessTypeVersion),
 					LocalReference: digest.String(),
 					MediaType:      "application/vnd.test",
 				},
