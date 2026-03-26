@@ -92,6 +92,14 @@ includes:
     optional: true
     taskfile: ./bindings/go/rsa/Taskfile.yml
     dir: ./bindings/go/rsa
+  bindings/go/sigstore:
+    optional: true
+    taskfile: ./bindings/go/sigstore/Taskfile.yml
+    dir: ./bindings/go/sigstore
+  bindings/go/sigstore/integration:
+    optional: true
+    taskfile: ./bindings/go/sigstore/integration/Taskfile.yml
+    dir: ./bindings/go/sigstore/integration
   bindings/go/signing:
     optional: true
     taskfile: ./bindings/go/signing/Taskfile.yml

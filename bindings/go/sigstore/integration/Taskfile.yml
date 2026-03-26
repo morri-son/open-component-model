@@ -1,0 +1,40 @@
+version: '3'
+
+includes:
+  reuse: ../../../../reuse.Taskfile.yml
+
+vars:
+  INTEGRATION_TEST_IDENTIFIER: 'Integration'
+
+tasks:
+  test/integration:
+    desc: Run Sigstore integration tests (requires SIGSTORE_INTEGRATION_TEST=1 and service URLs)
+    cmds:
+      - task: reuse:run-go-test
+        vars:
+          GO_TEST_FLAGS: '-run "{{ .INTEGRATION_TEST_IDENTIFIER }}" -timeout 120s'
+
+  kind/setup:
+    desc: Create a Kind cluster with a full Sigstore stack (Fulcio, Rekor, CTLog, Trillian, TUF, TSA)
+    cmds:
+      - ./hack/setup-kind-sigstore.sh
+
+  kind/teardown:
+    desc: Delete the Kind cluster created by kind/setup
+    cmds:
+      - ./hack/teardown-kind-sigstore.sh
+
+  kind/port-forward:
+    desc: Start port-forwards for Fulcio, Rekor, and TSA services
+    cmds:
+      - |
+        echo "Starting port-forwards (background)..."
+        kubectl port-forward -n fulcio-system svc/fulcio-server 5555:80 &
+        kubectl port-forward -n rekor-system svc/rekor-server 3001:80 &
+        kubectl port-forward -n tsa-system svc/tsa-server 3002:80 &
+        echo "Fulcio: http://localhost:5555"
+        echo "Rekor:  http://localhost:3001"
+        echo "TSA:    http://localhost:3002"
+        echo ""
+        echo "Press Ctrl+C to stop port-forwards"
+        wait
