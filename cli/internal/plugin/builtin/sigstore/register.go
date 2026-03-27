@@ -10,16 +10,21 @@ import (
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler"
 )
 
+const (
+	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
+	defaultOIDCClientID = "sigstore"
+)
+
 // interactiveTokenGetter acquires an OIDC identity token for keyless Sigstore signing.
 // It checks the SIGSTORE_ID_TOKEN environment variable first (for CI), then falls back
-// to an interactive browser-based OIDC flow against the given issuer.
+// to an interactive browser-based OIDC flow against the public-good Sigstore issuer.
 type interactiveTokenGetter struct{}
 
-func (g *interactiveTokenGetter) GetIDToken(issuer, clientID string) (string, error) {
+func (g *interactiveTokenGetter) GetIDToken() (string, error) {
 	if tok := os.Getenv("SIGSTORE_ID_TOKEN"); tok != "" {
 		return tok, nil
 	}
-	result, err := oauthflow.OIDConnect(issuer, clientID, "", "", oauthflow.DefaultIDTokenGetter)
+	result, err := oauthflow.OIDConnect(defaultOIDCIssuer, defaultOIDCClientID, "", "", oauthflow.DefaultIDTokenGetter)
 	if err != nil {
 		return "", fmt.Errorf("interactive OIDC authentication: %w", err)
 	}

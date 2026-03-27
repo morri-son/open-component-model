@@ -12,7 +12,7 @@ func Test_InteractiveTokenGetter_EnvVar(t *testing.T) {
 		r := require.New(t)
 
 		g := &interactiveTokenGetter{}
-		token, err := g.GetIDToken("https://issuer.example.com", "client-id")
+		token, err := g.GetIDToken()
 		r.NoError(err)
 		r.Equal("env-token", token)
 	})
@@ -22,7 +22,7 @@ func Test_InteractiveTokenGetter_EnvVar(t *testing.T) {
 		r := require.New(t)
 
 		g := &interactiveTokenGetter{}
-		token, err := g.GetIDToken("https://issuer.example.com", "client-id")
+		token, err := g.GetIDToken()
 		r.NoError(err)
 		r.Equal("env-token-priority", token)
 	})
