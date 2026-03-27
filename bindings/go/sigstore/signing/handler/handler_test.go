@@ -802,6 +802,31 @@ func Test_ResolveKeypair_Keyless(t *testing.T) {
 	})
 }
 
+// ---- resolveKeypair SIGSTORE_ID_TOKEN env var ----
+
+func Test_ResolveKeypair_EnvVar(t *testing.T) {
+	t.Run("SIGSTORE_ID_TOKEN env var is used when no credential token", func(t *testing.T) {
+		t.Setenv("SIGSTORE_ID_TOKEN", "env-token")
+		r := require.New(t)
+
+		kp, token, err := resolveKeypair(map[string]string{})
+		r.NoError(err)
+		r.NotNil(kp)
+		r.Equal("env-token", token)
+	})
+
+	t.Run("credential token takes precedence over SIGSTORE_ID_TOKEN env var", func(t *testing.T) {
+		t.Setenv("SIGSTORE_ID_TOKEN", "env-token")
+		r := require.New(t)
+
+		creds := map[string]string{credentials.CredentialKeyOIDCToken: "cred-token"}
+		kp, token, err := resolveKeypair(creds)
+		r.NoError(err)
+		r.NotNil(kp)
+		r.Equal("cred-token", token)
+	})
+}
+
 // ---- configureCertificateProvider tests ----
 
 func Test_ConfigureCertificateProvider(t *testing.T) {
