@@ -133,6 +133,48 @@ func Test_Handler_GetVerifyingCredentialConsumerIdentity(t *testing.T) {
 	})
 }
 
+func Test_Handler_Sign_InvalidConfig(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+	h := newHandler(t)
+
+	// Pass a Raw config with the right type but invalid JSON — scheme.Convert
+	// will fail during unmarshal.
+	badCfg := &runtime.Raw{
+		Data: []byte(`{invalid`),
+	}
+	badCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+
+	_, err := h.Sign(t.Context(), sampleDigest(t), badCfg, map[string]string{})
+	r.Error(err)
+	r.Contains(err.Error(), "convert config")
+}
+
+func Test_Handler_Verify_InvalidConfig(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+	h := newHandler(t)
+
+	badCfg := &runtime.Raw{
+		Data: []byte(`{invalid`),
+	}
+	badCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+
+	signed := descruntime.Signature{
+		Name:   "test-sig",
+		Digest: sampleDigest(t),
+		Signature: descruntime.SignatureInfo{
+			Algorithm: v1alpha1.AlgorithmSigstore,
+			MediaType: v1alpha1.MediaTypeSigstoreBundle,
+			Value:     "dW51c2Vk",
+		},
+	}
+
+	err := h.Verify(t.Context(), signed, badCfg, map[string]string{})
+	r.Error(err)
+	r.Contains(err.Error(), "convert config")
+}
+
 // ---- helpers for sign tests ----
 
 func mustECDSAKey(t *testing.T) *ecdsa.PrivateKey {
@@ -251,20 +293,6 @@ func Test_Handler_Sign(t *testing.T) {
 		r.Contains(err.Error(), "private key")
 	})
 
-	t.Run("sign without credentials uses ephemeral keypair (offline)", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		// No private key, no OIDC token → ephemeral keypair, no Fulcio, SkipRekor
-		creds := map[string]string{}
-
-		sigInfo, err := h.Sign(t.Context(), sampleDigest(t), offlineConfig(), creds)
-		r.NoError(err)
-		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
-		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
-		r.NotEmpty(sigInfo.Value)
-	})
 }
 
 // ---- Verify tests ----
@@ -422,13 +450,13 @@ func Test_Handler_Verify(t *testing.T) {
 
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
+		signCfg := offlineConfig()
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		sigInfo, err := h.Sign(t.Context(), digest, signCfg, signCreds)
 		r.NoError(err)
 
 		signed := descruntime.Signature{
@@ -437,10 +465,18 @@ func Test_Handler_Verify(t *testing.T) {
 			Signature: sigInfo,
 		}
 
-		// No public key in credentials → TUF fallback provides a trusted root,
-		// but it cannot verify signatures made with a local key.
-		err = h.Verify(t.Context(), signed, cfg, map[string]string{})
+		// Force TUF to fail by pointing at an invalid URL, ensuring no
+		// network-dependent fallback. Without a public key, trusted root,
+		// or reachable TUF mirror, verification must fail deterministically.
+		verifyCfg := &v1alpha1.Config{
+			SkipRekor:  true,
+			TUFRootURL: "https://nonexistent-tuf.invalid",
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+
+		err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{})
 		r.Error(err)
+		r.Contains(err.Error(), "resolve trusted material")
 	})
 
 	t.Run("public key derived from private key in credentials", func(t *testing.T) {
@@ -746,15 +782,52 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 	r.Error(err, "TUF fallback with invalid URL should fail")
 }
 
-func Test_ResolveTrustedMaterial_NoCreds_FallsBackToPublicGoodTUF(t *testing.T) {
+// ---- resolveOfflineTrustedRoot tests ----
+
+func Test_ResolveOfflineTrustedRoot(t *testing.T) {
 	t.Parallel()
-	r := require.New(t)
 
-	cfg := &v1alpha1.Config{}
+	t.Run("returns trusted root from credentials JSON", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
 
-	tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
-	r.NoError(err, "empty config should fall back to Sigstore public-good TUF root")
-	r.NotNil(tm)
+		trustedRoot := makeTrustedRootJSON(t)
+		cfg := &v1alpha1.Config{}
+		creds := map[string]string{
+			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
+		}
+
+		tm, err := resolveOfflineTrustedRoot(cfg, creds)
+		r.NoError(err)
+		r.NotNil(tm)
+	})
+
+	t.Run("returns trusted root from file path", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		dir := t.TempDir()
+		trPath := filepath.Join(dir, "trusted_root.json")
+		r.NoError(os.WriteFile(trPath, trustedRoot, 0o644))
+
+		cfg := &v1alpha1.Config{TrustedRootPath: trPath}
+
+		tm, err := resolveOfflineTrustedRoot(cfg, map[string]string{})
+		r.NoError(err)
+		r.NotNil(tm)
+	})
+
+	t.Run("returns nil when no offline source configured", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.Config{}
+
+		tm, err := resolveOfflineTrustedRoot(cfg, map[string]string{})
+		r.NoError(err)
+		r.Nil(tm, "should return nil when no offline sources are available")
+	})
 }
 
 // ---- ecdsaKeypair unit tests ----

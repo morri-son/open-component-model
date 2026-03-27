@@ -43,7 +43,6 @@ func mustPKCS8PrivateKeyPEM(t *testing.T, key *ecdsa.PrivateKey) string {
 
 func Test_PrivateKeyFromCredentials(t *testing.T) {
 	t.Parallel()
-	r := require.New(t)
 
 	key := mustECDSAKey(t)
 	pemData := mustPrivateKeyPEM(t, key)
@@ -94,6 +93,7 @@ func Test_PrivateKeyFromCredentials(t *testing.T) {
 
 	t.Run("invalid PEM", func(t *testing.T) {
 		t.Parallel()
+		r := require.New(t)
 		_, err := PrivateKeyFromCredentials(map[string]string{
 			CredentialKeyPrivateKeyPEM: "not-a-pem",
 		})
@@ -102,6 +102,7 @@ func Test_PrivateKeyFromCredentials(t *testing.T) {
 
 	t.Run("non-existent file", func(t *testing.T) {
 		t.Parallel()
+		r := require.New(t)
 		_, err := PrivateKeyFromCredentials(map[string]string{
 			CredentialKeyPrivateKeyPEMFile: "/nonexistent/path/key.pem",
 		})
