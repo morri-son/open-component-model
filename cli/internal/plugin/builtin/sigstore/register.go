@@ -7,9 +7,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 
 	"ocm.software/open-component-model/bindings/go/plugin/manager/registries/signinghandler"
-	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler"
-	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
 )
 
 // interactiveTokenGetter acquires an OIDC identity token for keyless Sigstore signing.
@@ -29,12 +27,7 @@ func (g *interactiveTokenGetter) GetIDToken(issuer, clientID string) (string, er
 }
 
 func Register(signingHandlerRegistry *signinghandler.SigningRegistry) error {
-	scheme := runtime.NewScheme()
-	if err := scheme.RegisterScheme(v1alpha1.Scheme); err != nil {
-		return err
-	}
-
-	hdlr := handler.NewWithTokenGetter(scheme, &interactiveTokenGetter{})
+	hdlr := handler.NewWithTokenGetter(&interactiveTokenGetter{})
 
 	return signingHandlerRegistry.RegisterInternalComponentSignatureHandler(hdlr)
 }
