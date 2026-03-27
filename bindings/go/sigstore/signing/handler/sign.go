@@ -33,12 +33,6 @@ const (
 	defaultTSAURL       = "https://timestamp.sigstore.dev"
 	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
 	defaultOIDCClientID = "sigstore"
-	defaultTimeout      = 30 * time.Second
-	// defaultRekorTimeout is intentionally longer than defaultTimeout because
-	// Rekor may need extra time for inclusion proof computation and log
-	// consistency checks, especially under high load or when using Rekor v2
-	// tile-backed logs.
-	defaultRekorTimeout = 90 * time.Second
 )
 
 func doSign(
@@ -155,7 +149,6 @@ func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.Config
 
 	opts.CertificateProvider = sign.NewFulcio(&sign.FulcioOptions{
 		BaseURL: url,
-		Timeout: defaultTimeout,
 		Retries: 1,
 	})
 	opts.CertificateProviderOptions = &sign.CertificateProviderOptions{
@@ -175,7 +168,6 @@ func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.Config)
 	tsaURL = ensureTSAPath(tsaURL)
 	opts.TimestampAuthorities = append(opts.TimestampAuthorities, sign.NewTimestampAuthority(&sign.TimestampAuthorityOptions{
 		URL:     tsaURL,
-		Timeout: defaultTimeout,
 		Retries: 1,
 	}))
 }
@@ -205,7 +197,6 @@ func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
 	}
 	rekorOpts := &sign.RekorOptions{
 		BaseURL: url,
-		Timeout: defaultRekorTimeout,
 		Retries: 1,
 	}
 	if cfg.RekorVersion != 0 {
@@ -231,7 +222,6 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 		}
 		opts.CertificateProvider = sign.NewFulcio(&sign.FulcioOptions{
 			BaseURL: fulcioSvc.URL,
-			Timeout: defaultTimeout,
 			Retries: 1,
 		})
 		opts.CertificateProviderOptions = &sign.CertificateProviderOptions{
@@ -247,7 +237,6 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 		}
 		opts.TransparencyLogs = append(opts.TransparencyLogs, sign.NewRekor(&sign.RekorOptions{
 			BaseURL: rekorSvc.URL,
-			Timeout: defaultRekorTimeout,
 			Retries: 1,
 			Version: rekorSvc.MajorAPIVersion,
 		}))
@@ -261,7 +250,6 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 		}
 		opts.TimestampAuthorities = append(opts.TimestampAuthorities, sign.NewTimestampAuthority(&sign.TimestampAuthorityOptions{
 			URL:     tsaSvc.URL,
-			Timeout: defaultTimeout,
 			Retries: 1,
 		}))
 	}
