@@ -21,9 +21,8 @@ func init() {
 // Custom infrastructure can be configured by setting the endpoint URLs.
 //
 // For keyless verification, at least one identity field (ExpectedIssuer, ExpectedSAN,
-// or their regex variants) should be set. If no identity fields and no public key
-// credential are provided, verification falls back to an unsafe mode that does not
-// constrain the signer's identity.
+// or their regex variants) must be set. If no identity fields and no public key
+// credential are provided, verification returns an error.
 //
 // +k8s:deepcopy-gen:interfaces=ocm.software/open-component-model/bindings/go/runtime.Typed
 // +k8s:deepcopy-gen=true

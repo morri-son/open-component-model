@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
@@ -19,8 +18,6 @@ const (
 	IdentityAttributeSignature = "signature"
 )
 
-var ErrMissingCredentials = errors.New("either a private key or OIDC token must be provided for signing")
-
 // TokenGetter acquires an OIDC identity token for keyless signing.
 // The issuer and clientID parameters identify the OIDC provider to authenticate against.
 type TokenGetter interface {
@@ -28,19 +25,18 @@ type TokenGetter interface {
 }
 
 type Handler struct {
-	scheme      *runtime.Scheme
 	tokenGetter TokenGetter
 }
 
-func New(scheme *runtime.Scheme) *Handler {
-	return &Handler{scheme: scheme}
+func New() *Handler {
+	return &Handler{}
 }
 
 // NewWithTokenGetter creates a Handler with an interactive token acquisition flow.
 // When no private key or OIDC token is available from credentials, the handler
 // calls tg.GetIDToken to obtain a token (e.g. via browser-based OIDC).
-func NewWithTokenGetter(scheme *runtime.Scheme, tg TokenGetter) *Handler {
-	return &Handler{scheme: scheme, tokenGetter: tg}
+func NewWithTokenGetter(tg TokenGetter) *Handler {
+	return &Handler{tokenGetter: tg}
 }
 
 func (h *Handler) GetSigningHandlerScheme() *runtime.Scheme {

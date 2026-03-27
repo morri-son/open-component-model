@@ -47,7 +47,7 @@ func doVerify(
 		return fmt.Errorf("validate sigstore bundle: %w", err)
 	}
 
-	trustedMaterial, err := resolveTrustedMaterial(cfg, creds)
+	trustedMaterial, err := resolveTrustedMaterial(ctx, cfg, creds)
 	if err != nil {
 		return fmt.Errorf("resolve trusted material: %w", err)
 	}
@@ -84,13 +84,13 @@ func doVerify(
 //
 // Without a public key the function falls back to a trusted root alone
 // (keyless / certificate-based verification).
-func resolveTrustedMaterial(cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
+func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
 	pubKey, err := credentials.PublicKeyFromCredentials(creds)
 	if err != nil {
 		return nil, fmt.Errorf("load public key from credentials: %w", err)
 	}
 
-	trustedRoot, err := resolveTrustedRoot(cfg, creds)
+	trustedRoot, err := resolveTrustedRoot(ctx, cfg, creds)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,13 @@ func resolveTrustedMaterial(cfg *v1alpha1.Config, creds map[string]string) (root
 // resolveTrustedRoot loads a trusted root from the first available source:
 // credentials JSON, config file path, or TUF.
 // Returns nil, nil when no source is configured.
-func resolveTrustedRoot(cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
+//
+// For air-gapped / offline environments, provide a trusted root via the
+// "trusted_root_json" credential or the TrustedRootPath config field.
+// The TUF fallback always requires network access; there is currently no
+// pre-caching mechanism for custom TUF mirrors (DisableLocalCache is true
+// for custom mirrors to avoid cache conflicts).
+func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
 	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
 	if err != nil {
 		return nil, fmt.Errorf("load trusted root from credentials: %w", err)
@@ -134,7 +140,27 @@ func resolveTrustedRoot(cfg *v1alpha1.Config, creds map[string]string) (root.Tru
 
 	// Fall back to TUF. When TUFRootURL is set, a custom mirror is used;
 	// otherwise the Sigstore public-good root is fetched automatically.
-	return trustedMaterialFromTUF(cfg)
+	return trustedMaterialFromTUF(ctx, cfg)
+}
+
+// resolveOfflineTrustedRoot loads a trusted root from offline sources only:
+// credentials JSON or config file path. Unlike resolveTrustedRoot, it never
+// falls back to TUF (which requires network access). Returns nil, nil when
+// no offline source is configured.
+func resolveOfflineTrustedRoot(cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
+	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
+	if err != nil {
+		return nil, fmt.Errorf("load trusted root from credentials: %w", err)
+	}
+	if len(trustedRootJSON) > 0 {
+		return root.NewTrustedRootFromJSON(trustedRootJSON)
+	}
+
+	if cfg.TrustedRootPath != "" {
+		return root.NewTrustedRootFromPath(cfg.TrustedRootPath)
+	}
+
+	return nil, nil
 }
 
 // trustedMaterialFromPublicKey creates a TrustedMaterial from an ECDSA public key.
@@ -156,7 +182,7 @@ func trustedMaterialFromPublicKey(pubKey *ecdsa.PublicKey) (root.TrustedMaterial
 // If cfg.TUFRootURL is set, it uses that as the TUF mirror and fetches its
 // root.json as the trust anchor. Otherwise it defaults to the Sigstore
 // public-good instance with its embedded root.
-func trustedMaterialFromTUF(cfg *v1alpha1.Config) (root.TrustedMaterial, error) {
+func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.Config) (root.TrustedMaterial, error) {
 	opts := tuf.DefaultOptions()
 	if cfg.TUFRootURL != "" {
 		opts.RepositoryBaseURL = cfg.TUFRootURL
@@ -164,7 +190,7 @@ func trustedMaterialFromTUF(cfg *v1alpha1.Config) (root.TrustedMaterial, error) 
 		// Custom TUF mirrors use their own root of trust. Fetch the
 		// remote root.json and use it as the trust anchor instead of the
 		// embedded Sigstore public-good root.
-		remoteRoot, err := fetchTUFRoot(cfg.TUFRootURL)
+		remoteRoot, err := fetchTUFRoot(ctx, cfg.TUFRootURL)
 		if err != nil {
 			return nil, fmt.Errorf("fetch TUF root from %s: %w", cfg.TUFRootURL, err)
 		}
@@ -181,8 +207,12 @@ func trustedMaterialFromTUF(cfg *v1alpha1.Config) (root.TrustedMaterial, error) 
 }
 
 // fetchTUFRoot fetches root.json from a TUF mirror URL.
-func fetchTUFRoot(baseURL string) ([]byte, error) {
-	resp, err := http.Get(baseURL + "/root.json") //nolint:gosec,noctx // TUF root fetch is a one-off bootstrap operation.
+func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/root.json", nil) //nolint:gosec // TUF root fetch is a one-off bootstrap operation.
+	if err != nil {
+		return nil, fmt.Errorf("create HTTP request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP GET: %w", err)
 	}
@@ -229,15 +259,15 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config) (
 
 // buildPolicy constructs the verification policy.
 //
-// Three modes are supported in order of precedence:
+// Two modes are supported in order of precedence:
 //  1. Key-based: when a public key is present in creds, uses WithKey(). Identity
 //     fields in config are ignored because key-based verification doesn't use certificates.
 //  2. Certificate identity: when identity fields are configured (ExpectedIssuer,
 //     ExpectedSAN, or their regex variants), uses WithCertificateIdentity().
-//  3. Unsafe fallback: when neither a public key nor identity fields are provided,
-//     falls back to WithoutIdentitiesUnsafe(). This skips certificate identity
-//     checks entirely — the bundle's signature is verified against the trusted root
-//     but the signer's identity is not constrained. Use with caution.
+//
+// If neither a public key nor identity fields are provided, an error is returned.
+// Keyless verification without identity constraints is not supported because it
+// would accept any Fulcio-issued certificate regardless of the signer.
 func buildPolicy(artifact *bytes.Reader, creds map[string]string, cfg *v1alpha1.Config) (verify.PolicyBuilder, error) {
 	artifactOpt := verify.WithArtifact(artifact)
 
@@ -263,7 +293,7 @@ func buildPolicy(artifact *bytes.Reader, creds map[string]string, cfg *v1alpha1.
 		return verify.NewPolicy(artifactOpt, verify.WithCertificateIdentity(certID)), nil
 	}
 
-	return verify.NewPolicy(artifactOpt, verify.WithoutIdentitiesUnsafe()), nil
+	return verify.PolicyBuilder{}, fmt.Errorf("keyless verification requires identity config: set ExpectedIssuer/ExpectedSAN or their regex variants")
 }
 
 // composedTrustedMaterial combines a trusted root (providing Rekor/CT/TSA

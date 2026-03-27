@@ -72,6 +72,14 @@ func doSign(
 		configureTransparencyLog(&opts, cfg)
 	}
 
+	// When a trusted root is available from an offline source, set it on
+	// BundleOptions so sign.Bundle can verify the created bundle before
+	// returning it (defense-in-depth). TUF is intentionally excluded to
+	// avoid a network round-trip at sign time.
+	if tr, err := resolveOfflineTrustedRoot(cfg, creds); err == nil && tr != nil {
+		opts.TrustedRoot = tr
+	}
+
 	content := &sign.PlainData{Data: digestBytes}
 
 	bundle, err := sign.Bundle(content, keypair, opts)

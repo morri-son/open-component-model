@@ -37,7 +37,7 @@ import (
 
 func newHandler(t *testing.T) *Handler {
 	t.Helper()
-	return New(v1alpha1.Scheme)
+	return New()
 }
 
 func defaultConfig() *v1alpha1.Config {
@@ -503,6 +503,46 @@ func Test_ConfigureTransparencyLog_SkipRekor(t *testing.T) {
 	r.Empty(opts.TransparencyLogs, "SkipRekor should prevent adding transparency logs")
 }
 
+func Test_ConfigureTimestampAuthority(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ForceTSA uses default TSA URL", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.Config{ForceTSA: true}
+
+		var opts sign.BundleOptions
+		configureTimestampAuthority(&opts, cfg)
+
+		r.Len(opts.TimestampAuthorities, 1, "should add one timestamp authority")
+	})
+
+	t.Run("explicit TSAURL is used", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.Config{TSAURL: "https://custom-tsa.example.com"}
+
+		var opts sign.BundleOptions
+		configureTimestampAuthority(&opts, cfg)
+
+		r.Len(opts.TimestampAuthorities, 1, "should add one timestamp authority")
+	})
+
+	t.Run("no TSA when neither ForceTSA nor TSAURL set", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.Config{}
+
+		var opts sign.BundleOptions
+		configureTimestampAuthority(&opts, cfg)
+
+		r.Empty(opts.TimestampAuthorities, "should not add timestamp authorities")
+	})
+}
+
 func Test_EnsureTSAPath(t *testing.T) {
 	t.Parallel()
 
@@ -702,7 +742,7 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
 	}
 
-	_, err := resolveTrustedMaterial(cfg, map[string]string{})
+	_, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
 	r.Error(err, "TUF fallback with invalid URL should fail")
 }
 
@@ -712,7 +752,7 @@ func Test_ResolveTrustedMaterial_NoCreds_FallsBackToPublicGoodTUF(t *testing.T) 
 
 	cfg := &v1alpha1.Config{}
 
-	tm, err := resolveTrustedMaterial(cfg, map[string]string{})
+	tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
 	r.NoError(err, "empty config should fall back to Sigstore public-good TUF root")
 	r.NotNil(tm)
 }
@@ -1214,7 +1254,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 		r.NotEqual(verify.PolicyBuilder{}, policy)
 	})
 
-	t.Run("without public key and without identity config uses unsafe policy", func(t *testing.T) {
+	t.Run("without public key and without identity config returns error", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1224,13 +1264,13 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		cfg := &v1alpha1.Config{}
 
-		policy, err := buildPolicy(
+		_, err = buildPolicy(
 			bytes.NewReader(digestBytes),
 			map[string]string{},
 			cfg,
 		)
-		r.NoError(err)
-		r.NotEqual(verify.PolicyBuilder{}, policy)
+		r.Error(err)
+		r.Contains(err.Error(), "keyless verification requires identity config")
 	})
 
 	t.Run("with public key always uses key policy regardless of identity config", func(t *testing.T) {
@@ -1279,7 +1319,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			TrustedRootPath: trPath,
 		}
 
-		tm, err := resolveTrustedMaterial(cfg, map[string]string{})
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
 		r.NoError(err)
 		r.NotNil(tm, "should return trusted material from file")
 	})
@@ -1295,7 +1335,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveTrustedMaterial(cfg, creds)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
 		r.NoError(err)
 		r.NotNil(tm, "should return trusted material from credentials")
 	})
@@ -1317,7 +1357,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 		}
 
-		tm, err := resolveTrustedMaterial(cfg, creds)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
 		r.NoError(err)
 		r.NotNil(tm)
 
@@ -1343,7 +1383,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveTrustedMaterial(cfg, creds)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
 		r.NoError(err)
 		r.NotNil(tm, "credentials trusted root should take precedence")
 	})
@@ -1408,6 +1448,34 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		v, err := buildVerifier(tm, cfg)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with TSA requirement")
+	})
+
+	t.Run("RekorVersion 2 without TSA uses no observer timestamps", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		cfg := &v1alpha1.Config{RekorVersion: 2}
+		v, err := buildVerifier(tm, cfg)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier for Rekor v2 without TSA")
+	})
+
+	t.Run("RekorVersion 2 with TSA uses observer timestamps", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		cfg := &v1alpha1.Config{RekorVersion: 2, ForceTSA: true}
+		v, err := buildVerifier(tm, cfg)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier for Rekor v2 with TSA")
 	})
 }
 
