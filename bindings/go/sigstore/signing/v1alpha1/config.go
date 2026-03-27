@@ -17,8 +17,9 @@ func init() {
 
 // Config defines configuration for Sigstore-based signing and verification.
 //
-// When all URL fields are empty, the public Sigstore infrastructure is used by default.
-// Custom infrastructure can be configured by setting the endpoint URLs.
+// The library does not provide default endpoint URLs. All URLs must be explicitly
+// configured, either individually (FulcioURL, RekorURL, TSAURL) or via a
+// SigningConfigPath. CLI layers should set appropriate defaults for user convenience.
 //
 // For keyless verification, at least one identity field (ExpectedIssuer, ExpectedSAN,
 // or their regex variants) must be set. If no identity fields and no public key
@@ -35,19 +36,20 @@ type Config struct {
 	Type runtime.Type `json:"type"`
 
 	// FulcioURL is the URL of the Fulcio certificate authority for keyless signing.
-	// If empty, the public Sigstore Fulcio instance is used.
+	// Required when an OIDC token is available and SigningConfigPath is not set.
 	FulcioURL string `json:"fulcioURL,omitempty"`
 
 	// RekorURL is the URL of the Rekor transparency log.
-	// If empty, the public Sigstore Rekor instance is used.
+	// When empty and SigningConfigPath is not set, no transparency log entry is created.
 	RekorURL string `json:"rekorURL,omitempty"`
 
-	// TSAURL is the URL of a RFC 3161 Timestamp Authority.
-	// If empty, no timestamp authority is used unless ForceTSA is set.
+	// TSAURL is the full URL of a RFC 3161 Timestamp Authority endpoint
+	// (e.g. "https://timestamp.sigstore.dev/api/v1/timestamp").
+	// When empty, no timestamp authority is used unless ForceTSA is set.
 	TSAURL string `json:"tsaURL,omitempty"`
 
 	// TUFRootURL is the URL of a TUF repository for fetching trusted root material.
-	// If empty, the default Sigstore TUF root is used.
+	// When empty, TUF is not used; provide a trusted root via credentials or TrustedRootPath instead.
 	TUFRootURL string `json:"tufRootURL,omitempty"`
 
 	// TrustedRootPath is a filesystem path to a trusted root JSON file for offline verification.

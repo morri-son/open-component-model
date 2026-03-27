@@ -7,15 +7,14 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"net/url"
 	"time"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -25,14 +24,6 @@ import (
 	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler/internal/credentials"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
-)
-
-const (
-	defaultFulcioURL    = "https://fulcio.sigstore.dev"
-	defaultRekorURL     = "https://rekor.sigstore.dev"
-	defaultTSAURL       = "https://timestamp.sigstore.dev"
-	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
-	defaultOIDCClientID = "sigstore"
 )
 
 func doSign(
@@ -125,7 +116,7 @@ func resolveKeypair(creds map[string]string, tg TokenGetter) (sign.Keypair, stri
 
 	idToken := credentials.OIDCTokenFromCredentials(creds)
 	if idToken == "" && tg != nil {
-		idToken, err = tg.GetIDToken(defaultOIDCIssuer, defaultOIDCClientID)
+		idToken, err = tg.GetIDToken()
 		if err != nil {
 			return nil, "", fmt.Errorf("acquire OIDC token: %w", err)
 		}
@@ -142,14 +133,12 @@ func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.Config
 	if idToken == "" {
 		return nil
 	}
-	url := cfg.FulcioURL
-	if url == "" {
-		url = defaultFulcioURL
+	if cfg.FulcioURL == "" {
+		return fmt.Errorf("FulcioURL must be set for keyless signing (OIDC token provided but no Fulcio endpoint configured)")
 	}
 
 	opts.CertificateProvider = sign.NewFulcio(&sign.FulcioOptions{
-		BaseURL: url,
-		Retries: 1,
+		BaseURL: cfg.FulcioURL,
 	})
 	opts.CertificateProviderOptions = &sign.CertificateProviderOptions{
 		IDToken: idToken,
@@ -161,43 +150,20 @@ func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.Config)
 	if cfg.TSAURL == "" && !cfg.ForceTSA {
 		return
 	}
-	tsaURL := cfg.TSAURL
-	if tsaURL == "" {
-		tsaURL = defaultTSAURL
+	if cfg.TSAURL == "" {
+		return
 	}
-	tsaURL = ensureTSAPath(tsaURL)
 	opts.TimestampAuthorities = append(opts.TimestampAuthorities, sign.NewTimestampAuthority(&sign.TimestampAuthorityOptions{
-		URL:     tsaURL,
-		Retries: 1,
+		URL: cfg.TSAURL,
 	}))
 }
 
-// ensureTSAPath appends the standard RFC 3161 API path if the URL does not
-// already contain a path component beyond "/".
-func ensureTSAPath(rawURL string) string {
-	const tsaPath = "/api/v1/timestamp"
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return rawURL + tsaPath
-	}
-	if u.Path == "" || u.Path == "/" {
-		u.Path = tsaPath
-		return u.String()
-	}
-	return rawURL
-}
-
 func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
-	if cfg.SkipRekor {
+	if cfg.SkipRekor || cfg.RekorURL == "" {
 		return
 	}
-	url := cfg.RekorURL
-	if url == "" {
-		url = defaultRekorURL
-	}
 	rekorOpts := &sign.RekorOptions{
-		BaseURL: url,
-		Retries: 1,
+		BaseURL: cfg.RekorURL,
 	}
 	if cfg.RekorVersion != 0 {
 		rekorOpts.Version = cfg.RekorVersion
@@ -222,7 +188,6 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 		}
 		opts.CertificateProvider = sign.NewFulcio(&sign.FulcioOptions{
 			BaseURL: fulcioSvc.URL,
-			Retries: 1,
 		})
 		opts.CertificateProviderOptions = &sign.CertificateProviderOptions{
 			IDToken: idToken,
@@ -237,7 +202,6 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 		}
 		opts.TransparencyLogs = append(opts.TransparencyLogs, sign.NewRekor(&sign.RekorOptions{
 			BaseURL: rekorSvc.URL,
-			Retries: 1,
 			Version: rekorSvc.MajorAPIVersion,
 		}))
 	}
@@ -249,8 +213,7 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 			return fmt.Errorf("select tsa service: %w", err)
 		}
 		opts.TimestampAuthorities = append(opts.TimestampAuthorities, sign.NewTimestampAuthority(&sign.TimestampAuthorityOptions{
-			URL:     tsaSvc.URL,
-			Retries: 1,
+			URL: tsaSvc.URL,
 		}))
 	}
 
@@ -258,9 +221,9 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 }
 
 // extractIssuer attempts to extract the OIDC issuer from the Fulcio certificate in the bundle.
-// It tries the v2 extension (OID 1.3.6.1.4.1.57264.1.8) first, which uses proper ASN.1
-// encoding, then falls back to the v1 extension (OID 1.3.6.1.4.1.57264.1.1), which stores
-// the issuer as raw UTF-8 bytes without ASN.1 wrapping (a known non-RFC5280 quirk in Fulcio).
+// It delegates to sigstore-go's certificate.ParseExtensions which handles both the v2 extension
+// (OID 1.3.6.1.4.1.57264.1.8, proper ASN.1 encoding) and the deprecated v1 extension
+// (OID 1.3.6.1.4.1.57264.1.1, raw UTF-8 bytes).
 func extractIssuer(bundle *protobundle.Bundle) string {
 	vm := bundle.GetVerificationMaterial()
 	if vm == nil {
@@ -279,34 +242,11 @@ func extractIssuer(bundle *protobundle.Bundle) string {
 		return ""
 	}
 
-	// Try v2 issuer extension first (proper ASN.1 UTF8String encoding).
-	// OID: 1.3.6.1.4.1.57264.1.8
-	for _, ext := range cert.Extensions {
-		if ext.Id.String() == "1.3.6.1.4.1.57264.1.8" {
-			var issuer string
-			if _, err := asn1.Unmarshal(ext.Value, &issuer); err == nil && issuer != "" {
-				return issuer
-			}
-		}
+	extensions, err := certificate.ParseExtensions(cert.Extensions)
+	if err != nil {
+		return ""
 	}
-
-	// Fall back to v1 issuer extension (raw UTF-8 bytes, not ASN.1 wrapped).
-	// OID: 1.3.6.1.4.1.57264.1.1
-	for _, ext := range cert.Extensions {
-		if ext.Id.String() == "1.3.6.1.4.1.57264.1.1" {
-			// Try ASN.1 first (some issuers wrap the value properly).
-			var issuer string
-			if _, err := asn1.Unmarshal(ext.Value, &issuer); err == nil && issuer != "" {
-				return issuer
-			}
-			// Fall back to raw bytes (Fulcio's original non-RFC5280 encoding).
-			if len(ext.Value) > 0 {
-				return string(ext.Value)
-			}
-		}
-	}
-
-	return ""
+	return extensions.Issuer
 }
 
 // ecdsaKeypair adapts an *ecdsa.PrivateKey to sigstore-go's sign.Keypair interface.

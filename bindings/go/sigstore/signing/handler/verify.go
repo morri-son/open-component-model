@@ -117,14 +117,13 @@ func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map
 }
 
 // resolveTrustedRoot loads a trusted root from the first available source:
-// credentials JSON, config file path, or TUF.
+// credentials JSON, config file path, or TUF (when TUFRootURL is set).
 // Returns nil, nil when no source is configured.
 //
-// For air-gapped / offline environments, provide a trusted root via the
-// "trusted_root_json" credential or the TrustedRootPath config field.
-// The TUF fallback always requires network access; there is currently no
-// pre-caching mechanism for custom TUF mirrors (DisableLocalCache is true
-// for custom mirrors to avoid cache conflicts).
+// The library does not implicitly fall back to the Sigstore public-good TUF
+// root. For public Sigstore infrastructure, set TUFRootURL in the config or
+// provide a trusted root via credentials or TrustedRootPath. CLI layers
+// should set appropriate defaults for user convenience.
 func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
 	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
 	if err != nil {
@@ -138,9 +137,12 @@ func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[str
 		return root.NewTrustedRootFromPath(cfg.TrustedRootPath)
 	}
 
-	// Fall back to TUF. When TUFRootURL is set, a custom mirror is used;
-	// otherwise the Sigstore public-good root is fetched automatically.
-	return trustedMaterialFromTUF(ctx, cfg)
+	// TUF is only used when an explicit TUF mirror URL is configured.
+	if cfg.TUFRootURL != "" {
+		return trustedMaterialFromTUF(ctx, cfg)
+	}
+
+	return nil, nil
 }
 
 // resolveOfflineTrustedRoot loads a trusted root from offline sources only:
@@ -178,27 +180,21 @@ func trustedMaterialFromPublicKey(pubKey *ecdsa.PublicKey) (root.TrustedMaterial
 	}), nil
 }
 
-// trustedMaterialFromTUF fetches a trusted root via TUF.
-// If cfg.TUFRootURL is set, it uses that as the TUF mirror and fetches its
-// root.json as the trust anchor. Otherwise it defaults to the Sigstore
-// public-good instance with its embedded root.
+// trustedMaterialFromTUF fetches a trusted root from a TUF mirror.
+// cfg.TUFRootURL must be set. The remote root.json is fetched and used as the
+// trust anchor (TOFU — Trust On First Use). Local caching is disabled to avoid
+// conflicts between different TUF repositories.
 func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.Config) (root.TrustedMaterial, error) {
 	opts := tuf.DefaultOptions()
-	if cfg.TUFRootURL != "" {
-		opts.RepositoryBaseURL = cfg.TUFRootURL
+	opts.RepositoryBaseURL = cfg.TUFRootURL
 
-		// Custom TUF mirrors use their own root of trust. Fetch the
-		// remote root.json and use it as the trust anchor instead of the
-		// embedded Sigstore public-good root.
-		remoteRoot, err := fetchTUFRoot(ctx, cfg.TUFRootURL)
-		if err != nil {
-			return nil, fmt.Errorf("fetch TUF root from %s: %w", cfg.TUFRootURL, err)
-		}
-		opts.Root = remoteRoot
-		// Disable local cache to avoid conflicts between different TUF
-		// repositories sharing the same cache path.
-		opts.DisableLocalCache = true
+	remoteRoot, err := fetchTUFRoot(ctx, cfg.TUFRootURL)
+	if err != nil {
+		return nil, fmt.Errorf("fetch TUF root from %s: %w", cfg.TUFRootURL, err)
 	}
+	opts.Root = remoteRoot
+	opts.DisableLocalCache = true
+
 	client, err := tuf.New(opts)
 	if err != nil {
 		return nil, fmt.Errorf("create TUF client: %w", err)
