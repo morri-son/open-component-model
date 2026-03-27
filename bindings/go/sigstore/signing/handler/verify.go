@@ -132,11 +132,9 @@ func resolveTrustedRoot(cfg *v1alpha1.Config, creds map[string]string) (root.Tru
 		return root.NewTrustedRootFromPath(cfg.TrustedRootPath)
 	}
 
-	if cfg.TUFRootURL != "" {
-		return trustedMaterialFromTUF(cfg)
-	}
-
-	return nil, nil
+	// Fall back to TUF. When TUFRootURL is set, a custom mirror is used;
+	// otherwise the Sigstore public-good root is fetched automatically.
+	return trustedMaterialFromTUF(cfg)
 }
 
 // trustedMaterialFromPublicKey creates a TrustedMaterial from an ECDSA public key.

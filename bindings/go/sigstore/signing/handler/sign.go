@@ -12,7 +12,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
-	"os"
 	"time"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -29,10 +28,12 @@ import (
 )
 
 const (
-	defaultFulcioURL = "https://fulcio.sigstore.dev"
-	defaultRekorURL  = "https://rekor.sigstore.dev"
-	defaultTSAURL    = "https://timestamp.sigstore.dev"
-	defaultTimeout   = 30 * time.Second
+	defaultFulcioURL    = "https://fulcio.sigstore.dev"
+	defaultRekorURL     = "https://rekor.sigstore.dev"
+	defaultTSAURL       = "https://timestamp.sigstore.dev"
+	defaultOIDCIssuer   = "https://oauth2.sigstore.dev/auth"
+	defaultOIDCClientID = "sigstore"
+	defaultTimeout      = 30 * time.Second
 	// defaultRekorTimeout is intentionally longer than defaultTimeout because
 	// Rekor may need extra time for inclusion proof computation and log
 	// consistency checks, especially under high load or when using Rekor v2
@@ -45,13 +46,14 @@ func doSign(
 	unsigned descruntime.Digest,
 	cfg *v1alpha1.Config,
 	creds map[string]string,
+	tg TokenGetter,
 ) (descruntime.SignatureInfo, error) {
 	digestBytes, err := hex.DecodeString(unsigned.Value)
 	if err != nil {
 		return descruntime.SignatureInfo{}, fmt.Errorf("decode digest hex value: %w", err)
 	}
 
-	keypair, idToken, err := resolveKeypair(creds)
+	keypair, idToken, err := resolveKeypair(creds, tg)
 	if err != nil {
 		return descruntime.SignatureInfo{}, err
 	}
@@ -94,15 +96,18 @@ func doSign(
 
 // resolveKeypair determines the signing keypair and optional OIDC token from credentials.
 //
-// Three modes are supported:
+// Three modes are supported (checked in order):
 //  1. Key-based: a private key PEM is present in creds. Returns an ecdsaKeypair
 //     wrapping that key and an empty OIDC token.
-//  2. Keyless (OIDC): no private key but an OIDC token is present. Returns an
-//     ephemeral keypair (for Fulcio certificate issuance) and the token.
-//  3. Ephemeral (offline): neither private key nor OIDC token. Returns an
-//     ephemeral keypair with an empty token. Bundles produced in this mode
-//     contain only a public key hint and no Fulcio certificate.
-func resolveKeypair(creds map[string]string) (sign.Keypair, string, error) {
+//  2. Credential token: an OIDC token is present in creds. Returns an ephemeral
+//     keypair and the token (for Fulcio certificate issuance).
+//  3. TokenGetter (injected): if tg is non-nil, calls tg.GetIDToken() to acquire
+//     a token interactively or from the environment. Returns an ephemeral keypair
+//     and the obtained token. Errors from the getter are propagated.
+//
+// If no token is obtained (tg is nil or not called), an ephemeral keypair is
+// returned with an empty token (offline/unsigned mode — no Fulcio certificate).
+func resolveKeypair(creds map[string]string, tg TokenGetter) (sign.Keypair, string, error) {
 	privKey, err := credentials.PrivateKeyFromCredentials(creds)
 	if err != nil {
 		return nil, "", fmt.Errorf("load private key: %w", err)
@@ -117,9 +122,13 @@ func resolveKeypair(creds map[string]string) (sign.Keypair, string, error) {
 	}
 
 	idToken := credentials.OIDCTokenFromCredentials(creds)
-	if idToken == "" {
-		idToken = os.Getenv("SIGSTORE_ID_TOKEN")
+	if idToken == "" && tg != nil {
+		idToken, err = tg.GetIDToken(defaultOIDCIssuer, defaultOIDCClientID)
+		if err != nil {
+			return nil, "", fmt.Errorf("acquire OIDC token: %w", err)
+		}
 	}
+
 	keypair, err := sign.NewEphemeralKeypair(nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("create ephemeral keypair: %w", err)
@@ -371,11 +380,12 @@ func signWithConfig(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 	scheme *runtime.Scheme,
+	tg TokenGetter,
 ) (descruntime.SignatureInfo, error) {
 	var cfg v1alpha1.Config
 	if err := scheme.Convert(rawCfg, &cfg); err != nil {
 		return descruntime.SignatureInfo{}, fmt.Errorf("convert config: %w", err)
 	}
 
-	return doSign(ctx, unsigned, &cfg, creds)
+	return doSign(ctx, unsigned, &cfg, creds, tg)
 }

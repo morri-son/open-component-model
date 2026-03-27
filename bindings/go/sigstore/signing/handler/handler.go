@@ -21,12 +21,26 @@ const (
 
 var ErrMissingCredentials = errors.New("either a private key or OIDC token must be provided for signing")
 
+// TokenGetter acquires an OIDC identity token for keyless signing.
+// The issuer and clientID parameters identify the OIDC provider to authenticate against.
+type TokenGetter interface {
+	GetIDToken(issuer, clientID string) (string, error)
+}
+
 type Handler struct {
-	scheme *runtime.Scheme
+	scheme      *runtime.Scheme
+	tokenGetter TokenGetter
 }
 
 func New(scheme *runtime.Scheme) *Handler {
 	return &Handler{scheme: scheme}
+}
+
+// NewWithTokenGetter creates a Handler with an interactive token acquisition flow.
+// When no private key or OIDC token is available from credentials, the handler
+// calls tg.GetIDToken to obtain a token (e.g. via browser-based OIDC).
+func NewWithTokenGetter(scheme *runtime.Scheme, tg TokenGetter) *Handler {
+	return &Handler{scheme: scheme, tokenGetter: tg}
 }
 
 func (h *Handler) GetSigningHandlerScheme() *runtime.Scheme {
@@ -39,7 +53,7 @@ func (h *Handler) Sign(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 ) (descruntime.SignatureInfo, error) {
-	return signWithConfig(ctx, unsigned, rawCfg, creds, h.GetSigningHandlerScheme())
+	return signWithConfig(ctx, unsigned, rawCfg, creds, h.GetSigningHandlerScheme(), h.tokenGetter)
 }
 
 func (h *Handler) Verify(
