@@ -542,7 +542,7 @@ func Test_ConfigureTransparencyLog_SkipRekor(t *testing.T) {
 func Test_ConfigureTimestampAuthority(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ForceTSA uses default TSA URL", func(t *testing.T) {
+	t.Run("ForceTSA without TSAURL is no-op", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -551,14 +551,14 @@ func Test_ConfigureTimestampAuthority(t *testing.T) {
 		var opts sign.BundleOptions
 		configureTimestampAuthority(&opts, cfg)
 
-		r.Len(opts.TimestampAuthorities, 1, "should add one timestamp authority")
+		r.Empty(opts.TimestampAuthorities, "ForceTSA without TSAURL should not add timestamp authorities")
 	})
 
 	t.Run("explicit TSAURL is used", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{TSAURL: "https://custom-tsa.example.com"}
+		cfg := &v1alpha1.Config{TSAURL: "https://custom-tsa.example.com/api/v1/timestamp"}
 
 		var opts sign.BundleOptions
 		configureTimestampAuthority(&opts, cfg)
@@ -577,50 +577,6 @@ func Test_ConfigureTimestampAuthority(t *testing.T) {
 
 		r.Empty(opts.TimestampAuthorities, "should not add timestamp authorities")
 	})
-}
-
-func Test_EnsureTSAPath(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "base URL without path",
-			input:    "http://localhost:8283",
-			expected: "http://localhost:8283/api/v1/timestamp",
-		},
-		{
-			name:     "base URL with trailing slash",
-			input:    "http://localhost:8283/",
-			expected: "http://localhost:8283/api/v1/timestamp",
-		},
-		{
-			name:     "already has full path",
-			input:    "http://localhost:8283/api/v1/timestamp",
-			expected: "http://localhost:8283/api/v1/timestamp",
-		},
-		{
-			name:     "custom path preserved",
-			input:    "http://tsa.example.com/custom/path",
-			expected: "http://tsa.example.com/custom/path",
-		},
-		{
-			name:     "public good TSA default",
-			input:    "https://timestamp.sigstore.dev",
-			expected: "https://timestamp.sigstore.dev/api/v1/timestamp",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			r := require.New(t)
-			r.Equal(tc.expected, ensureTSAPath(tc.input))
-		})
-	}
 }
 
 // ---- Req 3: SigningConfig tests ----
@@ -871,7 +827,7 @@ type mockTokenGetter struct {
 	called bool
 }
 
-func (m *mockTokenGetter) GetIDToken(_, _ string) (string, error) {
+func (m *mockTokenGetter) GetIDToken() (string, error) {
 	m.called = true
 	return m.token, m.err
 }
@@ -998,16 +954,17 @@ func Test_ConfigureCertificateProvider(t *testing.T) {
 		r.Nil(opts.CertificateProviderOptions)
 	})
 
-	t.Run("empty FulcioURL uses default", func(t *testing.T) {
+	t.Run("empty FulcioURL with token returns error", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
 		cfg := &v1alpha1.Config{}
 		var opts sign.BundleOptions
 		err := configureCertificateProvider(&opts, cfg, "my-token")
-		r.NoError(err)
+		r.Error(err)
+		r.Contains(err.Error(), "FulcioURL must be set")
 
-		r.NotNil(opts.CertificateProvider, "should configure Fulcio with default URL")
+		r.Nil(opts.CertificateProvider)
 	})
 }
 
@@ -1015,14 +972,11 @@ func Test_ConfigureCertificateProvider(t *testing.T) {
 
 // makeFulcioCert creates a self-signed certificate with the Fulcio OIDC issuer
 // extension (OID 1.3.6.1.4.1.57264.1.1) for testing extractIssuer.
-// The value is ASN.1 encoded (proper wrapping).
+// The value uses raw UTF-8 bytes (no ASN.1 wrapping), matching Fulcio's actual v1 encoding.
 func makeFulcioCert(t *testing.T, issuer string) []byte {
 	t.Helper()
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-
-	issuerDER, err := asn1.Marshal(issuer)
 	require.NoError(t, err)
 
 	tmpl := &x509.Certificate{
@@ -1033,7 +987,7 @@ func makeFulcioCert(t *testing.T, issuer string) []byte {
 		ExtraExtensions: []pkix.Extension{
 			{
 				Id:    asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
-				Value: issuerDER,
+				Value: []byte(issuer),
 			},
 		},
 	}
@@ -1063,33 +1017,6 @@ func makeFulcioCertV2(t *testing.T, issuer string) []byte {
 			{
 				Id:    asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 8},
 				Value: issuerDER,
-			},
-		},
-	}
-
-	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
-	require.NoError(t, err)
-	return certDER
-}
-
-// makeFulcioCertRawV1 creates a self-signed certificate with the v1 issuer
-// extension (OID 1.3.6.1.4.1.57264.1.1) using raw UTF-8 bytes (no ASN.1 wrapping),
-// which matches Fulcio's original non-RFC5280 encoding behavior.
-func makeFulcioCertRawV1(t *testing.T, issuer string) []byte {
-	t.Helper()
-
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-
-	tmpl := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: "test-fulcio-cert-raw"},
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().Add(time.Hour),
-		ExtraExtensions: []pkix.Extension{
-			{
-				Id:    asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
-				Value: []byte(issuer),
 			},
 		},
 	}
@@ -1212,11 +1139,11 @@ func Test_ExtractIssuer(t *testing.T) {
 		r.Equal("https://token.actions.githubusercontent.com", extractIssuer(bundle))
 	})
 
-	t.Run("extracts issuer from raw v1 bytes when ASN.1 unmarshal fails", func(t *testing.T) {
+	t.Run("extracts issuer from raw v1 bytes", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		certDER := makeFulcioCertRawV1(t, "https://kubernetes.default.svc.cluster.local")
+		certDER := makeFulcioCert(t, "https://kubernetes.default.svc.cluster.local")
 
 		bundle := &protobundle.Bundle{
 			VerificationMaterial: &protobundle.VerificationMaterial{
@@ -1238,8 +1165,6 @@ func Test_ExtractIssuer(t *testing.T) {
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
 
-		v1DER, err := asn1.Marshal("https://v1-issuer.example.com")
-		require.NoError(t, err)
 		v2DER, err := asn1.Marshal("https://v2-issuer.example.com")
 		require.NoError(t, err)
 
@@ -1251,7 +1176,7 @@ func Test_ExtractIssuer(t *testing.T) {
 			ExtraExtensions: []pkix.Extension{
 				{
 					Id:    asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
-					Value: v1DER,
+					Value: []byte("https://v1-issuer.example.com"),
 				},
 				{
 					Id:    asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 8},
@@ -1567,7 +1492,11 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 		creds := map[string]string{
 			credentials.CredentialKeyOIDCToken: "not-a-valid-jwt",
 		}
-		cfg := offlineConfig()
+		cfg := &v1alpha1.Config{
+			FulcioURL: "https://fulcio.example.com",
+			SkipRekor: true,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
 
 		_, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
 		r.Error(err)

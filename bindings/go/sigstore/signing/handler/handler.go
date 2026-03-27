@@ -19,9 +19,11 @@ const (
 )
 
 // TokenGetter acquires an OIDC identity token for keyless signing.
-// The issuer and clientID parameters identify the OIDC provider to authenticate against.
+// Implementations are responsible for determining the OIDC provider
+// (issuer and client ID) — typically from environment variables,
+// configuration, or an interactive browser flow.
 type TokenGetter interface {
-	GetIDToken(issuer, clientID string) (string, error)
+	GetIDToken() (string, error)
 }
 
 type Handler struct {
