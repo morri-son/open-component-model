@@ -542,19 +542,7 @@ func Test_ConfigureTransparencyLog_SkipRekor(t *testing.T) {
 func Test_ConfigureTimestampAuthority(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ForceTSA without TSAURL is no-op", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		cfg := &v1alpha1.Config{ForceTSA: true}
-
-		var opts sign.BundleOptions
-		configureTimestampAuthority(&opts, cfg)
-
-		r.Empty(opts.TimestampAuthorities, "ForceTSA without TSAURL should not add timestamp authorities")
-	})
-
-	t.Run("explicit TSAURL is used", func(t *testing.T) {
+	t.Run("TSAURL adds timestamp authority", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -566,7 +554,7 @@ func Test_ConfigureTimestampAuthority(t *testing.T) {
 		r.Len(opts.TimestampAuthorities, 1, "should add one timestamp authority")
 	})
 
-	t.Run("no TSA when neither ForceTSA nor TSAURL set", func(t *testing.T) {
+	t.Run("no TSA when TSAURL empty", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1420,7 +1408,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NotNil(v, "should build verifier without tlog")
 	})
 
-	t.Run("ForceTSA adds signed timestamp requirement", func(t *testing.T) {
+	t.Run("TSAURL adds signed timestamp requirement", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1428,13 +1416,13 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{ForceTSA: true}
+		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com/api/v1/timestamp"}
 		v, err := buildVerifier(tm, cfg)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with TSA requirement")
 	})
 
-	t.Run("TSAURL adds signed timestamp requirement", func(t *testing.T) {
+	t.Run("TSAURL adds signed timestamp requirement (alternate URL)", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1470,7 +1458,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{RekorVersion: 2, ForceTSA: true}
+		cfg := &v1alpha1.Config{RekorVersion: 2, TSAURL: "https://tsa.example.com/api/v1/timestamp"}
 		v, err := buildVerifier(tm, cfg)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier for Rekor v2 with TSA")

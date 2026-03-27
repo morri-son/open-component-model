@@ -45,7 +45,8 @@ type Config struct {
 
 	// TSAURL is the full URL of a RFC 3161 Timestamp Authority endpoint
 	// (e.g. "https://timestamp.sigstore.dev/api/v1/timestamp").
-	// When empty, no timestamp authority is used unless ForceTSA is set.
+	// When set, a TSA timestamp is obtained at sign time and required at verify time.
+	// Rekor v2 keyless flows require a TSA because v2 does not produce signed entry timestamps.
 	TSAURL string `json:"tsaURL,omitempty"`
 
 	// TUFRootURL is the URL of a TUF repository for fetching trusted root material.
@@ -86,8 +87,4 @@ type Config struct {
 	// SkipRekor disables transparency log integration.
 	// When true, signatures are not uploaded to Rekor and Rekor entries are not required for verification.
 	SkipRekor bool `json:"skipRekor,omitempty"`
-
-	// ForceTSA forces the use of a Timestamp Authority even when Rekor is available.
-	// By default, Rekor's integrated timestamps are used. When set, a TSA timestamp is also obtained.
-	ForceTSA bool `json:"forceTSA,omitempty"`
 }

@@ -50,9 +50,9 @@ type testBackend struct {
 	RekorURL        string
 	RekorVersion    uint32
 	TrustedRootPath string
-	// ForceTSA must be set for Rekor v2 keyless: v2 has no SETs,
-	// so Fulcio cert validity requires an RFC 3161 timestamp.
-	ForceTSA bool
+	// RequiresTSA indicates that keyless flows on this backend require a TSA.
+	// Rekor v2 does not produce SETs, so Fulcio cert validity requires an RFC 3161 timestamp.
+	RequiresTSA bool
 }
 
 func backends(t *testing.T) []testBackend {
@@ -79,7 +79,7 @@ func backends(t *testing.T) []testBackend {
 			RekorURL:        v2URL,
 			RekorVersion:    2,
 			TrustedRootPath: v2Root,
-			ForceTSA:        true,
+			RequiresTSA:     true,
 		})
 	}
 
@@ -143,7 +143,6 @@ func keylessConfig(b testBackend) *v1alpha1.Config {
 	}
 	if tsa := tsaURL(); tsa != "" {
 		cfg.TSAURL = tsa
-		cfg.ForceTSA = b.ForceTSA
 	}
 	setType(cfg)
 	return cfg
@@ -154,7 +153,9 @@ func keylessVerifyConfig(b testBackend) *v1alpha1.Config {
 	cfg := &v1alpha1.Config{
 		RekorVersion:    b.RekorVersion,
 		TrustedRootPath: b.TrustedRootPath,
-		ForceTSA:        b.ForceTSA,
+	}
+	if tsa := tsaURL(); tsa != "" {
+		cfg.TSAURL = tsa
 	}
 	setType(cfg)
 	return cfg
@@ -374,7 +375,7 @@ func Test_Integration_Keyless_SignVerify(t *testing.T) {
 			if b.TrustedRootPath == "" {
 				t.Skipf("skipping: no trusted root path for %s", b.Name)
 			}
-			if b.ForceTSA && tsaURL() == "" {
+			if b.RequiresTSA && tsaURL() == "" {
 				t.Skipf("skipping: %s keyless requires TSA (SIGSTORE_TSA_URL)", b.Name)
 			}
 
@@ -446,7 +447,7 @@ func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
 			if b.TrustedRootPath == "" {
 				t.Skipf("skipping: no trusted root path for %s", b.Name)
 			}
-			if b.ForceTSA && tsaURL() == "" {
+			if b.RequiresTSA && tsaURL() == "" {
 				t.Skipf("skipping: %s keyless requires TSA", b.Name)
 			}
 
@@ -523,7 +524,6 @@ func Test_Integration_TSA_SignVerify(t *testing.T) {
 				RekorURL:        b.RekorURL,
 				RekorVersion:    b.RekorVersion,
 				TSAURL:          tsa,
-				ForceTSA:        true,
 				TrustedRootPath: b.TrustedRootPath,
 			}
 			setType(cfg)
