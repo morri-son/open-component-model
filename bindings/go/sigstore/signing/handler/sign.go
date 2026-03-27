@@ -147,9 +147,6 @@ func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.Config
 }
 
 func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
-	if cfg.TSAURL == "" && !cfg.ForceTSA {
-		return
-	}
 	if cfg.TSAURL == "" {
 		return
 	}

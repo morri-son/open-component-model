@@ -224,7 +224,7 @@ func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
 func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config) (*verify.Verifier, error) {
 	var opts []verify.VerifierOption
 
-	hasTSA := cfg.ForceTSA || cfg.TSAURL != ""
+	hasTSA := cfg.TSAURL != ""
 
 	switch {
 	case cfg.SkipRekor:

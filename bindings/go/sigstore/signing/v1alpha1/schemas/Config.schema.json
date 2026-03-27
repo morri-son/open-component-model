@@ -4,7 +4,7 @@
   "$id": "ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1/schemas/Config.schema.json",
   "title": "Config",
   "type": "object",
-  "description": "Config defines configuration for Sigstore-based signing and verification.\n\nWhen all URL fields are empty, the public Sigstore infrastructure is used by default.\nCustom infrastructure can be configured by setting the endpoint URLs.",
+  "description": "Config defines configuration for Sigstore-based signing and verification.\n\nThe library does not provide default endpoint URLs. All URLs must be explicitly\nconfigured, either individually (FulcioURL, RekorURL, TSAURL) or via a\nSigningConfigPath. CLI layers should set appropriate defaults for user convenience.\n\nFor keyless verification, at least one identity field (ExpectedIssuer, ExpectedSAN,\nor their regex variants) must be set. If no identity fields and no public key\ncredential are provided, verification returns an error.",
   "properties": {
     "expectedIssuer": {
       "type": "string",
@@ -22,17 +22,13 @@
       "type": "string",
       "description": "ExpectedSANRegex is a regular expression to match the Subject Alternative Name.\nMutually exclusive with ExpectedSAN — if both are set, ExpectedSAN takes precedence."
     },
-    "forceTSA": {
-      "type": "boolean",
-      "description": "ForceTSA forces the use of a Timestamp Authority even when Rekor is available.\nBy default, Rekor's integrated timestamps are used. When set, a TSA timestamp is also obtained."
-    },
     "fulcioURL": {
       "type": "string",
-      "description": "FulcioURL is the URL of the Fulcio certificate authority for keyless signing.\nIf empty, the public Sigstore Fulcio instance is used."
+      "description": "FulcioURL is the URL of the Fulcio certificate authority for keyless signing.\nRequired when an OIDC token is available and SigningConfigPath is not set."
     },
     "rekorURL": {
       "type": "string",
-      "description": "RekorURL is the URL of the Rekor transparency log.\nIf empty, the public Sigstore Rekor instance is used."
+      "description": "RekorURL is the URL of the Rekor transparency log.\nWhen empty and SigningConfigPath is not set, no transparency log entry is created."
     },
     "rekorVersion": {
       "type": "integer",
@@ -54,11 +50,11 @@
     },
     "tsaURL": {
       "type": "string",
-      "description": "TSAURL is the URL of a RFC 3161 Timestamp Authority.\nIf empty, no timestamp authority is used unless ForceTSA is set."
+      "description": "TSAURL is the full URL of a RFC 3161 Timestamp Authority endpoint\n(e.g. \"https://timestamp.sigstore.dev/api/v1/timestamp\").\nWhen set, a TSA timestamp is obtained at sign time and required at verify time.\nRekor v2 keyless flows require a TSA because v2 does not produce signed entry timestamps."
     },
     "tufRootURL": {
       "type": "string",
-      "description": "TUFRootURL is the URL of a TUF repository for fetching trusted root material.\nIf empty, the default Sigstore TUF root is used."
+      "description": "TUFRootURL is the URL of a TUF repository for fetching trusted root material.\nWhen empty, TUF is not used; provide a trusted root via credentials or TrustedRootPath instead."
     },
     "type": {
       "$ref": "#/$defs/ocm.software.open-component-model.bindings.go.runtime.Type",
