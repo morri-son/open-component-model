@@ -25,7 +25,9 @@ import (
 )
 
 // Credential key constants mirrored from the internal credentials package.
-// These must stay in sync with handler/internal/credentials/credentials.go.
+// These must stay in sync with the CredentialKey* constants in
+// signing/handler/internal/credentials/credentials.go.
+// The internal package boundary prevents direct import from integration tests.
 //
 //nolint:gosec // these are not secrets
 const (
@@ -113,7 +115,7 @@ func tufMirrorURL() string { return os.Getenv("SIGSTORE_TUF_MIRROR_URL") }
 
 func newTestHandler(t *testing.T) *handler.Handler {
 	t.Helper()
-	return handler.New(v1alpha1.Scheme)
+	return handler.New()
 }
 
 func setType(cfg *v1alpha1.Config) {
@@ -557,40 +559,37 @@ func Test_Integration_TSA_SignVerify(t *testing.T) {
 
 func Test_Integration_KeyBased_SignVerify_FileCredentials(t *testing.T) {
 	skipUnlessIntegration(t)
-	r := require.New(t)
 
 	h := newTestHandler(t)
-	digest := uniqueDigest(t, "file-creds")
 
-	// File credential test only needs v1 — it validates the credential loading
-	// path, not backend behaviour.
-	v1URL := envOrDefault("SIGSTORE_REKOR_URL", "https://rekor.sigstore.dev")
-	v1Root := os.Getenv("SIGSTORE_TRUSTED_ROOT_PATH")
-	cfg := &v1alpha1.Config{
-		RekorURL:        v1URL,
-		TrustedRootPath: v1Root,
+	for _, b := range backends(t) {
+		t.Run(b.Name, func(t *testing.T) {
+			r := require.New(t)
+
+			digest := uniqueDigest(t, "file-creds-"+b.Name)
+			cfg := keyBasedConfig(b)
+
+			key := mustECDSAKey(t)
+			privKeyFile := writeKeyToFile(t, pemEncodePrivateKey(t, key))
+			pubKeyFile := writeKeyToFile(t, pemEncodePublicKey(t, &key.PublicKey))
+
+			sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+				credPrivateKeyPEMFile: privKeyFile,
+			})
+			r.NoError(err)
+			r.NotEmpty(sigInfo.Value)
+
+			signed := descruntime.Signature{
+				Name:      "integration-file-creds-" + b.Name,
+				Digest:    digest,
+				Signature: sigInfo,
+			}
+			err = h.Verify(t.Context(), signed, cfg, map[string]string{
+				credPublicKeyPEMFile: pubKeyFile,
+			})
+			r.NoError(err)
+		})
 	}
-	setType(cfg)
-
-	key := mustECDSAKey(t)
-	privKeyFile := writeKeyToFile(t, pemEncodePrivateKey(t, key))
-	pubKeyFile := writeKeyToFile(t, pemEncodePublicKey(t, &key.PublicKey))
-
-	sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
-		credPrivateKeyPEMFile: privKeyFile,
-	})
-	r.NoError(err)
-	r.NotEmpty(sigInfo.Value)
-
-	signed := descruntime.Signature{
-		Name:      "integration-file-creds",
-		Digest:    digest,
-		Signature: sigInfo,
-	}
-	err = h.Verify(t.Context(), signed, cfg, map[string]string{
-		credPublicKeyPEMFile: pubKeyFile,
-	})
-	r.NoError(err)
 }
 
 // signingConfigV1Path returns a v1-only signing config.
