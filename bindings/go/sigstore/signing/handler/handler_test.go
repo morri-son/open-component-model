@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -436,10 +437,10 @@ func Test_Handler_Verify(t *testing.T) {
 			Signature: sigInfo,
 		}
 
-		// No public key, no trusted root → should fail
+		// No public key in credentials → TUF fallback provides a trusted root,
+		// but it cannot verify signatures made with a local key.
 		err = h.Verify(t.Context(), signed, cfg, map[string]string{})
 		r.Error(err)
-		r.Contains(err.Error(), "no trusted material available")
 	})
 
 	t.Run("public key derived from private key in credentials", func(t *testing.T) {
@@ -705,15 +706,15 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 	r.Error(err, "TUF fallback with invalid URL should fail")
 }
 
-func Test_ResolveTrustedMaterial_NoCreds_NoTUF(t *testing.T) {
+func Test_ResolveTrustedMaterial_NoCreds_FallsBackToPublicGoodTUF(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
 	cfg := &v1alpha1.Config{}
 
-	_, err := resolveTrustedMaterial(cfg, map[string]string{})
-	r.Error(err)
-	r.Contains(err.Error(), "no trusted material available")
+	tm, err := resolveTrustedMaterial(cfg, map[string]string{})
+	r.NoError(err, "empty config should fall back to Sigstore public-good TUF root")
+	r.NotNil(tm)
 }
 
 // ---- ecdsaKeypair unit tests ----
@@ -751,6 +752,17 @@ func Test_ecdsaKeypair(t *testing.T) {
 
 // ---- resolveKeypair keyless path ----
 
+type mockTokenGetter struct {
+	token  string
+	err    error
+	called bool
+}
+
+func (m *mockTokenGetter) GetIDToken(_, _ string) (string, error) {
+	m.called = true
+	return m.token, m.err
+}
+
 func Test_ResolveKeypair_Keyless(t *testing.T) {
 	t.Parallel()
 
@@ -762,7 +774,7 @@ func Test_ResolveKeypair_Keyless(t *testing.T) {
 			credentials.CredentialKeyOIDCToken: "fake-oidc-token",
 		}
 
-		kp, token, err := resolveKeypair(creds)
+		kp, token, err := resolveKeypair(creds, nil)
 		r.NoError(err)
 		r.NotNil(kp, "should return an ephemeral keypair")
 		r.Equal("fake-oidc-token", token)
@@ -775,7 +787,7 @@ func Test_ResolveKeypair_Keyless(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		kp, token, err := resolveKeypair(map[string]string{})
+		kp, token, err := resolveKeypair(map[string]string{}, nil)
 		r.NoError(err)
 		r.NotNil(kp)
 		r.Empty(token, "without OIDC token, token string should be empty")
@@ -791,7 +803,7 @@ func Test_ResolveKeypair_Keyless(t *testing.T) {
 			credentials.CredentialKeyOIDCToken:     "some-token",
 		}
 
-		kp, token, err := resolveKeypair(creds)
+		kp, token, err := resolveKeypair(creds, nil)
 		r.NoError(err)
 		r.NotNil(kp)
 		r.Empty(token, "key-based mode should not return an OIDC token")
@@ -800,30 +812,40 @@ func Test_ResolveKeypair_Keyless(t *testing.T) {
 		_, isOurs := kp.(*ecdsaKeypair)
 		r.True(isOurs, "should return ecdsaKeypair when private key is provided")
 	})
-}
 
-// ---- resolveKeypair SIGSTORE_ID_TOKEN env var ----
-
-func Test_ResolveKeypair_EnvVar(t *testing.T) {
-	t.Run("SIGSTORE_ID_TOKEN env var is used when no credential token", func(t *testing.T) {
-		t.Setenv("SIGSTORE_ID_TOKEN", "env-token")
+	t.Run("TokenGetter is called when no credentials provide a token", func(t *testing.T) {
+		t.Parallel()
 		r := require.New(t)
 
-		kp, token, err := resolveKeypair(map[string]string{})
+		tg := &mockTokenGetter{token: "getter-token"}
+		kp, token, err := resolveKeypair(map[string]string{}, tg)
 		r.NoError(err)
 		r.NotNil(kp)
-		r.Equal("env-token", token)
+		r.Equal("getter-token", token)
+		r.True(tg.called, "TokenGetter should have been invoked")
 	})
 
-	t.Run("credential token takes precedence over SIGSTORE_ID_TOKEN env var", func(t *testing.T) {
-		t.Setenv("SIGSTORE_ID_TOKEN", "env-token")
+	t.Run("credential token takes precedence over TokenGetter", func(t *testing.T) {
+		t.Parallel()
 		r := require.New(t)
 
+		tg := &mockTokenGetter{token: "getter-token"}
 		creds := map[string]string{credentials.CredentialKeyOIDCToken: "cred-token"}
-		kp, token, err := resolveKeypair(creds)
+		kp, token, err := resolveKeypair(creds, tg)
 		r.NoError(err)
 		r.NotNil(kp)
 		r.Equal("cred-token", token)
+		r.False(tg.called, "TokenGetter should NOT be called when credential token exists")
+	})
+
+	t.Run("TokenGetter error is propagated", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		tg := &mockTokenGetter{err: fmt.Errorf("auth failed")}
+		_, _, err := resolveKeypair(map[string]string{}, tg)
+		r.Error(err)
+		r.Contains(err.Error(), "auth failed")
 	})
 }
 
