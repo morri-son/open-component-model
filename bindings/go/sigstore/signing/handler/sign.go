@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
+	"os"
 	"time"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -116,6 +117,9 @@ func resolveKeypair(creds map[string]string) (sign.Keypair, string, error) {
 	}
 
 	idToken := credentials.OIDCTokenFromCredentials(creds)
+	if idToken == "" {
+		idToken = os.Getenv("SIGSTORE_ID_TOKEN")
+	}
 	keypair, err := sign.NewEphemeralKeypair(nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("create ephemeral keypair: %w", err)
