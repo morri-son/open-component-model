@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -121,17 +122,17 @@ func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map
 		return trustedRoot, nil
 	}
 
-	return nil, fmt.Errorf("no trusted material available: provide a public key, trusted root, or TUF root URL")
+	return nil, fmt.Errorf("no trusted material available: provide a public key, trusted root, or enable network access for public-good TUF")
 }
 
 // resolveTrustedRoot loads a trusted root from the first available source:
-// credentials JSON, config file path, or TUF (when TUFRootURL is set).
-// Returns nil, nil when no source is configured.
+// credentials JSON, config file path, TUF (when TUFRootURL is set), or the
+// public-good Sigstore TUF repository (when no explicit source is configured
+// and Rekor is not skipped).
 //
-// The library does not implicitly fall back to the Sigstore public-good TUF
-// root. For public Sigstore infrastructure, set TUFRootURL in the config or
-// provide a trusted root via credentials or TrustedRootPath. CLI layers
-// should set appropriate defaults for user convenience.
+// Returns nil, nil only when SkipRekor is set and no explicit source is
+// configured. For all other zero-config cases the public-good trusted root
+// is fetched automatically.
 func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
 	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
 	if err != nil {
@@ -150,7 +151,16 @@ func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[str
 		return trustedMaterialFromTUF(ctx, cfg)
 	}
 
-	return nil, nil
+	if cfg.SkipRekor {
+		return nil, nil
+	}
+
+	slog.InfoContext(ctx, "no trusted root configured, fetching from public-good Sigstore TUF")
+	tr, err := root.FetchTrustedRoot()
+	if err != nil {
+		return nil, fmt.Errorf("fetch public Sigstore trusted root: %w", err)
+	}
+	return tr, nil
 }
 
 // resolveOfflineTrustedRoot loads a trusted root from offline sources only:
@@ -213,7 +223,7 @@ func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.Config) (root.Tru
 
 // fetchTUFRoot fetches root.json from a TUF mirror URL.
 func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/root.json", nil) //nolint:gosec // TUF root fetch is a one-off bootstrap operation.
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/root.json", nil)
 	if err != nil {
 		return nil, fmt.Errorf("create HTTP request: %w", err)
 	}
@@ -239,30 +249,30 @@ func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
 func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, isKeyBased bool) (*verify.Verifier, error) {
 	var opts []verify.VerifierOption
 
-	hasTSA := cfg.TSAURL != ""
+	hasTSAFromConfig := cfg.TSAURL != ""
+	hasTSAFromMaterial := !hasTSAFromConfig && len(trustedMaterial.TimestampingAuthorities()) > 0
 
 	switch {
 	case cfg.SkipRekor:
 		opts = append(opts, verify.WithNoObserverTimestamps())
 	default:
 		opts = append(opts, verify.WithTransparencyLog(1))
-		// Rekor v1 provides signed entry timestamps (SETs) as integrated timestamps.
-		// Rekor v2 does not provide SETs, so a TSA is required to supply observer
-		// timestamps. Without a TSA, verification will fail because no integrated
-		// timestamps are present in a v2 bundle — matching sigstore-go's signer
-		// behavior, which also requires a TSA when using Rekor v2.
-		if cfg.RekorVersion == 2 {
-			if hasTSA {
-				opts = append(opts, verify.WithObserverTimestamps(1))
-			} else {
-				opts = append(opts, verify.WithIntegratedTimestamps(1))
-			}
-		} else {
+
+		switch {
+		case cfg.RekorVersion == 2 && hasTSAFromConfig:
+			opts = append(opts, verify.WithObserverTimestamps(1))
+		case cfg.RekorVersion == 2:
+			opts = append(opts, verify.WithIntegratedTimestamps(1))
+		case hasTSAFromMaterial:
+			// Auto-discovery: TSA available in trusted material (e.g. from public-good TUF).
+			// WithObserverTimestamps accepts both v1 SETs and v2 TSA timestamps.
+			opts = append(opts, verify.WithObserverTimestamps(1))
+		default:
 			opts = append(opts, verify.WithIntegratedTimestamps(1))
 		}
 	}
 
-	if hasTSA {
+	if hasTSAFromConfig {
 		opts = append(opts, verify.WithSignedTimestamps(1))
 	}
 

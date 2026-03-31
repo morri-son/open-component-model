@@ -2059,3 +2059,303 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		r.NotNil(v)
 	})
 }
+
+// ---- hasExplicitEndpoints tests ----
+
+func Test_HasExplicitEndpoints(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		cfg      *v1alpha1.Config
+		expected bool
+	}{
+		{
+			name:     "empty config",
+			cfg:      &v1alpha1.Config{},
+			expected: false,
+		},
+		{
+			name:     "only SkipRekor",
+			cfg:      &v1alpha1.Config{SkipRekor: true},
+			expected: false,
+		},
+		{
+			name:     "FulcioURL set",
+			cfg:      &v1alpha1.Config{FulcioURL: "https://fulcio.example.com"},
+			expected: true,
+		},
+		{
+			name:     "RekorURL set",
+			cfg:      &v1alpha1.Config{RekorURL: "https://rekor.example.com"},
+			expected: true,
+		},
+		{
+			name:     "TSAURL set",
+			cfg:      &v1alpha1.Config{TSAURL: "https://tsa.example.com"},
+			expected: true,
+		},
+		{
+			name: "all URLs set",
+			cfg: &v1alpha1.Config{
+				FulcioURL: "https://fulcio.example.com",
+				RekorURL:  "https://rekor.example.com",
+				TSAURL:    "https://tsa.example.com",
+			},
+			expected: true,
+		},
+		{
+			name:     "TUFRootURL does not count as explicit endpoint",
+			cfg:      &v1alpha1.Config{TUFRootURL: "https://tuf.example.com"},
+			expected: false,
+		},
+		{
+			name:     "TrustedRootPath does not count as explicit endpoint",
+			cfg:      &v1alpha1.Config{TrustedRootPath: "/path/to/root.json"},
+			expected: false,
+		},
+		{
+			name:     "SigningConfigPath does not count as explicit endpoint",
+			cfg:      &v1alpha1.Config{SigningConfigPath: "/path/to/config.json"},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := require.New(t)
+			r.Equal(tt.expected, hasExplicitEndpoints(tt.cfg))
+		})
+	}
+}
+
+// ---- applySigningConfig tests ----
+
+func Test_ApplySigningConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("configures Fulcio when idToken present", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		scJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"caUrls": [
+				{
+					"url": "https://fulcio.sigstore.dev",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z"}
+				}
+			],
+			"rekorTlogUrls": [
+				{
+					"url": "https://rekor.sigstore.dev",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z"}
+				}
+			]
+		}`
+
+		sc, err := root.NewSigningConfigFromJSON([]byte(scJSON))
+		r.NoError(err)
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err = applySigningConfig(&opts, sc, "test-token")
+		r.NoError(err)
+		r.NotNil(opts.CertificateProvider, "Fulcio should be configured")
+		r.NotNil(opts.CertificateProviderOptions, "CertificateProviderOptions should be set")
+		r.Equal("test-token", opts.CertificateProviderOptions.IDToken)
+		r.Len(opts.TransparencyLogs, 1, "Rekor should be configured")
+	})
+
+	t.Run("skips Fulcio when idToken empty", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		scJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"caUrls": [
+				{
+					"url": "https://fulcio.sigstore.dev",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z"}
+				}
+			],
+			"rekorTlogUrls": [
+				{
+					"url": "https://rekor.sigstore.dev",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z"}
+				}
+			]
+		}`
+
+		sc, err := root.NewSigningConfigFromJSON([]byte(scJSON))
+		r.NoError(err)
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err = applySigningConfig(&opts, sc, "")
+		r.NoError(err)
+		r.Nil(opts.CertificateProvider, "Fulcio should not be configured without token")
+		r.Len(opts.TransparencyLogs, 1, "Rekor should still be configured")
+	})
+
+	t.Run("configures TSA when available", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		scJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"tsaUrls": [
+				{
+					"url": "https://tsa.sigstore.dev",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z"}
+				}
+			]
+		}`
+
+		sc, err := root.NewSigningConfigFromJSON([]byte(scJSON))
+		r.NoError(err)
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err = applySigningConfig(&opts, sc, "")
+		r.NoError(err)
+		r.Len(opts.TimestampAuthorities, 1, "TSA should be configured")
+	})
+
+	t.Run("empty signing config produces no services", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		scJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json"
+		}`
+
+		sc, err := root.NewSigningConfigFromJSON([]byte(scJSON))
+		r.NoError(err)
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err = applySigningConfig(&opts, sc, "")
+		r.NoError(err)
+		r.Nil(opts.CertificateProvider)
+		r.Empty(opts.TransparencyLogs)
+		r.Empty(opts.TimestampAuthorities)
+	})
+}
+
+// ---- buildVerifier with TSA from trusted material tests ----
+
+// makeTrustedRootWithTSAJSON creates a trusted root JSON with a timestamp authority entry.
+func makeTrustedRootWithTSAJSON(t *testing.T) []byte {
+	t.Helper()
+
+	key := mustECDSAKey(t)
+	certTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test TSA"},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &key.PublicKey, key)
+	require.NoError(t, err)
+
+	tr := map[string]any{
+		"mediaType":              "application/vnd.dev.sigstore.trustedroot+json;version=0.1",
+		"tlogs":                  []any{},
+		"certificateAuthorities": []any{},
+		"ctlogs":                 []any{},
+		"timestampAuthorities": []any{
+			map[string]any{
+				"subject": map[string]any{
+					"organization": "Test",
+					"commonName":   "Test TSA",
+				},
+				"uri": "https://tsa.example.com",
+				"certChain": map[string]any{
+					"certificates": []any{
+						map[string]any{
+							"rawBytes": base64.StdEncoding.EncodeToString(certDER),
+						},
+					},
+				},
+				"validFor": map[string]any{
+					"start": "2020-01-01T00:00:00Z",
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(tr)
+	require.NoError(t, err)
+	return data
+}
+
+func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
+	t.Parallel()
+
+	t.Run("TSA in material without explicit TSAURL uses observer timestamps", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootWithTSAJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+		r.Greater(len(tm.TimestampingAuthorities()), 0, "trusted material should have TSA")
+
+		cfg := &v1alpha1.Config{}
+		v, err := buildVerifier(tm, cfg, false)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier with observer timestamps from material TSA")
+	})
+
+	t.Run("TSA in material with explicit TSAURL uses config TSA", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootWithTSAJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com"}
+		v, err := buildVerifier(tm, cfg, false)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier with config-explicit TSA")
+	})
+
+	t.Run("no TSA anywhere uses integrated timestamps", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+		r.Empty(tm.TimestampingAuthorities(), "trusted material should not have TSA")
+
+		cfg := &v1alpha1.Config{}
+		v, err := buildVerifier(tm, cfg, false)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier with integrated timestamps")
+	})
+}
+
+// ---- resolveTrustedRoot auto-discovery tests ----
+
+func Test_ResolveTrustedRoot_SkipRekor_NoFallback(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	cfg := &v1alpha1.Config{SkipRekor: true}
+	creds := map[string]string{}
+
+	tm, err := resolveTrustedRoot(t.Context(), cfg, creds)
+	r.NoError(err)
+	r.Nil(tm, "SkipRekor with no explicit source should return nil without fetching public TUF")
+}
