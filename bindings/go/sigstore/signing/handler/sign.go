@@ -18,6 +18,7 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
@@ -247,34 +248,37 @@ func extractIssuer(bundle *protobundle.Bundle) string {
 }
 
 // ecdsaKeypair adapts an *ecdsa.PrivateKey to sigstore-go's sign.Keypair interface.
+// The implementation mirrors sigstore-go's EphemeralKeypair, using AlgorithmDetails
+// from the sigstore algorithm registry to derive hash, signing algorithm, and key hint
+// rather than hardcoding these values.
 type ecdsaKeypair struct {
-	privKey *ecdsa.PrivateKey
-	hint    []byte
+	privKey    *ecdsa.PrivateKey
+	hint       []byte
+	algDetails signature.AlgorithmDetails
 }
 
 func newECDSAKeypair(privKey *ecdsa.PrivateKey) (*ecdsaKeypair, error) {
-	hint, err := computeKeyHint(privKey)
+	algDetails, err := signature.GetAlgorithmDetails(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
 	if err != nil {
-		return nil, fmt.Errorf("compute key hint: %w", err)
+		return nil, fmt.Errorf("get algorithm details: %w", err)
 	}
-	return &ecdsaKeypair{privKey: privKey, hint: hint}, nil
-}
 
-func computeKeyHint(privKey *ecdsa.PrivateKey) ([]byte, error) {
-	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(privKey.Public())
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(privKey.Public())
 	if err != nil {
-		return nil, fmt.Errorf("marshal public key to PEM: %w", err)
+		return nil, fmt.Errorf("marshal public key to DER: %w", err)
 	}
-	h := sha256.Sum256(pubBytes)
-	return []byte(base64.StdEncoding.EncodeToString(h[:])), nil
+	hashedBytes := sha256.Sum256(pubKeyBytes)
+	hint := []byte(base64.StdEncoding.EncodeToString(hashedBytes[:]))
+
+	return &ecdsaKeypair{privKey: privKey, hint: hint, algDetails: algDetails}, nil
 }
 
 func (k *ecdsaKeypair) GetHashAlgorithm() protocommon.HashAlgorithm {
-	return protocommon.HashAlgorithm_SHA2_256
+	return k.algDetails.GetProtoHashType()
 }
 
 func (k *ecdsaKeypair) GetSigningAlgorithm() protocommon.PublicKeyDetails {
-	return protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256
+	return k.algDetails.GetSignatureAlgorithm()
 }
 
 func (k *ecdsaKeypair) GetHint() []byte {
@@ -298,12 +302,15 @@ func (k *ecdsaKeypair) GetPublicKeyPem() (string, error) {
 }
 
 func (k *ecdsaKeypair) SignData(_ context.Context, data []byte) ([]byte, []byte, error) {
-	h := sha256.Sum256(data)
-	sig, err := ecdsa.SignASN1(rand.Reader, k.privKey, h[:])
+	hf := k.algDetails.GetHashType()
+	hasher := hf.New()
+	hasher.Write(data)
+	digest := hasher.Sum(nil)
+	sig, err := k.privKey.Sign(rand.Reader, digest, hf)
 	if err != nil {
 		return nil, nil, err
 	}
-	return sig, h[:], nil
+	return sig, digest, nil
 }
 
 // signWithConfig is the internal sign implementation called from Handler.Sign.
