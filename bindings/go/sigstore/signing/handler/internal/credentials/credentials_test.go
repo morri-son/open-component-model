@@ -108,6 +108,36 @@ func Test_PrivateKeyFromCredentials(t *testing.T) {
 		})
 		r.Error(err)
 	})
+
+	t.Run("P-384 key is rejected", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		r.NoError(err)
+		der, err := x509.MarshalECPrivateKey(key)
+		r.NoError(err)
+		pemData := string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}))
+		_, err = PrivateKeyFromCredentials(map[string]string{
+			CredentialKeyPrivateKeyPEM: pemData,
+		})
+		r.Error(err)
+		r.Contains(err.Error(), "only P-256 is supported")
+	})
+
+	t.Run("P-384 PKCS8 key is rejected", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		r.NoError(err)
+		der, err := x509.MarshalPKCS8PrivateKey(key)
+		r.NoError(err)
+		pemData := string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
+		_, err = PrivateKeyFromCredentials(map[string]string{
+			CredentialKeyPrivateKeyPEM: pemData,
+		})
+		r.Error(err)
+		r.Contains(err.Error(), "only P-256 is supported")
+	})
 }
 
 func Test_PublicKeyFromCredentials(t *testing.T) {
@@ -171,6 +201,21 @@ func Test_PublicKeyFromCredentials(t *testing.T) {
 		result, err := PublicKeyFromCredentials(map[string]string{})
 		r.NoError(err)
 		r.Nil(result)
+	})
+
+	t.Run("P-384 public key is rejected", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		r.NoError(err)
+		der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+		r.NoError(err)
+		pubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
+		_, err = PublicKeyFromCredentials(map[string]string{
+			CredentialKeyPublicKeyPEM: pubPEM,
+		})
+		r.Error(err)
+		r.Contains(err.Error(), "only P-256 is supported")
 	})
 }
 
