@@ -104,10 +104,11 @@ func envOrDefault(key, fallback string) string {
 	return fallback
 }
 
-func fulcioURL() string    { return envOrDefault("SIGSTORE_FULCIO_URL", "https://fulcio.sigstore.dev") }
-func tsaURL() string       { return os.Getenv("SIGSTORE_TSA_URL") }
-func oidcToken() string    { return os.Getenv("SIGSTORE_OIDC_TOKEN") }
-func tufMirrorURL() string { return os.Getenv("SIGSTORE_TUF_MIRROR_URL") }
+func fulcioURL() string          { return envOrDefault("SIGSTORE_FULCIO_URL", "https://fulcio.sigstore.dev") }
+func tsaURL() string             { return os.Getenv("SIGSTORE_TSA_URL") }
+func oidcToken() string          { return os.Getenv("SIGSTORE_OIDC_TOKEN") }
+func tufMirrorURL() string       { return os.Getenv("SIGSTORE_TUF_MIRROR_URL") }
+func tufInitialRootPath() string { return os.Getenv("SIGSTORE_TUF_INITIAL_ROOT_PATH") }
 
 // ---------------------------------------------------------------------------
 // Config builders
@@ -726,10 +727,17 @@ func Test_Integration_TUF_TrustedRoot(t *testing.T) {
 	if tufURL == "" {
 		t.Skip("skipping: SIGSTORE_TUF_MIRROR_URL not set")
 	}
+	initialRootPath := tufInitialRootPath()
+	if initialRootPath == "" {
+		t.Skip("skipping: SIGSTORE_TUF_INITIAL_ROOT_PATH not set")
+	}
 
 	r := require.New(t)
 	h := newTestHandler(t)
 	digest := uniqueDigest(t, "tuf-root")
+
+	initialRoot, err := os.ReadFile(initialRootPath)
+	r.NoError(err, "reading TUF initial root.json")
 
 	// Sign via v1 (key-based), verify via TUF mirror.
 	v1URL := envOrDefault("SIGSTORE_REKOR_URL", "https://rekor.sigstore.dev")
@@ -753,7 +761,8 @@ func Test_Integration_TUF_TrustedRoot(t *testing.T) {
 	}
 
 	verifyCfg := &v1alpha1.Config{
-		TUFRootURL: tufURL,
+		TUFRootURL:     tufURL,
+		TUFInitialRoot: string(initialRoot),
 	}
 	setType(verifyCfg)
 

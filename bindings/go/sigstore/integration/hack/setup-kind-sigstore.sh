@@ -86,6 +86,26 @@ else
     --set "fulcio.server.ingress.http.enabled=false" \
     --set "rekor.server.ingress.enabled=false" \
     --set "tuf.ingress.create=false" \
+    --set-json 'fulcio.config.contents={
+      "OIDCIssuers": {
+        "https://kubernetes.default.svc": {
+          "IssuerURL": "https://kubernetes.default.svc",
+          "ClientID": "sigstore",
+          "Type": "kubernetes"
+        },
+        "https://kubernetes.default.svc.cluster.local": {
+          "IssuerURL": "https://kubernetes.default.svc.cluster.local",
+          "ClientID": "sigstore",
+          "Type": "kubernetes"
+        }
+      },
+      "MetaIssuers": {
+        "https://kubernetes.*.svc": {
+          "ClientID": "sigstore",
+          "Type": "kubernetes"
+        }
+      }
+    }' \
     --timeout "$TIMEOUT" \
     --wait >&2
 fi
@@ -117,8 +137,9 @@ log "Installing rekor-tiles (v${REKOR_TILES_CHART_VERSION}, POSIX backend)"
 helm upgrade --install rekor-tiles sigstore/rekor-tiles \
   --namespace "${REKOR_TILES_NAMESPACE}" \
   --version "${REKOR_TILES_CHART_VERSION}" \
+  --skip-schema-validation \
   --set "image.flavor=posix" \
-  --set "nodeSelector=null" \
+  --set-json 'nodeSelector=null' \
   --set "namespace.create=false" \
   --set "namespace.name=${REKOR_TILES_NAMESPACE}" \
   --set "server.hostname=${REKOR_V2_HOSTNAME}" \
@@ -208,6 +229,19 @@ else
   log "Warning: Could not find trusted_root.json in TUF targets"
 fi
 
+# --- Fetch TUF initial root (trust anchor for custom TUF mirrors) -----------
+# The TUF root.json at the repository base is the initial trust anchor.
+# sigstore-go's tuf.New() requires opts.Root to be set for custom mirrors.
+
+TUF_INITIAL_ROOT_PATH="${ARTIFACTS_DIR}/tuf_initial_root.json"
+
+log "Fetching TUF initial root.json"
+if curl -sf "http://localhost:${TUF_LOCAL_PORT}/root.json" > "$TUF_INITIAL_ROOT_PATH"; then
+  log "TUF initial root.json saved to $TUF_INITIAL_ROOT_PATH"
+else
+  log "Warning: Could not fetch TUF initial root.json"
+fi
+
 # --- Generate Rekor v2 composite trusted root --------------------------------
 #
 # sigstore-go verifies Rekor v2 log entries via trusted_root.json containing:
@@ -273,7 +307,7 @@ jq --argjson v2tlog "${REKOR_V2_TLOG_ENTRY}" \
 FULCIO_LOCAL_URL="http://localhost:${FULCIO_LOCAL_PORT}"
 REKOR_V1_LOCAL_URL="http://localhost:${REKOR_V1_LOCAL_PORT}"
 REKOR_V2_LOCAL_URL="http://localhost:${REKOR_V2_LOCAL_PORT}"
-TSA_LOCAL_URL="http://localhost:${TSA_LOCAL_PORT}"
+TSA_LOCAL_URL="http://localhost:${TSA_LOCAL_PORT}/api/v1/timestamp"
 TUF_LOCAL_URL="http://localhost:${TUF_LOCAL_PORT}"
 
 SIGNING_CONFIG_V1_PATH="${ARTIFACTS_DIR}/signing_config_v1.json"
@@ -339,6 +373,7 @@ export SIGSTORE_REKOR_URL=${REKOR_V1_LOCAL_URL}
 export SIGSTORE_FULCIO_URL=${FULCIO_LOCAL_URL}
 export SIGSTORE_TSA_URL=${TSA_LOCAL_URL}
 export SIGSTORE_TUF_MIRROR_URL=${TUF_LOCAL_URL}
+export SIGSTORE_TUF_INITIAL_ROOT_PATH=${TUF_INITIAL_ROOT_PATH}
 export SIGSTORE_OIDC_TOKEN=${OIDC_TOKEN}
 export SIGSTORE_TRUSTED_ROOT_PATH=${V1_TRUSTED_ROOT_PATH}
 export SIGSTORE_SIGNING_CONFIG_V1_PATH=${SIGNING_CONFIG_V1_PATH}

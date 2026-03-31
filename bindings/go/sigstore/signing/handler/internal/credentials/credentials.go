@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -117,7 +118,7 @@ func parsePrivateKeyPEM(data []byte) (crypto.PrivateKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse EC private key: %w", err)
 		}
-		if err := validateECDSACurve(key); err != nil {
+		if err := validateECDSACurve(key.Curve); err != nil {
 			return nil, err
 		}
 		return key, nil
@@ -130,7 +131,7 @@ func parsePrivateKeyPEM(data []byte) (crypto.PrivateKey, error) {
 	default:
 		// Try SEC1 first, then PKCS8, to handle unlabelled or mislabelled blocks.
 		if key, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
-			if err := validateECDSACurve(key); err != nil {
+			if err := validateECDSACurve(key.Curve); err != nil {
 				return nil, err
 			}
 			return key, nil
@@ -160,7 +161,7 @@ func parsePublicKeyPEM(data []byte) (crypto.PublicKey, error) {
 func validatePrivateKey(key interface{}) (crypto.PrivateKey, error) {
 	switch k := key.(type) {
 	case *ecdsa.PrivateKey:
-		if err := validateECDSACurve(k); err != nil {
+		if err := validateECDSACurve(k.Curve); err != nil {
 			return nil, err
 		}
 		return k, nil
@@ -174,7 +175,7 @@ func validatePrivateKey(key interface{}) (crypto.PrivateKey, error) {
 func validatePublicKey(key interface{}) (crypto.PublicKey, error) {
 	switch k := key.(type) {
 	case *ecdsa.PublicKey:
-		if err := validateECDSACurve(&ecdsa.PrivateKey{PublicKey: *k}); err != nil {
+		if err := validateECDSACurve(k.Curve); err != nil {
 			return nil, err
 		}
 		return k, nil
@@ -185,8 +186,8 @@ func validatePublicKey(key interface{}) (crypto.PublicKey, error) {
 	}
 }
 
-func validateECDSACurve(key *ecdsa.PrivateKey) error {
-	name := key.Curve.Params().Name
+func validateECDSACurve(curve elliptic.Curve) error {
+	name := curve.Params().Name
 	switch name {
 	case "P-256", "P-384", "P-521":
 		return nil
