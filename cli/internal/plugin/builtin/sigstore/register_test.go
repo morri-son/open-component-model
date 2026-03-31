@@ -16,14 +16,4 @@ func Test_InteractiveTokenGetter_EnvVar(t *testing.T) {
 		r.NoError(err)
 		r.Equal("env-token", token)
 	})
-
-	t.Run("credential token from env var takes priority over browser flow", func(t *testing.T) {
-		t.Setenv("SIGSTORE_ID_TOKEN", "env-token-priority")
-		r := require.New(t)
-
-		g := &interactiveTokenGetter{}
-		token, err := g.GetIDToken()
-		r.NoError(err)
-		r.Equal("env-token-priority", token)
-	})
 }
