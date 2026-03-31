@@ -32,6 +32,10 @@ func doVerify(
 	cfg *v1alpha1.Config,
 	creds map[string]string,
 ) error {
+	if err := validateConfig(cfg); err != nil {
+		return err
+	}
+
 	bundleJSON, err := base64.StdEncoding.DecodeString(signed.Signature.Value)
 	if err != nil {
 		return fmt.Errorf("decode bundle base64: %w", err)
@@ -52,7 +56,12 @@ func doVerify(
 		return fmt.Errorf("resolve trusted material: %w", err)
 	}
 
-	verifier, err := buildVerifier(trustedMaterial, cfg)
+	pubKey, err := credentials.PublicKeyFromCredentials(creds)
+	if err != nil {
+		return fmt.Errorf("load public key for verifier: %w", err)
+	}
+
+	verifier, err := buildVerifier(trustedMaterial, cfg, pubKey != nil)
 	if err != nil {
 		return fmt.Errorf("build verifier: %w", err)
 	}
@@ -208,7 +217,8 @@ func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create HTTP request: %w", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP GET: %w", err)
 	}
@@ -217,11 +227,16 @@ func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+
+	const maxTUFRootSize = 10 << 20 // 10 MB
+	return io.ReadAll(io.LimitReader(resp.Body, maxTUFRootSize))
 }
 
 // buildVerifier creates a sigstore-go Verifier with appropriate options based on config.
-func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config) (*verify.Verifier, error) {
+// isKeyBased indicates whether the verification uses a public key (true) or certificates (false).
+// For certificate-based (keyless) verification, SCT verification is enabled when the
+// trusted material includes CT log authorities, following sigstore-go's reference pattern.
+func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, isKeyBased bool) (*verify.Verifier, error) {
 	var opts []verify.VerifierOption
 
 	hasTSA := cfg.TSAURL != ""
@@ -248,6 +263,10 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config) (
 
 	if hasTSA {
 		opts = append(opts, verify.WithSignedTimestamps(1))
+	}
+
+	if !isKeyBased && len(trustedMaterial.CTLogs()) > 0 {
+		opts = append(opts, verify.WithSignedCertificateTimestamps(1))
 	}
 
 	return verify.NewVerifier(trustedMaterial, opts...)
@@ -309,6 +328,14 @@ func (c *composedTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConst
 func hasIdentityConfig(cfg *v1alpha1.Config) bool {
 	return cfg.ExpectedIssuer != "" || cfg.ExpectedIssuerRegex != "" ||
 		cfg.ExpectedSAN != "" || cfg.ExpectedSANRegex != ""
+}
+
+// validateConfig checks config fields for obviously invalid values.
+func validateConfig(cfg *v1alpha1.Config) error {
+	if cfg.RekorVersion > 2 {
+		return fmt.Errorf("unsupported RekorVersion %d: must be 0 (default), 1, or 2", cfg.RekorVersion)
+	}
+	return nil
 }
 
 // verifyWithConfig is the internal verify implementation called from Handler.Verify.
