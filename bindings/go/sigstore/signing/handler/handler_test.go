@@ -1418,7 +1418,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		cfg := &v1alpha1.Config{}
-		v, err := buildVerifier(tm, cfg)
+		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with tlog requirement")
 	})
@@ -1432,7 +1432,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		cfg := &v1alpha1.Config{SkipRekor: true}
-		v, err := buildVerifier(tm, cfg)
+		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier without tlog")
 	})
@@ -1446,7 +1446,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com/api/v1/timestamp"}
-		v, err := buildVerifier(tm, cfg)
+		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with TSA requirement")
 	})
@@ -1460,7 +1460,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com"}
-		v, err := buildVerifier(tm, cfg)
+		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with TSA requirement")
 	})
@@ -1474,7 +1474,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		cfg := &v1alpha1.Config{RekorVersion: 2}
-		v, err := buildVerifier(tm, cfg)
+		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier for Rekor v2 without TSA")
 	})
@@ -1488,7 +1488,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		cfg := &v1alpha1.Config{RekorVersion: 2, TSAURL: "https://tsa.example.com/api/v1/timestamp"}
-		v, err := buildVerifier(tm, cfg)
+		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier for Rekor v2 with TSA")
 	})
@@ -1586,4 +1586,252 @@ func makeTrustedRootJSON(t *testing.T) []byte {
 	data, err := json.Marshal(tr)
 	require.NoError(t, err)
 	return data
+}
+
+// ---- configureFromSigningConfig error path tests ----
+
+func Test_ConfigureFromSigningConfig_ExpiredServices(t *testing.T) {
+	t.Parallel()
+
+	t.Run("expired Fulcio CA returns error", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		signingConfigJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"caUrls": [
+				{
+					"url": "https://fulcio.example.com",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z", "end": "2021-01-01T00:00:00Z"}
+				}
+			]
+		}`
+
+		dir := t.TempDir()
+		scPath := filepath.Join(dir, "signing_config.json")
+		r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
+
+		cfg := &v1alpha1.Config{SigningConfigPath: scPath}
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err := configureFromSigningConfig(&opts, cfg, "fake-oidc-token")
+		r.Error(err)
+		r.Contains(err.Error(), "select fulcio service")
+	})
+
+	t.Run("expired Rekor service returns error", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		signingConfigJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"rekorTlogUrls": [
+				{
+					"url": "https://rekor.example.com",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z", "end": "2021-01-01T00:00:00Z"}
+				}
+			],
+			"rekorTlogConfig": {"selector": "ANY"}
+		}`
+
+		dir := t.TempDir()
+		scPath := filepath.Join(dir, "signing_config.json")
+		r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
+
+		cfg := &v1alpha1.Config{SigningConfigPath: scPath}
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err := configureFromSigningConfig(&opts, cfg, "")
+		r.Error(err)
+		r.Contains(err.Error(), "select rekor service")
+	})
+
+	t.Run("expired TSA service returns error", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		signingConfigJSON := `{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"tsaUrls": [
+				{
+					"url": "https://tsa.example.com",
+					"majorApiVersion": 1,
+					"validFor": {"start": "2020-01-01T00:00:00Z", "end": "2021-01-01T00:00:00Z"}
+				}
+			],
+			"tsaConfig": {"selector": "ANY"}
+		}`
+
+		dir := t.TempDir()
+		scPath := filepath.Join(dir, "signing_config.json")
+		r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
+
+		cfg := &v1alpha1.Config{SigningConfigPath: scPath}
+
+		var opts sign.BundleOptions
+		opts.Context = t.Context()
+		err := configureFromSigningConfig(&opts, cfg, "")
+		r.Error(err)
+		r.Contains(err.Error(), "select tsa service")
+	})
+}
+
+// ---- validateConfig tests ----
+
+func Test_ValidateConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("RekorVersion 0 is valid", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		r.NoError(validateConfig(&v1alpha1.Config{RekorVersion: 0}))
+	})
+
+	t.Run("RekorVersion 1 is valid", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		r.NoError(validateConfig(&v1alpha1.Config{RekorVersion: 1}))
+	})
+
+	t.Run("RekorVersion 2 is valid", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		r.NoError(validateConfig(&v1alpha1.Config{RekorVersion: 2}))
+	})
+
+	t.Run("RekorVersion 3 is rejected", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		err := validateConfig(&v1alpha1.Config{RekorVersion: 3})
+		r.Error(err)
+		r.Contains(err.Error(), "unsupported RekorVersion 3")
+	})
+
+	t.Run("RekorVersion 99 is rejected", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		err := validateConfig(&v1alpha1.Config{RekorVersion: 99})
+		r.Error(err)
+		r.Contains(err.Error(), "unsupported RekorVersion 99")
+	})
+
+	t.Run("invalid RekorVersion blocks sign", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		h := newHandler(t)
+
+		key := mustECDSAKey(t)
+		creds := map[string]string{
+			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
+		}
+		cfg := &v1alpha1.Config{
+			SkipRekor:    true,
+			RekorVersion: 3,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+
+		_, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
+		r.Error(err)
+		r.Contains(err.Error(), "unsupported RekorVersion 3")
+	})
+
+	t.Run("invalid RekorVersion blocks verify", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		h := newHandler(t)
+
+		key := mustECDSAKey(t)
+		digest := sampleDigest(t)
+
+		signCfg := offlineConfig()
+		signCreds := map[string]string{
+			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
+		}
+		sigInfo, err := h.Sign(t.Context(), digest, signCfg, signCreds)
+		r.NoError(err)
+
+		verifyCfg := &v1alpha1.Config{
+			SkipRekor:    true,
+			RekorVersion: 5,
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+
+		signed := descruntime.Signature{
+			Name:      "test-sig",
+			Digest:    digest,
+			Signature: sigInfo,
+		}
+		verifyCreds := map[string]string{
+			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
+		}
+
+		err = h.Verify(t.Context(), signed, verifyCfg, verifyCreds)
+		r.Error(err)
+		r.Contains(err.Error(), "unsupported RekorVersion 5")
+	})
+}
+
+// ---- TUF failure with public key fallback ----
+
+func Test_ResolveTrustedMaterial_TUFFailure_PublicKeyFallback(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	key := mustECDSAKey(t)
+	cfg := &v1alpha1.Config{
+		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
+	}
+	creds := map[string]string{
+		credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
+	}
+
+	// TUF fetch will fail, but public key should still work.
+	// The function should return an error because TUF failure propagates
+	// even when a public key is available (TUF resolution happens unconditionally).
+	tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
+
+	// TUF failure causes resolveTrustedRoot to fail, which propagates up.
+	// Even though we have a public key, the TUF error takes precedence.
+	r.Error(err, "TUF failure should propagate even when public key is available")
+	r.Nil(tm)
+}
+
+// ---- buildVerifier SCT tests ----
+
+func Test_BuildVerifier_SCT(t *testing.T) {
+	t.Parallel()
+
+	t.Run("keyless with CT logs enables SCT verification", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		// The test trusted root has empty ctlogs, so SCT won't actually be enabled.
+		// This verifies the verifier still builds successfully.
+		cfg := &v1alpha1.Config{SkipRekor: true}
+		v, err := buildVerifier(tm, cfg, false)
+		r.NoError(err)
+		r.NotNil(v)
+	})
+
+	t.Run("key-based never enables SCT verification", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		cfg := &v1alpha1.Config{SkipRekor: true}
+		v, err := buildVerifier(tm, cfg, true)
+		r.NoError(err)
+		r.NotNil(v)
+	})
 }

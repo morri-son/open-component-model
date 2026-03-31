@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"time"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -34,6 +35,10 @@ func doSign(
 	creds map[string]string,
 	tg TokenGetter,
 ) (descruntime.SignatureInfo, error) {
+	if err := validateConfig(cfg); err != nil {
+		return descruntime.SignatureInfo{}, err
+	}
+
 	digestBytes, err := hex.DecodeString(unsigned.Value)
 	if err != nil {
 		return descruntime.SignatureInfo{}, fmt.Errorf("decode digest hex value: %w", err)
@@ -62,7 +67,9 @@ func doSign(
 	// BundleOptions so sign.Bundle can verify the created bundle before
 	// returning it (defense-in-depth). TUF is intentionally excluded to
 	// avoid a network round-trip at sign time.
-	if tr, err := resolveOfflineTrustedRoot(cfg, creds); err == nil && tr != nil {
+	if tr, err := resolveOfflineTrustedRoot(cfg, creds); err != nil {
+		slog.WarnContext(ctx, "failed to resolve offline trusted root for sign-time verification", "error", err)
+	} else if tr != nil {
 		opts.TrustedRoot = tr
 	}
 
