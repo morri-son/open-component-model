@@ -1465,7 +1465,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NotNil(v, "should build verifier with TSA requirement")
 	})
 
-	t.Run("RekorVersion 2 without TSA uses no observer timestamps", func(t *testing.T) {
+	t.Run("RekorVersion 2 without TSA requires integrated timestamps", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1473,6 +1473,10 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
+		// Without a TSA, Rekor v2 bundles carry no timestamps at all (no SETs,
+		// no RFC 3161 timestamps). The verifier is built with WithIntegratedTimestamps(1),
+		// matching sigstore-go signer behavior: verification of such a bundle will fail
+		// because no integrated timestamps are present.
 		cfg := &v1alpha1.Config{RekorVersion: 2}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
