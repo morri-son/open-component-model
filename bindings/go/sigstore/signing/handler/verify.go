@@ -246,15 +246,16 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, i
 		opts = append(opts, verify.WithNoObserverTimestamps())
 	default:
 		opts = append(opts, verify.WithTransparencyLog(1))
-		// Rekor v2 does not produce signed entry timestamps (SETs), so
-		// integrated timestamps are only available from Rekor v1. For v2
-		// without a TSA, we skip timestamp requirements — the checkpoint
-		// and inclusion proof still provide log integrity guarantees.
+		// Rekor v1 provides signed entry timestamps (SETs) as integrated timestamps.
+		// Rekor v2 does not provide SETs, so a TSA is required to supply observer
+		// timestamps. Without a TSA, verification will fail because no integrated
+		// timestamps are present in a v2 bundle — matching sigstore-go's signer
+		// behavior, which also requires a TSA when using Rekor v2.
 		if cfg.RekorVersion == 2 {
 			if hasTSA {
 				opts = append(opts, verify.WithObserverTimestamps(1))
 			} else {
-				opts = append(opts, verify.WithNoObserverTimestamps())
+				opts = append(opts, verify.WithIntegratedTimestamps(1))
 			}
 		} else {
 			opts = append(opts, verify.WithIntegratedTimestamps(1))
