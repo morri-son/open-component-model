@@ -7,9 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"time"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -21,7 +19,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
-	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler/internal/credentials"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
 )
@@ -51,14 +48,14 @@ func doVerify(
 		return fmt.Errorf("validate sigstore bundle: %w", err)
 	}
 
-	trustedMaterial, err := resolveTrustedMaterial(ctx, cfg, creds)
-	if err != nil {
-		return fmt.Errorf("resolve trusted material: %w", err)
-	}
-
 	pubKey, err := credentials.PublicKeyFromCredentials(creds)
 	if err != nil {
 		return fmt.Errorf("load public key for verifier: %w", err)
+	}
+
+	trustedMaterial, err := resolveTrustedMaterial(ctx, cfg, creds, pubKey)
+	if err != nil {
+		return fmt.Errorf("resolve trusted material: %w", err)
 	}
 
 	verifier, err := buildVerifier(trustedMaterial, cfg, pubKey != nil)
@@ -71,7 +68,7 @@ func doVerify(
 		return fmt.Errorf("decode digest hex: %w", err)
 	}
 
-	policy, err := buildPolicy(bytes.NewReader(digestBytes), creds, cfg)
+	policy, err := buildPolicy(bytes.NewReader(digestBytes), pubKey, cfg)
 	if err != nil {
 		return fmt.Errorf("build verification policy: %w", err)
 	}
@@ -85,20 +82,15 @@ func doVerify(
 
 // resolveTrustedMaterial builds the trusted material for verification.
 //
-// When a public key is provided via credentials, it takes precedence as the
-// signing key verifier. If a trusted root is also available (via credentials,
-// config path, or TUF), it is composed with the key material so that
-// transparency log entries can be verified against the trusted root while
-// signatures are verified against the provided public key.
+// When a public key is provided, it takes precedence as the signing key
+// verifier. If a trusted root is also available (via credentials, config path,
+// or TUF), it is composed with the key material so that transparency log
+// entries can be verified against the trusted root while signatures are
+// verified against the provided public key.
 //
 // Without a public key the function falls back to a trusted root alone
 // (keyless / certificate-based verification).
-func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
-	pubKey, err := credentials.PublicKeyFromCredentials(creds)
-	if err != nil {
-		return nil, fmt.Errorf("load public key from credentials: %w", err)
-	}
-
+func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string, pubKey crypto.PublicKey) (root.TrustedMaterial, error) {
 	trustedRoot, err := resolveTrustedRoot(ctx, cfg, creds)
 	if err != nil {
 		return nil, err
@@ -199,47 +191,28 @@ func trustedMaterialFromPublicKey(pubKey crypto.PublicKey) (root.TrustedMaterial
 	}), nil
 }
 
-// trustedMaterialFromTUF fetches a trusted root from a TUF mirror.
-// cfg.TUFRootURL must be set. The remote root.json is fetched and used as the
-// trust anchor (TOFU — Trust On First Use). Local caching is disabled to avoid
-// conflicts between different TUF repositories.
+// trustedMaterialFromTUF fetches a trusted root from a custom TUF mirror.
+// cfg.TUFRootURL and cfg.TUFInitialRoot must both be set. The initial root
+// serves as the cryptographic trust anchor — the TUF security model requires
+// a known-good initial root.json to verify all subsequent metadata.
+// Local caching is disabled to avoid conflicts between different TUF repositories.
 func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.Config) (root.TrustedMaterial, error) {
+	if cfg.TUFInitialRoot == "" {
+		return nil, fmt.Errorf("TUFInitialRoot is required when TUFRootURL is set: the TUF security model requires a pinned initial root.json as trust anchor")
+	}
+
 	opts := tuf.DefaultOptions()
 	opts.RepositoryBaseURL = cfg.TUFRootURL
-
-	remoteRoot, err := fetchTUFRoot(ctx, cfg.TUFRootURL)
-	if err != nil {
-		return nil, fmt.Errorf("fetch TUF root from %s: %w", cfg.TUFRootURL, err)
-	}
-	opts.Root = remoteRoot
+	opts.Root = []byte(cfg.TUFInitialRoot)
 	opts.DisableLocalCache = true
+
+	slog.InfoContext(ctx, "fetching trusted root from custom TUF mirror", "url", cfg.TUFRootURL)
 
 	client, err := tuf.New(opts)
 	if err != nil {
 		return nil, fmt.Errorf("create TUF client: %w", err)
 	}
 	return root.GetTrustedRoot(client)
-}
-
-// fetchTUFRoot fetches root.json from a TUF mirror URL.
-func fetchTUFRoot(ctx context.Context, baseURL string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/root.json", nil)
-	if err != nil {
-		return nil, fmt.Errorf("create HTTP request: %w", err)
-	}
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP GET: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
-	}
-
-	const maxTUFRootSize = 10 << 20 // 10 MB
-	return io.ReadAll(io.LimitReader(resp.Body, maxTUFRootSize))
 }
 
 // buildVerifier creates a sigstore-go Verifier with appropriate options based on config.
@@ -259,10 +232,12 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, i
 		opts = append(opts, verify.WithTransparencyLog(1))
 
 		switch {
-		case cfg.RekorVersion == 2 && hasTSAFromConfig:
+		case cfg.RekorVersion == 2 && (hasTSAFromConfig || hasTSAFromMaterial):
+			// Rekor v2 does not produce signed entry timestamps (SETs).
+			// WithObserverTimestamps accepts both RFC3161 TSA timestamps and SETs.
 			opts = append(opts, verify.WithObserverTimestamps(1))
 		case cfg.RekorVersion == 2:
-			opts = append(opts, verify.WithIntegratedTimestamps(1))
+			return nil, fmt.Errorf("Rekor v2 requires a Timestamp Authority (TSA): configure TSAURL or provide trusted material with TSA entries, because v2 does not produce signed entry timestamps")
 		case hasTSAFromMaterial:
 			// Auto-discovery: TSA available in trusted material (e.g. from public-good TUF).
 			// WithObserverTimestamps accepts both v1 SETs and v2 TSA timestamps.
@@ -286,21 +261,16 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, i
 // buildPolicy constructs the verification policy.
 //
 // Two modes are supported in order of precedence:
-//  1. Key-based: when a public key is present in creds, uses WithKey(). Identity
-//     fields in config are ignored because key-based verification doesn't use certificates.
+//  1. Key-based: when pubKey is non-nil, uses WithKey(). Identity fields in
+//     config are ignored because key-based verification doesn't use certificates.
 //  2. Certificate identity: when identity fields are configured (ExpectedIssuer,
 //     ExpectedSAN, or their regex variants), uses WithCertificateIdentity().
 //
 // If neither a public key nor identity fields are provided, an error is returned.
 // Keyless verification without identity constraints is not supported because it
 // would accept any Fulcio-issued certificate regardless of the signer.
-func buildPolicy(artifact *bytes.Reader, creds map[string]string, cfg *v1alpha1.Config) (verify.PolicyBuilder, error) {
+func buildPolicy(artifact *bytes.Reader, pubKey crypto.PublicKey, cfg *v1alpha1.Config) (verify.PolicyBuilder, error) {
 	artifactOpt := verify.WithArtifact(artifact)
-
-	pubKey, err := credentials.PublicKeyFromCredentials(creds)
-	if err != nil {
-		return verify.PolicyBuilder{}, fmt.Errorf("load public key for policy: %w", err)
-	}
 
 	if pubKey != nil {
 		return verify.NewPolicy(artifactOpt, verify.WithKey()), nil
@@ -347,20 +317,4 @@ func validateConfig(cfg *v1alpha1.Config) error {
 		return fmt.Errorf("unsupported RekorVersion %d: must be 0 (default), 1, or 2", cfg.RekorVersion)
 	}
 	return nil
-}
-
-// verifyWithConfig is the internal verify implementation called from Handler.Verify.
-func verifyWithConfig(
-	ctx context.Context,
-	signed descruntime.Signature,
-	rawCfg runtime.Typed,
-	creds map[string]string,
-	scheme *runtime.Scheme,
-) error {
-	var cfg v1alpha1.Config
-	if err := scheme.Convert(rawCfg, &cfg); err != nil {
-		return fmt.Errorf("convert config: %w", err)
-	}
-
-	return doVerify(ctx, signed, &cfg, creds)
 }

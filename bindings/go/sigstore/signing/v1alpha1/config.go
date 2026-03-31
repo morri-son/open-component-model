@@ -74,7 +74,14 @@ type Config struct {
 
 	// TUFRootURL is the URL of a TUF repository for fetching trusted root material.
 	// When empty, TUF is not used; provide a trusted root via credentials or TrustedRootPath instead.
+	// When set, TUFInitialRoot must also be provided as the trust anchor.
 	TUFRootURL string `json:"tufRootURL,omitempty"`
+
+	// TUFInitialRoot is the initial (pinned) TUF root.json used to bootstrap trust
+	// when fetching from a custom TUF mirror (TUFRootURL). This is mandatory when
+	// TUFRootURL is set — the TUF security model requires a known-good initial root
+	// to verify all subsequent metadata. The value is raw JSON (not base64-encoded).
+	TUFInitialRoot string `json:"tufInitialRoot,omitempty"`
 
 	// TrustedRootPath is a filesystem path to a trusted root JSON file for offline verification.
 	// When set, this takes precedence over TUF-based root fetching.

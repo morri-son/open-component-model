@@ -25,7 +25,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
-	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler/internal/credentials"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
 )
@@ -75,14 +74,19 @@ func doSign(
 		}
 	}
 
-	// When a trusted root is available from an offline source, set it on
-	// BundleOptions so sign.Bundle can verify the created bundle before
-	// returning it (defense-in-depth). TUF is intentionally excluded to
-	// avoid a network round-trip at sign time.
-	if tr, err := resolveOfflineTrustedRoot(cfg, creds); err != nil {
-		slog.WarnContext(ctx, "failed to resolve offline trusted root for sign-time verification", "error", err)
-	} else if tr != nil {
-		opts.TrustedRoot = tr
+	// When a trusted root is available from an offline source and we are
+	// in a keyless flow (Fulcio certificate), set it on BundleOptions so
+	// sign.Bundle can verify the created bundle before returning it
+	// (defense-in-depth). Key-based bundles use a public-key hint that
+	// is not present in the trusted root, so sign-time verification
+	// would always fail. TUF is intentionally excluded to avoid a
+	// network round-trip at sign time.
+	if idToken != "" {
+		if tr, err := resolveOfflineTrustedRoot(cfg, creds); err != nil {
+			slog.WarnContext(ctx, "failed to resolve offline trusted root for sign-time verification", "error", err)
+		} else if tr != nil {
+			opts.TrustedRoot = tr
+		}
 	}
 
 	content := &sign.PlainData{Data: digestBytes}
@@ -421,21 +425,4 @@ func (k *ed25519Keypair) SignData(_ context.Context, data []byte) ([]byte, []byt
 		return nil, nil, err
 	}
 	return sig, data, nil
-}
-
-// signWithConfig is the internal sign implementation called from Handler.Sign.
-func signWithConfig(
-	ctx context.Context,
-	unsigned descruntime.Digest,
-	rawCfg runtime.Typed,
-	creds map[string]string,
-	scheme *runtime.Scheme,
-	tg TokenGetter,
-) (descruntime.SignatureInfo, error) {
-	var cfg v1alpha1.Config
-	if err := scheme.Convert(rawCfg, &cfg); err != nil {
-		return descruntime.SignatureInfo{}, fmt.Errorf("convert config: %w", err)
-	}
-
-	return doSign(ctx, unsigned, &cfg, creds, tg)
 }

@@ -726,8 +726,9 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
 	}
 
-	_, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
-	r.Error(err, "TUF fallback with invalid URL should fail")
+	_, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{}, nil)
+	r.Error(err, "TUF without initial root should fail")
+	r.Contains(err.Error(), "TUFInitialRoot is required")
 }
 
 // ---- resolveOfflineTrustedRoot tests ----
@@ -1459,7 +1460,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		policy, err := buildPolicy(
 			bytes.NewReader(digestBytes),
-			map[string]string{},
+			nil,
 			cfg,
 		)
 		r.NoError(err)
@@ -1482,7 +1483,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		policy, err := buildPolicy(
 			bytes.NewReader(digestBytes),
-			map[string]string{},
+			nil,
 			cfg,
 		)
 		r.NoError(err)
@@ -1501,7 +1502,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		_, err = buildPolicy(
 			bytes.NewReader(digestBytes),
-			map[string]string{},
+			nil,
 			cfg,
 		)
 		r.Error(err)
@@ -1522,13 +1523,9 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 			ExpectedSAN:    "user@example.com",
 		}
 
-		creds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-
 		policy, err := buildPolicy(
 			bytes.NewReader(digestBytes),
-			creds,
+			&key.PublicKey,
 			cfg,
 		)
 		r.NoError(err)
@@ -1554,7 +1551,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			TrustedRootPath: trPath,
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{}, nil)
 		r.NoError(err)
 		r.NotNil(tm, "should return trusted material from file")
 	})
@@ -1570,7 +1567,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, nil)
 		r.NoError(err)
 		r.NotNil(tm, "should return trusted material from credentials")
 	})
@@ -1592,7 +1589,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, &key.PublicKey)
 		r.NoError(err)
 		r.NotNil(tm)
 
@@ -1618,7 +1615,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, nil)
 		r.NoError(err)
 		r.NotNil(tm, "credentials trusted root should take precedence")
 	})
@@ -1685,7 +1682,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NotNil(v, "should build verifier with TSA requirement")
 	})
 
-	t.Run("RekorVersion 2 without TSA requires integrated timestamps", func(t *testing.T) {
+	t.Run("RekorVersion 2 without TSA returns error", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1694,13 +1691,12 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		// Without a TSA, Rekor v2 bundles carry no timestamps at all (no SETs,
-		// no RFC 3161 timestamps). The verifier is built with WithIntegratedTimestamps(1),
-		// matching sigstore-go signer behavior: verification of such a bundle will fail
-		// because no integrated timestamps are present.
+		// no RFC 3161 timestamps). The verifier cannot be built because
+		// sigstore-go requires a timestamp verification strategy.
 		cfg := &v1alpha1.Config{RekorVersion: 2}
-		v, err := buildVerifier(tm, cfg, false)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier for Rekor v2 without TSA")
+		_, err = buildVerifier(tm, cfg, false)
+		r.Error(err)
+		r.Contains(err.Error(), "Rekor v2 requires a Timestamp Authority")
 	})
 
 	t.Run("RekorVersion 2 with TSA uses observer timestamps", func(t *testing.T) {
@@ -2013,14 +2009,14 @@ func Test_ResolveTrustedMaterial_TUFFailure_PublicKeyFallback(t *testing.T) {
 		credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 	}
 
-	// TUF fetch will fail, but public key should still work.
-	// The function should return an error because TUF failure propagates
+	// TUF requires a pinned initial root — without it, resolution fails
 	// even when a public key is available (TUF resolution happens unconditionally).
-	tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
+	tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, &key.PublicKey)
 
-	// TUF failure causes resolveTrustedRoot to fail, which propagates up.
+	// Missing TUFInitialRoot causes resolveTrustedRoot to fail, which propagates up.
 	// Even though we have a public key, the TUF error takes precedence.
 	r.Error(err, "TUF failure should propagate even when public key is available")
+	r.Contains(err.Error(), "TUFInitialRoot is required")
 	r.Nil(tm)
 }
 

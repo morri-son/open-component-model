@@ -51,7 +51,12 @@ func (h *Handler) Sign(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 ) (descruntime.SignatureInfo, error) {
-	return signWithConfig(ctx, unsigned, rawCfg, creds, h.GetSigningHandlerScheme(), h.tokenGetter)
+	var cfg v1alpha1.Config
+	if err := h.GetSigningHandlerScheme().Convert(rawCfg, &cfg); err != nil {
+		return descruntime.SignatureInfo{}, fmt.Errorf("convert config: %w", err)
+	}
+
+	return doSign(ctx, unsigned, &cfg, creds, h.tokenGetter)
 }
 
 func (h *Handler) Verify(
@@ -60,7 +65,12 @@ func (h *Handler) Verify(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 ) error {
-	return verifyWithConfig(ctx, signed, rawCfg, creds, h.GetSigningHandlerScheme())
+	var cfg v1alpha1.Config
+	if err := h.GetSigningHandlerScheme().Convert(rawCfg, &cfg); err != nil {
+		return fmt.Errorf("convert config: %w", err)
+	}
+
+	return doVerify(ctx, signed, &cfg, creds)
 }
 
 func (*Handler) GetSigningCredentialConsumerIdentity(

@@ -4,7 +4,7 @@
   "$id": "ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1/schemas/Config.schema.json",
   "title": "Config",
   "type": "object",
-  "description": "Config defines configuration for Sigstore-based signing and verification.\n\nThe library does not provide default endpoint URLs. All URLs must be explicitly\nconfigured, either individually (FulcioURL, RekorURL, TSAURL) or via a\nSigningConfigPath. CLI layers should set appropriate defaults for user convenience.\n\nFor keyless verification, at least one identity field (ExpectedIssuer, ExpectedSAN,\nor their regex variants) must be set. If no identity fields and no public key\ncredential are provided, verification returns an error.",
+  "description": "Config defines configuration for Sigstore-based signing and verification.\n\n# Endpoint Discovery\n\nWhen no endpoint URLs (FulcioURL, RekorURL, TSAURL), SigningConfigPath, or SkipRekor\nare configured, the library automatically fetches the public-good Sigstore signing\nconfiguration and trusted root from the Sigstore TUF repository. This enables\nzero-configuration signing and verification against the public Sigstore infrastructure.\nThis matches the default behavior of Cosign v3 (https://blog.sigstore.dev/cosign-3-0-available/).\n\nTo use explicit endpoints instead, set the individual URL fields or provide a\nSigningConfigPath. SkipRekor disables transparency log integration entirely.\n\n# Signing Modes\n\nKeyless: an OIDC token (from credentials or interactive browser flow) produces a\nshort-lived Fulcio certificate embedded in the bundle along with the signer's identity.\n\nKey-based: a private key from credentials signs the artifact. The bundle stores only a\npublic key hint (an opaque identifier), not the actual public key material. This follows\nthe Sigstore bundle specification: \"Like traditional PKI key distribution the format of\nthe hint must be agreed upon out of band by the signer and the verifiers. The key itself\nis not embedded in the Sigstore bundle.\" (https://docs.sigstore.dev/about/bundle)\n\n# Verification Modes\n\nKeyless verification requires at least one identity field (ExpectedIssuer, ExpectedSAN,\nor their regex variants). The Fulcio certificate in the bundle is validated against the\ntrusted root's CA key and the identity constraints. No external key material is needed.\n\nKey-based verification requires the public key to be provided out of band via credentials,\nsince the bundle only contains a hint. Without the public key, verification fails.",
   "properties": {
     "expectedIssuer": {
       "type": "string",
@@ -52,9 +52,13 @@
       "type": "string",
       "description": "TSAURL is the full URL of a RFC 3161 Timestamp Authority endpoint\n(e.g. \"https://timestamp.sigstore.dev/api/v1/timestamp\").\nWhen set, a TSA timestamp is obtained at sign time and required at verify time.\nRekor v2 keyless flows require a TSA because v2 does not produce signed entry timestamps."
     },
+    "tufInitialRoot": {
+      "type": "string",
+      "description": "TUFInitialRoot is the initial (pinned) TUF root.json used to bootstrap trust\nwhen fetching from a custom TUF mirror (TUFRootURL). This is mandatory when\nTUFRootURL is set — the TUF security model requires a known-good initial root\nto verify all subsequent metadata. The value is raw JSON (not base64-encoded)."
+    },
     "tufRootURL": {
       "type": "string",
-      "description": "TUFRootURL is the URL of a TUF repository for fetching trusted root material.\nWhen empty, TUF is not used; provide a trusted root via credentials or TrustedRootPath instead."
+      "description": "TUFRootURL is the URL of a TUF repository for fetching trusted root material.\nWhen empty, TUF is not used; provide a trusted root via credentials or TrustedRootPath instead.\nWhen set, TUFInitialRoot must also be provided as the trust anchor."
     },
     "type": {
       "$ref": "#/$defs/ocm.software.open-component-model.bindings.go.runtime.Type",
