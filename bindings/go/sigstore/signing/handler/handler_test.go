@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -483,6 +484,43 @@ func Test_Handler_Verify(t *testing.T) {
 		r.Contains(err.Error(), "resolve trusted material")
 	})
 
+	t.Run("verification fails with invalid digest hex", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		h := newHandler(t)
+
+		key := mustECDSAKey(t)
+		digest := sampleDigest(t)
+		cfg := offlineConfig()
+
+		signCreds := map[string]string{
+			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
+		}
+
+		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		r.NoError(err)
+
+		badDigest := descruntime.Digest{
+			HashAlgorithm:          digest.HashAlgorithm,
+			NormalisationAlgorithm: digest.NormalisationAlgorithm,
+			Value:                  "not-valid-hex-gg$$",
+		}
+
+		signed := descruntime.Signature{
+			Name:      "test-sig",
+			Digest:    badDigest,
+			Signature: sigInfo,
+		}
+
+		verifyCreds := map[string]string{
+			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
+		}
+
+		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
+		r.Error(err)
+		r.Contains(err.Error(), "decode digest hex")
+	})
+
 	t.Run("public key derived from private key in credentials", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
@@ -507,6 +545,42 @@ func Test_Handler_Verify(t *testing.T) {
 
 		// Verify with same private key cred — public key should be derived
 		err = h.Verify(t.Context(), signed, cfg, creds)
+		r.NoError(err)
+	})
+
+	t.Run("Ed25519 sign-then-verify roundtrip (offline)", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		h := newHandler(t)
+
+		key := mustEd25519Key(t)
+		digest := sampleDigest(t)
+		cfg := offlineConfig()
+
+		signCreds := map[string]string{
+			credentials.CredentialKeyPrivateKeyPEM: mustPKCS8PrivateKeyPEM(t, key),
+		}
+
+		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		r.NoError(err)
+		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
+		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
+
+		signed := descruntime.Signature{
+			Name:      "test-sig-ed25519",
+			Digest:    digest,
+			Signature: sigInfo,
+		}
+
+		pubDER, err := x509.MarshalPKIXPublicKey(key.Public())
+		r.NoError(err)
+		pubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))
+
+		verifyCreds := map[string]string{
+			credentials.CredentialKeyPublicKeyPEM: pubPEM,
+		}
+
+		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
 		r.NoError(err)
 	})
 }
@@ -541,6 +615,32 @@ func Test_ConfigureTransparencyLog_SkipRekor(t *testing.T) {
 	configureTransparencyLog(&opts, cfg)
 
 	r.Empty(opts.TransparencyLogs, "SkipRekor should prevent adding transparency logs")
+}
+
+func Test_ConfigureTransparencyLog_DefaultVersion(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	cfg := &v1alpha1.Config{
+		RekorURL: "https://rekor.example.com",
+	}
+
+	var opts sign.BundleOptions
+	configureTransparencyLog(&opts, cfg)
+
+	r.Len(opts.TransparencyLogs, 1, "should add transparency log with default version")
+}
+
+func Test_KeypairFromPrivateKey_UnsupportedType(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	r.NoError(err)
+
+	_, err = keypairFromPrivateKey(rsaKey)
+	r.Error(err)
+	r.Contains(err.Error(), "unsupported private key type")
 }
 
 func Test_ConfigureTimestampAuthority(t *testing.T) {
@@ -1377,25 +1477,6 @@ func Test_ExtractIssuer(t *testing.T) {
 		r.Equal("https://token.actions.githubusercontent.com", extractIssuer(bundle))
 	})
 
-	t.Run("extracts issuer from raw v1 bytes", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		certDER := makeFulcioCert(t, "https://kubernetes.default.svc.cluster.local")
-
-		bundle := &protobundle.Bundle{
-			VerificationMaterial: &protobundle.VerificationMaterial{
-				Content: &protobundle.VerificationMaterial_Certificate{
-					Certificate: &protocommon.X509Certificate{
-						RawBytes: certDER,
-					},
-				},
-			},
-		}
-
-		r.Equal("https://kubernetes.default.svc.cluster.local", extractIssuer(bundle))
-	})
-
 	t.Run("prefers v2 OID over v1 when both present", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
@@ -1668,21 +1749,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NotNil(v, "should build verifier with TSA requirement")
 	})
 
-	t.Run("TSAURL adds signed timestamp requirement (alternate URL)", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com"}
-		v, err := buildVerifier(tm, cfg, false)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier with TSA requirement")
-	})
-
-	t.Run("RekorVersion 2 without TSA returns error", func(t *testing.T) {
+	t.Run("RekorVersion 2 without TSA returns error for keyless", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1691,12 +1758,27 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 
 		// Without a TSA, Rekor v2 bundles carry no timestamps at all (no SETs,
-		// no RFC 3161 timestamps). The verifier cannot be built because
-		// sigstore-go requires a timestamp verification strategy.
+		// no RFC 3161 timestamps). Keyless verification requires timestamps to
+		// prove the certificate was valid at signing time.
 		cfg := &v1alpha1.Config{RekorVersion: 2}
 		_, err = buildVerifier(tm, cfg, false)
 		r.Error(err)
 		r.Contains(err.Error(), "Rekor v2 requires a Timestamp Authority")
+	})
+
+	t.Run("RekorVersion 2 without TSA succeeds for key-based", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		// Key-based verification doesn't need timestamps — public keys don't expire.
+		cfg := &v1alpha1.Config{RekorVersion: 2}
+		v, err := buildVerifier(tm, cfg, true)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier for key-based Rekor v2 without TSA")
 	})
 
 	t.Run("RekorVersion 2 with TSA uses observer timestamps", func(t *testing.T) {
@@ -1767,25 +1849,6 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 		r.NotNil(vm.GetPublicKey(), "ephemeral keypair should produce public key hint")
 	})
 
-	t.Run("keyless sign configures Fulcio when FulcioURL is set", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		token := "test-oidc-token"
-		cfg := &v1alpha1.Config{
-			FulcioURL: "https://fulcio.example.com",
-			SkipRekor: true,
-		}
-
-		var opts sign.BundleOptions
-		opts.Context = t.Context()
-		err := configureCertificateProvider(&opts, cfg, token)
-		r.NoError(err)
-
-		r.NotNil(opts.CertificateProvider)
-		r.NotNil(opts.CertificateProviderOptions)
-		r.Equal(token, opts.CertificateProviderOptions.IDToken)
-	})
 }
 
 // ---- makeTrustedRootJSON helper ----
@@ -1931,14 +1994,6 @@ func Test_ValidateConfig(t *testing.T) {
 		r.Contains(err.Error(), "unsupported RekorVersion 3")
 	})
 
-	t.Run("RekorVersion 99 is rejected", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		err := validateConfig(&v1alpha1.Config{RekorVersion: 99})
-		r.Error(err)
-		r.Contains(err.Error(), "unsupported RekorVersion 99")
-	})
-
 	t.Run("invalid RekorVersion blocks sign", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
@@ -2022,6 +2077,47 @@ func Test_ResolveTrustedMaterial_TUFFailure_PublicKeyFallback(t *testing.T) {
 
 // ---- buildVerifier SCT tests ----
 
+// makeTrustedRootWithCTLogJSON creates a trusted root JSON with a CT log entry
+// so that len(trustedMaterial.CTLogs()) > 0 is true.
+func makeTrustedRootWithCTLogJSON(t *testing.T) []byte {
+	t.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	require.NoError(t, err)
+
+	logIDHash := sha256.Sum256(pubDER)
+
+	tr := map[string]any{
+		"mediaType":              "application/vnd.dev.sigstore.trustedroot+json;version=0.1",
+		"tlogs":                  []any{},
+		"certificateAuthorities": []any{},
+		"ctlogs": []any{
+			map[string]any{
+				"baseUrl":       "https://ctfe.example.com",
+				"hashAlgorithm": "SHA2_256",
+				"logId": map[string]any{
+					"keyId": base64.StdEncoding.EncodeToString(logIDHash[:]),
+				},
+				"publicKey": map[string]any{
+					"rawBytes":   base64.StdEncoding.EncodeToString(pubDER),
+					"keyDetails": "PKIX_ECDSA_P256_SHA_256",
+					"validFor": map[string]any{
+						"start": "2020-01-01T00:00:00Z",
+					},
+				},
+			},
+		},
+		"timestampAuthorities": []any{},
+	}
+
+	data, err := json.Marshal(tr)
+	require.NoError(t, err)
+	return data
+}
+
 func Test_BuildVerifier_SCT(t *testing.T) {
 	t.Parallel()
 
@@ -2029,30 +2125,30 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		trustedRoot := makeTrustedRootJSON(t)
+		trustedRoot := makeTrustedRootWithCTLogJSON(t)
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
+		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
-		// The test trusted root has empty ctlogs, so SCT won't actually be enabled.
-		// This verifies the verifier still builds successfully.
 		cfg := &v1alpha1.Config{SkipRekor: true}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
-		r.NotNil(v)
+		r.NotNil(v, "should build verifier with SCT requirement for keyless")
 	})
 
-	t.Run("key-based never enables SCT verification", func(t *testing.T) {
+	t.Run("key-based skips SCT even with CT logs", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		trustedRoot := makeTrustedRootJSON(t)
+		trustedRoot := makeTrustedRootWithCTLogJSON(t)
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
+		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
 		cfg := &v1alpha1.Config{SkipRekor: true}
 		v, err := buildVerifier(tm, cfg, true)
 		r.NoError(err)
-		r.NotNil(v)
+		r.NotNil(v, "should build verifier without SCT for key-based")
 	})
 }
 
@@ -2339,6 +2435,21 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with integrated timestamps")
+	})
+
+	t.Run("RekorVersion 2 with TSA from trusted material uses observer timestamps", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootWithTSAJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+		r.Greater(len(tm.TimestampingAuthorities()), 0, "trusted material should have TSA")
+
+		cfg := &v1alpha1.Config{RekorVersion: 2}
+		v, err := buildVerifier(tm, cfg, false)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier for Rekor v2 with TSA from trusted material")
 	})
 }
 

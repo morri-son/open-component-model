@@ -236,8 +236,11 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, i
 			// Rekor v2 does not produce signed entry timestamps (SETs).
 			// WithObserverTimestamps accepts both RFC3161 TSA timestamps and SETs.
 			opts = append(opts, verify.WithObserverTimestamps(1))
+		case cfg.RekorVersion == 2 && !isKeyBased:
+			return nil, fmt.Errorf("Rekor v2 requires a Timestamp Authority (TSA) for keyless verification: configure TSAURL or provide trusted material with TSA entries, because v2 does not produce signed entry timestamps")
 		case cfg.RekorVersion == 2:
-			return nil, fmt.Errorf("Rekor v2 requires a Timestamp Authority (TSA): configure TSAURL or provide trusted material with TSA entries, because v2 does not produce signed entry timestamps")
+			// Key-based v2 without TSA: no timestamps needed since public keys don't expire.
+			opts = append(opts, verify.WithNoObserverTimestamps())
 		case hasTSAFromMaterial:
 			// Auto-discovery: TSA available in trusted material (e.g. from public-good TUF).
 			// WithObserverTimestamps accepts both v1 SETs and v2 TSA timestamps.
