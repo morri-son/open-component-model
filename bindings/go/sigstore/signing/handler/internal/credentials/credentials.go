@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -100,7 +101,10 @@ func parseECDSAPrivateKeyPEM(data []byte) (*ecdsa.PrivateKey, error) {
 		if !ok {
 			return nil, fmt.Errorf("PKCS8 key is not ECDSA, got %T", pkcs8Key)
 		}
-		return ecKey, nil
+		key = ecKey
+	}
+	if key.Curve != elliptic.P256() {
+		return nil, fmt.Errorf("unsupported ECDSA curve %s: only P-256 is supported for sigstore signing", key.Curve.Params().Name)
 	}
 	return key, nil
 }
@@ -118,6 +122,9 @@ func parseECDSAPublicKeyPEM(data []byte) (*ecdsa.PublicKey, error) {
 	ecKey, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("public key is not ECDSA, got %T", pub)
+	}
+	if ecKey.Curve != elliptic.P256() {
+		return nil, fmt.Errorf("unsupported ECDSA curve %s: only P-256 is supported for sigstore signing", ecKey.Curve.Params().Name)
 	}
 	return ecKey, nil
 }
