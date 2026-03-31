@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -830,6 +831,225 @@ func Test_ecdsaKeypair(t *testing.T) {
 	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA256))
 	r.NoError(err)
 	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
+}
+
+func mustEd25519Key(t *testing.T) ed25519.PrivateKey {
+	t.Helper()
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	return priv
+}
+
+func mustPKCS8PrivateKeyPEM(t *testing.T, key interface{}) string {
+	t.Helper()
+	der, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
+}
+
+func Test_ecdsaKeypair_P384(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	r.NoError(err)
+	kp, err := newECDSAKeypair(key)
+	r.NoError(err)
+
+	r.Equal(protocommon.HashAlgorithm_SHA2_384, kp.GetHashAlgorithm())
+	r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, kp.GetSigningAlgorithm())
+	r.Equal("ECDSA", kp.GetKeyAlgorithm())
+
+	pubPEM, err := kp.GetPublicKeyPem()
+	r.NoError(err)
+	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
+
+	data := []byte("test data for P-384")
+	sig, digest, err := kp.SignData(t.Context(), data)
+	r.NoError(err)
+	r.NotEmpty(sig)
+	r.NotEmpty(digest)
+
+	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA384))
+	r.NoError(err)
+	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
+}
+
+func Test_ecdsaKeypair_P521(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	r.NoError(err)
+	kp, err := newECDSAKeypair(key)
+	r.NoError(err)
+
+	r.Equal(protocommon.HashAlgorithm_SHA2_512, kp.GetHashAlgorithm())
+	r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512, kp.GetSigningAlgorithm())
+	r.Equal("ECDSA", kp.GetKeyAlgorithm())
+
+	pubPEM, err := kp.GetPublicKeyPem()
+	r.NoError(err)
+	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
+
+	data := []byte("test data for P-521")
+	sig, digest, err := kp.SignData(t.Context(), data)
+	r.NoError(err)
+	r.NotEmpty(sig)
+	r.NotEmpty(digest)
+
+	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA512))
+	r.NoError(err)
+	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
+}
+
+func Test_ed25519Keypair(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+
+	key := mustEd25519Key(t)
+	kp, err := newEd25519Keypair(key)
+	r.NoError(err)
+
+	r.Equal(protocommon.HashAlgorithm_SHA2_512, kp.GetHashAlgorithm())
+	r.Equal(protocommon.PublicKeyDetails_PKIX_ED25519, kp.GetSigningAlgorithm())
+	r.Equal("Ed25519", kp.GetKeyAlgorithm())
+
+	pubDER, err := x509.MarshalPKIXPublicKey(key.Public())
+	r.NoError(err)
+	expectedHash := sha256.Sum256(pubDER)
+	r.Equal([]byte(base64.StdEncoding.EncodeToString(expectedHash[:])), kp.GetHint())
+
+	pubPEM, err := kp.GetPublicKeyPem()
+	r.NoError(err)
+	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
+
+	data := []byte("test data for Ed25519")
+	sig, returned, err := kp.SignData(t.Context(), data)
+	r.NoError(err)
+	r.NotEmpty(sig)
+	r.Equal(data, returned, "Ed25519 SignData should return raw data, not a digest")
+
+	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.Hash(0)))
+	r.NoError(err)
+	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
+}
+
+func Test_keypairFromPrivateKey(t *testing.T) {
+	t.Parallel()
+
+	t.Run("P-256 returns ecdsaKeypair", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key := mustECDSAKey(t)
+		kp, err := keypairFromPrivateKey(key)
+		r.NoError(err)
+		_, ok := kp.(*ecdsaKeypair)
+		r.True(ok)
+		r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, kp.GetSigningAlgorithm())
+	})
+
+	t.Run("P-384 returns ecdsaKeypair", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		r.NoError(err)
+		kp, err := keypairFromPrivateKey(key)
+		r.NoError(err)
+		_, ok := kp.(*ecdsaKeypair)
+		r.True(ok)
+		r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, kp.GetSigningAlgorithm())
+	})
+
+	t.Run("P-521 returns ecdsaKeypair", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		r.NoError(err)
+		kp, err := keypairFromPrivateKey(key)
+		r.NoError(err)
+		_, ok := kp.(*ecdsaKeypair)
+		r.True(ok)
+		r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512, kp.GetSigningAlgorithm())
+	})
+
+	t.Run("Ed25519 returns ed25519Keypair", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		key := mustEd25519Key(t)
+		kp, err := keypairFromPrivateKey(key)
+		r.NoError(err)
+		_, ok := kp.(*ed25519Keypair)
+		r.True(ok)
+		r.Equal(protocommon.PublicKeyDetails_PKIX_ED25519, kp.GetSigningAlgorithm())
+	})
+}
+
+func Test_ResolveKeypair_KeyBased(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name    string
+		pemFunc func(t *testing.T) string
+		check   func(t *testing.T, kp sign.Keypair)
+	}{
+		{
+			name: "P-256 EC PRIVATE KEY",
+			pemFunc: func(t *testing.T) string {
+				return pemEncodePrivateKey(t, mustECDSAKey(t))
+			},
+			check: func(t *testing.T, kp sign.Keypair) {
+				t.Helper()
+				r := require.New(t)
+				_, ok := kp.(*ecdsaKeypair)
+				r.True(ok)
+				r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, kp.GetSigningAlgorithm())
+			},
+		},
+		{
+			name: "P-384 EC PRIVATE KEY",
+			pemFunc: func(t *testing.T) string {
+				key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+				der, err := x509.MarshalECPrivateKey(key)
+				require.NoError(t, err)
+				return string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}))
+			},
+			check: func(t *testing.T, kp sign.Keypair) {
+				t.Helper()
+				r := require.New(t)
+				_, ok := kp.(*ecdsaKeypair)
+				r.True(ok)
+				r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, kp.GetSigningAlgorithm())
+			},
+		},
+		{
+			name: "Ed25519 PKCS8",
+			pemFunc: func(t *testing.T) string {
+				return mustPKCS8PrivateKeyPEM(t, mustEd25519Key(t))
+			},
+			check: func(t *testing.T, kp sign.Keypair) {
+				t.Helper()
+				r := require.New(t)
+				_, ok := kp.(*ed25519Keypair)
+				r.True(ok)
+				r.Equal(protocommon.PublicKeyDetails_PKIX_ED25519, kp.GetSigningAlgorithm())
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			r := require.New(t)
+			creds := map[string]string{
+				credentials.CredentialKeyPrivateKeyPEM: tc.pemFunc(t),
+			}
+			kp, token, err := resolveKeypair(creds, nil)
+			r.NoError(err)
+			r.NotNil(kp)
+			r.Empty(token)
+			tc.check(t, kp)
+		})
+	}
 }
 
 // ===========================================================================

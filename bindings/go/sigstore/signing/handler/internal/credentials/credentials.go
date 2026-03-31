@@ -1,8 +1,9 @@
 package credentials
 
 import (
+	"crypto"
 	"crypto/ecdsa"
-	"crypto/elliptic"
+	"crypto/ed25519"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -17,16 +18,16 @@ var IdentityTypeSigstore = runtime.NewVersionedType("Sigstore", "v1alpha1")
 //
 //nolint:gosec // these are not secrets
 const (
-	CredentialKeyPrivateKeyPEM       = "private_key_pem" // inline ECDSA private key PEM
+	CredentialKeyPrivateKeyPEM       = "private_key_pem" // inline private key PEM (ECDSA P-256/384/521 or Ed25519)
 	CredentialKeyPrivateKeyPEMFile   = CredentialKeyPrivateKeyPEM + "_file"
-	CredentialKeyPublicKeyPEM        = "public_key_pem" // inline ECDSA public key PEM
+	CredentialKeyPublicKeyPEM        = "public_key_pem" // inline public key PEM (ECDSA P-256/384/521 or Ed25519)
 	CredentialKeyPublicKeyPEMFile    = CredentialKeyPublicKeyPEM + "_file"
 	CredentialKeyOIDCToken           = "oidc_token"        // pre-obtained OIDC identity token for keyless signing
 	CredentialKeyTrustedRootJSON     = "trusted_root_json" // inline trusted root JSON for offline verification
 	CredentialKeyTrustedRootJSONFile = CredentialKeyTrustedRootJSON + "_file"
 )
 
-func PrivateKeyFromCredentials(credentials map[string]string) (*ecdsa.PrivateKey, error) {
+func PrivateKeyFromCredentials(credentials map[string]string) (crypto.PrivateKey, error) {
 	b, err := loadBytes(credentials[CredentialKeyPrivateKeyPEM], CredentialKeyPrivateKeyPEMFile, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed loading private key PEM: %w", err)
@@ -34,10 +35,10 @@ func PrivateKeyFromCredentials(credentials map[string]string) (*ecdsa.PrivateKey
 	if len(b) == 0 {
 		return nil, nil
 	}
-	return parseECDSAPrivateKeyPEM(b)
+	return parsePrivateKeyPEM(b)
 }
 
-func PublicKeyFromCredentials(credentials map[string]string) (*ecdsa.PublicKey, error) {
+func PublicKeyFromCredentials(credentials map[string]string) (crypto.PublicKey, error) {
 	b, err := loadBytes(credentials[CredentialKeyPublicKeyPEM], CredentialKeyPublicKeyPEMFile, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed loading public key PEM: %w", err)
@@ -50,9 +51,9 @@ func PublicKeyFromCredentials(credentials map[string]string) (*ecdsa.PublicKey, 
 		if pk == nil {
 			return nil, nil
 		}
-		return &pk.PublicKey, nil
+		return publicKeyOf(pk)
 	}
-	pubKey, err := parseECDSAPublicKeyPEM(b)
+	pubKey, err := parsePublicKeyPEM(b)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +61,14 @@ func PublicKeyFromCredentials(credentials map[string]string) (*ecdsa.PublicKey, 
 	if err != nil {
 		return nil, err
 	}
-	if pk != nil && !pk.PublicKey.Equal(pubKey) {
-		return nil, fmt.Errorf("provided public key does not match the private key")
+	if pk != nil {
+		expectedPub, err := publicKeyOf(pk)
+		if err != nil {
+			return nil, err
+		}
+		if !expectedPub.(interface{ Equal(x crypto.PublicKey) bool }).Equal(pubKey) {
+			return nil, fmt.Errorf("provided public key does not match the private key")
+		}
 	}
 	return pubKey, nil
 }
@@ -84,32 +91,60 @@ func loadBytes(val string, fileKey string, credentials map[string]string) ([]byt
 	return nil, nil
 }
 
-func parseECDSAPrivateKeyPEM(data []byte) (*ecdsa.PrivateKey, error) {
+// publicKeyOf extracts the public key from a private key.
+func publicKeyOf(priv crypto.PrivateKey) (crypto.PublicKey, error) {
+	type publicker interface {
+		Public() crypto.PublicKey
+	}
+	if p, ok := priv.(publicker); ok {
+		return p.Public(), nil
+	}
+	return nil, fmt.Errorf("private key type %T does not expose a public key", priv)
+}
+
+// parsePrivateKeyPEM parses a PEM-encoded private key.
+// Supported types: ECDSA (P-256, P-384, P-521) and Ed25519.
+// PEM block types "EC PRIVATE KEY" (SEC 1) and "PRIVATE KEY" (PKCS8) are both accepted.
+func parsePrivateKeyPEM(data []byte) (crypto.PrivateKey, error) {
 	block, _ := pem.Decode(data)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block")
 	}
 
-	key, err := x509.ParseECPrivateKey(block.Bytes)
-	if err != nil {
-		// try PKCS8
-		pkcs8Key, pkcs8Err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if pkcs8Err != nil {
-			return nil, fmt.Errorf("failed to parse ECDSA private key: %w (PKCS8: %w)", err, pkcs8Err)
+	switch block.Type {
+	case "EC PRIVATE KEY":
+		key, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse EC private key: %w", err)
 		}
-		ecKey, ok := pkcs8Key.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("PKCS8 key is not ECDSA, got %T", pkcs8Key)
+		if err := validateECDSACurve(key); err != nil {
+			return nil, err
 		}
-		key = ecKey
+		return key, nil
+	case "PRIVATE KEY":
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse PKCS8 private key: %w", err)
+		}
+		return validatePrivateKey(key)
+	default:
+		// Try SEC1 first, then PKCS8, to handle unlabelled or mislabelled blocks.
+		if key, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
+			if err := validateECDSACurve(key); err != nil {
+				return nil, err
+			}
+			return key, nil
+		}
+		if key, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
+			return validatePrivateKey(key)
+		}
+		return nil, fmt.Errorf("unsupported PEM block type %q: expected EC PRIVATE KEY or PRIVATE KEY", block.Type)
 	}
-	if key.Curve != elliptic.P256() {
-		return nil, fmt.Errorf("unsupported ECDSA curve %s: only P-256 is supported for sigstore signing", key.Curve.Params().Name)
-	}
-	return key, nil
 }
 
-func parseECDSAPublicKeyPEM(data []byte) (*ecdsa.PublicKey, error) {
+// parsePublicKeyPEM parses a PEM-encoded PKIX public key.
+// Supported types: ECDSA (P-256, P-384, P-521) and Ed25519.
+func parsePublicKeyPEM(data []byte) (crypto.PublicKey, error) {
 	block, _ := pem.Decode(data)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block")
@@ -119,12 +154,43 @@ func parseECDSAPublicKeyPEM(data []byte) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key: %w", err)
 	}
-	ecKey, ok := pub.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("public key is not ECDSA, got %T", pub)
+	return validatePublicKey(pub)
+}
+
+func validatePrivateKey(key interface{}) (crypto.PrivateKey, error) {
+	switch k := key.(type) {
+	case *ecdsa.PrivateKey:
+		if err := validateECDSACurve(k); err != nil {
+			return nil, err
+		}
+		return k, nil
+	case ed25519.PrivateKey:
+		return k, nil
+	default:
+		return nil, fmt.Errorf("unsupported private key type %T: only ECDSA (P-256, P-384, P-521) and Ed25519 are supported", key)
 	}
-	if ecKey.Curve != elliptic.P256() {
-		return nil, fmt.Errorf("unsupported ECDSA curve %s: only P-256 is supported for sigstore signing", ecKey.Curve.Params().Name)
+}
+
+func validatePublicKey(key interface{}) (crypto.PublicKey, error) {
+	switch k := key.(type) {
+	case *ecdsa.PublicKey:
+		if err := validateECDSACurve(&ecdsa.PrivateKey{PublicKey: *k}); err != nil {
+			return nil, err
+		}
+		return k, nil
+	case ed25519.PublicKey:
+		return k, nil
+	default:
+		return nil, fmt.Errorf("unsupported public key type %T: only ECDSA (P-256, P-384, P-521) and Ed25519 are supported", key)
 	}
-	return ecKey, nil
+}
+
+func validateECDSACurve(key *ecdsa.PrivateKey) error {
+	name := key.Curve.Params().Name
+	switch name {
+	case "P-256", "P-384", "P-521":
+		return nil
+	default:
+		return fmt.Errorf("unsupported ECDSA curve %s: only P-256, P-384, and P-521 are supported", name)
+	}
 }

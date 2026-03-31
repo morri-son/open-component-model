@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -98,7 +100,7 @@ func doSign(
 // resolveKeypair determines the signing keypair and optional OIDC token from credentials.
 //
 // Three modes are supported (checked in order):
-//  1. Key-based: a private key PEM is present in creds. Returns an ecdsaKeypair
+//  1. Key-based: a private key PEM is present in creds. Returns a keypair
 //     wrapping that key and an empty OIDC token.
 //  2. Credential token: an OIDC token is present in creds. Returns an ephemeral
 //     keypair and the token (for Fulcio certificate issuance).
@@ -115,9 +117,9 @@ func resolveKeypair(creds map[string]string, tg TokenGetter) (sign.Keypair, stri
 	}
 
 	if privKey != nil {
-		kp, err := newECDSAKeypair(privKey)
+		kp, err := keypairFromPrivateKey(privKey)
 		if err != nil {
-			return nil, "", fmt.Errorf("create ECDSA keypair: %w", err)
+			return nil, "", fmt.Errorf("create keypair: %w", err)
 		}
 		return kp, "", nil
 	}
@@ -135,6 +137,18 @@ func resolveKeypair(creds map[string]string, tg TokenGetter) (sign.Keypair, stri
 		return nil, "", fmt.Errorf("create ephemeral keypair: %w", err)
 	}
 	return keypair, idToken, nil
+}
+
+// keypairFromPrivateKey creates the appropriate sign.Keypair implementation for the given key type.
+func keypairFromPrivateKey(key crypto.PrivateKey) (sign.Keypair, error) {
+	switch k := key.(type) {
+	case *ecdsa.PrivateKey:
+		return newECDSAKeypair(k)
+	case ed25519.PrivateKey:
+		return newEd25519Keypair(k)
+	default:
+		return nil, fmt.Errorf("unsupported private key type %T", key)
+	}
 }
 
 func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.Config, idToken string) error {
@@ -255,17 +269,27 @@ func extractIssuer(bundle *protobundle.Bundle) string {
 }
 
 // ecdsaKeypair adapts an *ecdsa.PrivateKey to sigstore-go's sign.Keypair interface.
-// The implementation mirrors sigstore-go's EphemeralKeypair, using AlgorithmDetails
-// from the sigstore algorithm registry to derive hash, signing algorithm, and key hint
-// rather than hardcoding these values.
+// The signing algorithm is selected based on the key's curve (P-256, P-384, P-521),
+// using AlgorithmDetails from the sigstore algorithm registry rather than hardcoding values.
 type ecdsaKeypair struct {
 	privKey    *ecdsa.PrivateKey
 	hint       []byte
 	algDetails signature.AlgorithmDetails
 }
 
+// ecdsaCurveAlgorithm maps ECDSA curves to their corresponding protobuf algorithm constant.
+var ecdsaCurveAlgorithm = map[elliptic.Curve]protocommon.PublicKeyDetails{
+	elliptic.P256(): protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+	elliptic.P384(): protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+	elliptic.P521(): protocommon.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512,
+}
+
 func newECDSAKeypair(privKey *ecdsa.PrivateKey) (*ecdsaKeypair, error) {
-	algDetails, err := signature.GetAlgorithmDetails(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
+	alg, ok := ecdsaCurveAlgorithm[privKey.Curve]
+	if !ok {
+		return nil, fmt.Errorf("unsupported ECDSA curve %s", privKey.Curve.Params().Name)
+	}
+	algDetails, err := signature.GetAlgorithmDetails(alg)
 	if err != nil {
 		return nil, fmt.Errorf("get algorithm details: %w", err)
 	}
@@ -318,6 +342,64 @@ func (k *ecdsaKeypair) SignData(_ context.Context, data []byte) ([]byte, []byte,
 		return nil, nil, err
 	}
 	return sig, digest, nil
+}
+
+// ed25519Keypair adapts an ed25519.PrivateKey to sigstore-go's sign.Keypair interface.
+// Ed25519 performs its own internal hashing (using SHA-512), so SignData passes
+// the raw data directly to the signer without pre-hashing.
+type ed25519Keypair struct {
+	privKey ed25519.PrivateKey
+	hint    []byte
+}
+
+func newEd25519Keypair(privKey ed25519.PrivateKey) (*ed25519Keypair, error) {
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(privKey.Public())
+	if err != nil {
+		return nil, fmt.Errorf("marshal public key to DER: %w", err)
+	}
+	hashedBytes := sha256.Sum256(pubKeyBytes)
+	hint := []byte(base64.StdEncoding.EncodeToString(hashedBytes[:]))
+	return &ed25519Keypair{privKey: privKey, hint: hint}, nil
+}
+
+func (k *ed25519Keypair) GetHashAlgorithm() protocommon.HashAlgorithm {
+	// Ed25519 uses SHA-512 internally; no separate pre-hashing is performed.
+	return protocommon.HashAlgorithm_SHA2_512
+}
+
+func (k *ed25519Keypair) GetSigningAlgorithm() protocommon.PublicKeyDetails {
+	return protocommon.PublicKeyDetails_PKIX_ED25519
+}
+
+func (k *ed25519Keypair) GetHint() []byte {
+	return k.hint
+}
+
+func (k *ed25519Keypair) GetKeyAlgorithm() string {
+	return "Ed25519"
+}
+
+func (k *ed25519Keypair) GetPublicKey() crypto.PublicKey {
+	return k.privKey.Public()
+}
+
+func (k *ed25519Keypair) GetPublicKeyPem() (string, error) {
+	pem, err := cryptoutils.MarshalPublicKeyToPEM(k.privKey.Public())
+	if err != nil {
+		return "", err
+	}
+	return string(pem), nil
+}
+
+// SignData signs data with Ed25519. Unlike ECDSA, Ed25519 does not accept a
+// pre-computed digest; it hashes internally. The returned digest is the raw
+// data (not a hash), matching sigstore-go's expectation for PKIX_ED25519.
+func (k *ed25519Keypair) SignData(_ context.Context, data []byte) ([]byte, []byte, error) {
+	sig, err := k.privKey.Sign(rand.Reader, data, crypto.Hash(0))
+	if err != nil {
+		return nil, nil, err
+	}
+	return sig, data, nil
 }
 
 // signWithConfig is the internal sign implementation called from Handler.Sign.

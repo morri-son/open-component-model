@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -174,12 +173,13 @@ func resolveOfflineTrustedRoot(cfg *v1alpha1.Config, creds map[string]string) (r
 	return nil, nil
 }
 
-// trustedMaterialFromPublicKey creates a TrustedMaterial from an ECDSA public key.
-// It wraps the key in a non-expiring verifier that matches any hint.
-func trustedMaterialFromPublicKey(pubKey *ecdsa.PublicKey) (root.TrustedMaterial, error) {
-	verifier, err := signature.LoadECDSAVerifier(pubKey, crypto.SHA256)
+// trustedMaterialFromPublicKey creates a TrustedMaterial from a public key.
+// Supported types: ECDSA (P-256, P-384, P-521) and Ed25519.
+// The key is wrapped in a non-expiring verifier that matches any hint.
+func trustedMaterialFromPublicKey(pubKey crypto.PublicKey) (root.TrustedMaterial, error) {
+	verifier, err := signature.LoadVerifier(pubKey, crypto.SHA256)
 	if err != nil {
-		return nil, fmt.Errorf("create ECDSA verifier: %w", err)
+		return nil, fmt.Errorf("create verifier: %w", err)
 	}
 
 	key := root.NewExpiringKey(verifier, time.Time{}, time.Time{})
