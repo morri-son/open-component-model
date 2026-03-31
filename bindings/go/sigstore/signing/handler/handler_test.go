@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -25,6 +26,8 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore-go/pkg/verify"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
@@ -772,6 +775,19 @@ func Test_ResolveOfflineTrustedRoot(t *testing.T) {
 		r.NoError(err)
 		r.Nil(tm, "should return nil when no offline sources are available")
 	})
+
+	t.Run("returns error for corrupted trusted root JSON", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.Config{}
+		creds := map[string]string{
+			credentials.CredentialKeyTrustedRootJSON: `{not valid json`,
+		}
+
+		_, err := resolveOfflineTrustedRoot(cfg, creds)
+		r.Error(err)
+	})
 }
 
 // ---- ecdsaKeypair unit tests ----
@@ -784,23 +800,36 @@ func Test_ecdsaKeypair(t *testing.T) {
 	kp, err := newECDSAKeypair(key)
 	r.NoError(err)
 
-	r.NotEmpty(kp.GetHint())
+	// Algorithm details must match PKIX_ECDSA_P256_SHA_256, identical to
+	// sigstore-go's EphemeralKeypair defaults.
+	r.Equal(protocommon.HashAlgorithm_SHA2_256, kp.GetHashAlgorithm())
+	r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, kp.GetSigningAlgorithm())
 	r.Equal("ECDSA", kp.GetKeyAlgorithm())
+
+	// Hint must match sigstore-go's computation: base64(sha256(DER public key)).
+	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	r.NoError(err)
+	expectedHash := sha256.Sum256(pubDER)
+	expectedHint := []byte(base64.StdEncoding.EncodeToString(expectedHash[:]))
+	r.Equal(expectedHint, kp.GetHint())
 
 	pubPEM, err := kp.GetPublicKeyPem()
 	r.NoError(err)
 	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
 
+	// Verify SignData via signature.LoadVerifierWithOpts, mirroring sigstore-go's
+	// own keys_test.go pattern rather than raw ecdsa.VerifyASN1.
 	data := []byte("test data to sign")
 	sig, digest, err := kp.SignData(t.Context(), data)
 	r.NoError(err)
 	r.NotEmpty(sig)
-	r.NotEmpty(digest)
 
-	// Verify the signature is valid ECDSA
 	h := sha256.Sum256(data)
 	r.Equal(h[:], digest)
-	r.True(ecdsa.VerifyASN1(&key.PublicKey, digest, sig))
+
+	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA256))
+	r.NoError(err)
+	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
 }
 
 // ===========================================================================
