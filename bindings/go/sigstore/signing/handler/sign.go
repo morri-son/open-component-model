@@ -53,16 +53,26 @@ func doSign(
 
 	opts := sign.BundleOptions{Context: ctx}
 
-	if cfg.SigningConfigPath != "" {
+	switch {
+	case cfg.SigningConfigPath != "":
 		if err := configureFromSigningConfig(&opts, cfg, idToken); err != nil {
 			return descruntime.SignatureInfo{}, err
 		}
-	} else {
+	case hasExplicitEndpoints(cfg) || cfg.SkipRekor:
 		if err := configureCertificateProvider(&opts, cfg, idToken); err != nil {
 			return descruntime.SignatureInfo{}, err
 		}
 		configureTimestampAuthority(&opts, cfg)
 		configureTransparencyLog(&opts, cfg)
+	default:
+		slog.InfoContext(ctx, "no explicit Sigstore endpoints configured, fetching signing config from public-good TUF")
+		sc, err := root.FetchSigningConfig()
+		if err != nil {
+			return descruntime.SignatureInfo{}, fmt.Errorf("fetch public Sigstore signing config: %w", err)
+		}
+		if err := applySigningConfig(&opts, sc, idToken); err != nil {
+			return descruntime.SignatureInfo{}, err
+		}
 	}
 
 	// When a trusted root is available from an offline source, set it on
@@ -190,6 +200,12 @@ func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
 	opts.TransparencyLogs = append(opts.TransparencyLogs, sign.NewRekor(rekorOpts))
 }
 
+// hasExplicitEndpoints returns true when the config contains at least one
+// explicitly configured Sigstore service endpoint.
+func hasExplicitEndpoints(cfg *v1alpha1.Config) bool {
+	return cfg.FulcioURL != "" || cfg.RekorURL != "" || cfg.TSAURL != ""
+}
+
 // configureFromSigningConfig loads a signing_config.json and uses it to discover
 // Fulcio, Rekor, and TSA endpoints, replacing the individual URL config fields.
 func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, idToken string) error {
@@ -197,7 +213,12 @@ func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, 
 	if err != nil {
 		return fmt.Errorf("load signing config: %w", err)
 	}
+	return applySigningConfig(opts, sc, idToken)
+}
 
+// applySigningConfig configures bundle options from a SigningConfig, selecting
+// the best available Fulcio, Rekor, and TSA service endpoints.
+func applySigningConfig(opts *sign.BundleOptions, sc *root.SigningConfig, idToken string) error {
 	now := time.Now()
 
 	if idToken != "" {
