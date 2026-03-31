@@ -17,13 +17,36 @@ func init() {
 
 // Config defines configuration for Sigstore-based signing and verification.
 //
-// The library does not provide default endpoint URLs. All URLs must be explicitly
-// configured, either individually (FulcioURL, RekorURL, TSAURL) or via a
-// SigningConfigPath. CLI layers should set appropriate defaults for user convenience.
+// # Endpoint Discovery
 //
-// For keyless verification, at least one identity field (ExpectedIssuer, ExpectedSAN,
-// or their regex variants) must be set. If no identity fields and no public key
-// credential are provided, verification returns an error.
+// When no endpoint URLs (FulcioURL, RekorURL, TSAURL), SigningConfigPath, or SkipRekor
+// are configured, the library automatically fetches the public-good Sigstore signing
+// configuration and trusted root from the Sigstore TUF repository. This enables
+// zero-configuration signing and verification against the public Sigstore infrastructure.
+// This matches the default behavior of Cosign v3 (https://blog.sigstore.dev/cosign-3-0-available/).
+//
+// To use explicit endpoints instead, set the individual URL fields or provide a
+// SigningConfigPath. SkipRekor disables transparency log integration entirely.
+//
+// # Signing Modes
+//
+// Keyless: an OIDC token (from credentials or interactive browser flow) produces a
+// short-lived Fulcio certificate embedded in the bundle along with the signer's identity.
+//
+// Key-based: a private key from credentials signs the artifact. The bundle stores only a
+// public key hint (an opaque identifier), not the actual public key material. This follows
+// the Sigstore bundle specification: "Like traditional PKI key distribution the format of
+// the hint must be agreed upon out of band by the signer and the verifiers. The key itself
+// is not embedded in the Sigstore bundle." (https://docs.sigstore.dev/about/bundle)
+//
+// # Verification Modes
+//
+// Keyless verification requires at least one identity field (ExpectedIssuer, ExpectedSAN,
+// or their regex variants). The Fulcio certificate in the bundle is validated against the
+// trusted root's CA key and the identity constraints. No external key material is needed.
+//
+// Key-based verification requires the public key to be provided out of band via credentials,
+// since the bundle only contains a hint. Without the public key, verification fails.
 //
 // +k8s:deepcopy-gen:interfaces=ocm.software/open-component-model/bindings/go/runtime.Typed
 // +k8s:deepcopy-gen=true
