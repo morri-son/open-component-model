@@ -52,12 +52,12 @@ func (*Handler) GetSigningCredentialConsumerIdentity(
 	_ descruntime.Digest,
 	rawCfg runtime.Typed,
 ) (runtime.Identity, error) {
+	if got := rawCfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.SignConfigType {
+		return nil, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
+	}
 	var cfg v1alpha1.SignConfig
 	if err := v1alpha1.Scheme.Convert(rawCfg, &cfg); err != nil {
 		return nil, fmt.Errorf("convert config: %w", err)
-	}
-	if got := cfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.SignConfigType {
-		return nil, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
 	}
 	id := signingIdentity()
 	id[IdentityAttributeSignature] = name

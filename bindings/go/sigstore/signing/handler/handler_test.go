@@ -185,6 +185,53 @@ func Test_Handler_Verify_InvalidConfig(t *testing.T) {
 	r.Contains(err.Error(), "convert config")
 }
 
+func Test_Handler_Sign_WrongConfigType(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+	h := newHandler(t)
+
+	// Pass a VerifyConfig type to Sign — should be rejected by the type guard.
+	wrongCfg := &runtime.Raw{
+		Data: []byte(`{}`),
+	}
+	wrongCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+	key := mustECDSAKey(t)
+	creds := map[string]string{
+		credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
+	}
+
+	_, err := h.Sign(t.Context(), sampleDigest(t), wrongCfg, creds)
+	r.Error(err)
+	r.Contains(err.Error(), "expected config type")
+}
+
+func Test_Handler_Verify_WrongConfigType(t *testing.T) {
+	t.Parallel()
+	r := require.New(t)
+	h := newHandler(t)
+
+	// Pass a SignConfig type to Verify — should be rejected by the type guard.
+	wrongCfg := &runtime.Raw{
+		Data: []byte(`{}`),
+	}
+	wrongCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+
+	signed := descruntime.Signature{
+		Name:   "test-sig",
+		Digest: sampleDigest(t),
+		Signature: descruntime.SignatureInfo{
+			Algorithm: v1alpha1.AlgorithmSigstore,
+			MediaType: v1alpha1.MediaTypeSigstoreBundle,
+			Value:     "dW51c2Vk",
+		},
+	}
+
+	err := h.Verify(t.Context(), signed, wrongCfg, map[string]string{})
+	r.Error(err)
+	r.Contains(err.Error(), "expected config type")
+}
+
 // ---- helpers for sign tests ----
 
 func mustECDSAKey(t *testing.T) *ecdsa.PrivateKey {
@@ -575,6 +622,46 @@ func Test_Handler_Verify(t *testing.T) {
 		}
 
 		pubDER, err := x509.MarshalPKIXPublicKey(key.Public())
+		r.NoError(err)
+		pubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))
+
+		verifyCreds := map[string]string{
+			credentials.CredentialKeyPublicKeyPEM: pubPEM,
+		}
+
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
+		r.NoError(err)
+	})
+
+	t.Run("ECDSA P-384 sign-then-verify roundtrip (offline)", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+		h := newHandler(t)
+
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		r.NoError(err)
+		digest := sampleDigest(t)
+
+		privDER, err := x509.MarshalECPrivateKey(key)
+		r.NoError(err)
+		privPEM := string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privDER}))
+
+		signCreds := map[string]string{
+			credentials.CredentialKeyPrivateKeyPEM: privPEM,
+		}
+
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
+		r.NoError(err)
+		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
+		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
+
+		signed := descruntime.Signature{
+			Name:      "test-sig-p384",
+			Digest:    digest,
+			Signature: sigInfo,
+		}
+
+		pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
 		r.NoError(err)
 		pubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))
 
@@ -1646,13 +1733,14 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		trustedRoot := makeTrustedRootJSON(t)
+		trustedRoot := makeTrustedRootWithRekorJSON(t)
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
+		r.Greater(len(tm.RekorLogs()), 0, "trusted material should have Rekor log entries")
 
 		v, err := buildVerifier(tm, false)
 		r.NoError(err)
-		r.NotNil(v, "should build verifier")
+		r.NotNil(v, "should build verifier with transparency log requirement")
 	})
 
 	t.Run("empty Rekor logs auto-detects no transparency log requirement", func(t *testing.T) {
@@ -1668,6 +1756,37 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NotNil(v, "should build verifier without tlog when no Rekor logs in trusted material")
 	})
 
+}
+
+func Test_BuildVerifier_KeyBased(t *testing.T) {
+	t.Parallel()
+
+	t.Run("key-based with Rekor logs enables transparency log", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootWithRekorJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+		r.Greater(len(tm.RekorLogs()), 0, "trusted material should have Rekor log entries")
+
+		v, err := buildVerifier(tm, true)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier with transparency log for key-based when Rekor logs present")
+	})
+
+	t.Run("key-based without Rekor logs auto-detects", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
+		r.NoError(err)
+
+		v, err := buildVerifier(tm, true)
+		r.NoError(err)
+		r.NotNil(v, "should build verifier without tlog for key-based when no Rekor logs")
+	})
 }
 
 // ---- Keyless sign flow (ephemeral keypair, offline) ----
@@ -1724,7 +1843,7 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 
 }
 
-// ---- makeTrustedRootJSON helper ----
+// ---- makeTrustedRoot helpers ----
 
 // makeTrustedRootJSON creates a minimal valid trusted root JSON for testing.
 // This is a structurally valid protobuf-specs TrustedRoot with empty authority lists.
@@ -1734,6 +1853,47 @@ func makeTrustedRootJSON(t *testing.T) []byte {
 	tr := map[string]any{
 		"mediaType":              "application/vnd.dev.sigstore.trustedroot+json;version=0.1",
 		"tlogs":                  []any{},
+		"certificateAuthorities": []any{},
+		"ctlogs":                 []any{},
+		"timestampAuthorities":   []any{},
+	}
+
+	data, err := json.Marshal(tr)
+	require.NoError(t, err)
+	return data
+}
+
+// makeTrustedRootWithRekorJSON creates a trusted root JSON with a Rekor transparency
+// log entry so that len(trustedMaterial.RekorLogs()) > 0 is true.
+func makeTrustedRootWithRekorJSON(t *testing.T) []byte {
+	t.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	require.NoError(t, err)
+
+	logIDHash := sha256.Sum256(pubDER)
+
+	tr := map[string]any{
+		"mediaType": "application/vnd.dev.sigstore.trustedroot+json;version=0.1",
+		"tlogs": []any{
+			map[string]any{
+				"baseUrl":       "https://rekor.example.com",
+				"hashAlgorithm": "SHA2_256",
+				"logId": map[string]any{
+					"keyId": base64.StdEncoding.EncodeToString(logIDHash[:]),
+				},
+				"publicKey": map[string]any{
+					"rawBytes":   base64.StdEncoding.EncodeToString(pubDER),
+					"keyDetails": "PKIX_ECDSA_P256_SHA_256",
+					"validFor": map[string]any{
+						"start": "2020-01-01T00:00:00Z",
+					},
+				},
+			},
+		},
 		"certificateAuthorities": []any{},
 		"ctlogs":                 []any{},
 		"timestampAuthorities":   []any{},
@@ -2239,6 +2399,76 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		v, err := buildVerifier(tm, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with integrated timestamps")
+	})
+}
+
+// ---- resolveTrustedRootExplicit tests ----
+
+func Test_ResolveTrustedRootExplicit(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns trusted root from credentials JSON", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		creds := map[string]string{
+			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
+		}
+
+		tm, err := resolveTrustedRootExplicit(t.Context(), &v1alpha1.VerifyConfig{}, creds)
+		r.NoError(err)
+		r.NotNil(tm, "should resolve trusted root from credentials")
+	})
+
+	t.Run("returns trusted root from TrustedRootPath", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		dir := t.TempDir()
+		trPath := filepath.Join(dir, "trusted_root.json")
+		r.NoError(os.WriteFile(trPath, trustedRoot, 0o644))
+
+		cfg := &v1alpha1.VerifyConfig{TrustedRootPath: trPath}
+		tm, err := resolveTrustedRootExplicit(t.Context(), cfg, map[string]string{})
+		r.NoError(err)
+		r.NotNil(tm, "should resolve trusted root from file path")
+	})
+
+	t.Run("returns nil when no source configured", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		tm, err := resolveTrustedRootExplicit(t.Context(), &v1alpha1.VerifyConfig{}, map[string]string{})
+		r.NoError(err)
+		r.Nil(tm, "should return nil when no source is configured")
+	})
+
+	t.Run("TUFRootURL without TUFInitialRoot fails", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{TUFRootURL: "https://tuf.example.com"}
+		tm, err := resolveTrustedRootExplicit(t.Context(), cfg, map[string]string{})
+		r.Error(err)
+		r.Contains(err.Error(), "TUFInitialRoot is required")
+		r.Nil(tm)
+	})
+
+	t.Run("credentials take precedence over TrustedRootPath", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		trustedRoot := makeTrustedRootJSON(t)
+		creds := map[string]string{
+			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
+		}
+
+		cfg := &v1alpha1.VerifyConfig{TrustedRootPath: "/nonexistent/path"}
+		tm, err := resolveTrustedRootExplicit(t.Context(), cfg, creds)
+		r.NoError(err)
+		r.NotNil(tm, "credentials should take precedence over config path")
 	})
 }
 

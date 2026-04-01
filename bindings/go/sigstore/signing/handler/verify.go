@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -186,7 +188,7 @@ func resolveOfflineTrustedRoot(creds map[string]string) (root.TrustedMaterial, e
 // Supported types: ECDSA (P-256, P-384, P-521) and Ed25519.
 // The key is wrapped in a non-expiring verifier that matches any hint.
 func trustedMaterialFromPublicKey(pubKey crypto.PublicKey) (root.TrustedMaterial, error) {
-	verifier, err := signature.LoadVerifier(pubKey, crypto.SHA256)
+	verifier, err := signature.LoadVerifier(pubKey, hashForKey(pubKey))
 	if err != nil {
 		return nil, fmt.Errorf("create verifier: %w", err)
 	}
@@ -196,6 +198,21 @@ func trustedMaterialFromPublicKey(pubKey crypto.PublicKey) (root.TrustedMaterial
 	return root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
 		return key, nil
 	}), nil
+}
+
+// hashForKey returns the hash algorithm appropriate for the given public key.
+// ECDSA curves use their canonical hash (P-256→SHA-256, P-384→SHA-384, P-521→SHA-512).
+// Ed25519 and all other types default to SHA-256.
+func hashForKey(pubKey crypto.PublicKey) crypto.Hash {
+	if k, ok := pubKey.(*ecdsa.PublicKey); ok {
+		switch k.Curve {
+		case elliptic.P384():
+			return crypto.SHA384
+		case elliptic.P521():
+			return crypto.SHA512
+		}
+	}
+	return crypto.SHA256
 }
 
 // trustedMaterialFromTUF fetches a trusted root from a custom TUF mirror.
@@ -313,12 +330,13 @@ func verifyWithConfig(
 	creds map[string]string,
 	scheme *runtime.Scheme,
 ) error {
+	if got := rawCfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.VerifyConfigType {
+		return fmt.Errorf("expected config type %s but got %s", v1alpha1.VerifyConfigType, got)
+	}
+
 	var cfg v1alpha1.VerifyConfig
 	if err := scheme.Convert(rawCfg, &cfg); err != nil {
 		return fmt.Errorf("convert config: %w", err)
-	}
-	if got := cfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.VerifyConfigType {
-		return fmt.Errorf("expected config type %s but got %s", v1alpha1.VerifyConfigType, got)
 	}
 
 	return doVerify(ctx, signed, &cfg, creds)
