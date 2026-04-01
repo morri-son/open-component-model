@@ -57,13 +57,13 @@ func doSign(
 		if err := configureFromSigningConfig(&opts, cfg, idToken); err != nil {
 			return descruntime.SignatureInfo{}, err
 		}
-	case hasExplicitEndpoints(cfg) || cfg.SkipRekor:
+	case hasExplicitEndpoints(cfg):
 		if err := configureCertificateProvider(&opts, cfg, idToken); err != nil {
 			return descruntime.SignatureInfo{}, err
 		}
 		configureTimestampAuthority(&opts, cfg)
 		configureTransparencyLog(&opts, cfg)
-	default:
+	case idToken != "":
 		slog.InfoContext(ctx, "no explicit Sigstore endpoints configured, fetching signing config from public-good TUF")
 		sc, err := root.FetchSigningConfig()
 		if err != nil {
@@ -72,6 +72,11 @@ func doSign(
 		if err := applySigningConfig(&opts, sc, idToken); err != nil {
 			return descruntime.SignatureInfo{}, err
 		}
+	default:
+		// Key-based signing without explicit endpoints: produce a minimal bundle
+		// with only the signature and public key hint (no Fulcio, Rekor, or TSA).
+		// This matches cosign's default behavior (--tlog-upload=false since v1.14.0).
+		slog.InfoContext(ctx, "key-based signing with no explicit endpoints, producing minimal bundle")
 	}
 
 	// When a trusted root is available from an offline source and we are
@@ -182,7 +187,7 @@ func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.SignCon
 }
 
 func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.SignConfig) {
-	if cfg.SkipRekor || cfg.RekorURL == "" {
+	if cfg.RekorURL == "" {
 		return
 	}
 	rekorOpts := &sign.RekorOptions{

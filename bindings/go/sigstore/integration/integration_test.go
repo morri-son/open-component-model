@@ -780,19 +780,15 @@ func Test_Integration_TUF_TrustedRoot(t *testing.T) {
 	r.NoError(err, "verification via TUF trusted root should succeed")
 }
 
-func Test_Integration_SkipRekor_KeyBased(t *testing.T) {
+func Test_Integration_KeyBased_MinimalBundle(t *testing.T) {
 	skipUnlessIntegration(t)
 	r := require.New(t)
 
 	h := newTestHandler(t)
-	digest := uniqueDigest(t, "skip-rekor")
+	digest := uniqueDigest(t, "minimal-bundle")
 
-	// Sign normally with Rekor v1 — the bundle will contain a tlog entry.
-	v1URL := envOrDefault("SIGSTORE_REKOR_URL", "https://rekor.sigstore.dev")
-	v1Root := os.Getenv("SIGSTORE_TRUSTED_ROOT_PATH")
-	signCfg := &v1alpha1.SignConfig{
-		RekorURL: v1URL,
-	}
+	// Sign without explicit endpoints — produces a minimal bundle (no Rekor entry).
+	signCfg := &v1alpha1.SignConfig{}
 	setSignType(signCfg)
 
 	key := mustECDSAKey(t)
@@ -802,21 +798,18 @@ func Test_Integration_SkipRekor_KeyBased(t *testing.T) {
 	r.NoError(err)
 
 	signed := descruntime.Signature{
-		Name:      "integration-skip-rekor",
+		Name:      "integration-minimal",
 		Digest:    digest,
 		Signature: sigInfo,
 	}
 
-	// Verify with SkipRekor: only checks the signature against the public key,
-	// tlog entries in the bundle are ignored.
-	verifyCfg := &v1alpha1.VerifyConfig{
-		SkipRekor:       true,
-		TrustedRootPath: v1Root,
-	}
+	// Verify with only a public key — no trusted root needed for key-based
+	// verification of a minimal bundle (no tlog entries to verify).
+	verifyCfg := &v1alpha1.VerifyConfig{}
 	setVerifyType(verifyCfg)
 
 	err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 		credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 	})
-	r.NoError(err, "SkipRekor key-based verification should succeed")
+	r.NoError(err, "key-based minimal bundle verification should succeed")
 }
