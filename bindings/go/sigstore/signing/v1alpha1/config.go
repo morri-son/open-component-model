@@ -80,10 +80,6 @@ type SignConfig struct {
 	// When 0 (default), version 1 is used for direct URL mode.
 	// When a SigningConfigPath is provided, the highest available version is auto-selected.
 	RekorVersion uint32 `json:"rekorVersion,omitempty"`
-
-	// SkipRekor disables transparency log integration during signing.
-	// When true, signatures are not uploaded to Rekor.
-	SkipRekor bool `json:"skipRekor,omitempty"`
 }
 
 // VerifyConfig defines configuration for Sigstore-based verification.
@@ -92,6 +88,8 @@ type SignConfig struct {
 //
 // Trusted root material is resolved from credentials, TrustedRootPath,
 // TUFRootURL, or (as a fallback) the public-good Sigstore TUF repository.
+// For key-based verification, TUF auto-discovery is skipped when no explicit
+// source is configured — the public key alone is sufficient.
 //
 // # Verification Modes
 //
@@ -101,6 +99,11 @@ type SignConfig struct {
 //
 // Key-based verification requires the public key to be provided out of band via credentials,
 // since the bundle only contains a hint. Without the public key, verification fails.
+//
+// Transparency log and timestamp requirements are auto-detected from the trusted material:
+// if the trusted root contains Rekor log entries, transparency log verification is enforced;
+// if it contains timestamping authorities, observer timestamps are required; otherwise,
+// integrated timestamps (Rekor v1 SETs) are expected.
 //
 // +k8s:deepcopy-gen:interfaces=ocm.software/open-component-model/bindings/go/runtime.Typed
 // +k8s:deepcopy-gen=true
@@ -142,8 +145,4 @@ type VerifyConfig struct {
 	// ExpectedSANRegex is a regular expression to match the Subject Alternative Name.
 	// Mutually exclusive with ExpectedSAN — if both are set, ExpectedSAN takes precedence.
 	ExpectedSANRegex string `json:"expectedSANRegex,omitempty"`
-
-	// SkipRekor disables transparency log verification.
-	// When true, Rekor entries are not required for verification.
-	SkipRekor bool `json:"skipRekor,omitempty"`
 }

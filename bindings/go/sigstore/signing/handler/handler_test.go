@@ -219,17 +219,13 @@ func sampleDigest(t *testing.T) descruntime.Digest {
 }
 
 func offlineSignConfig() *v1alpha1.SignConfig {
-	cfg := &v1alpha1.SignConfig{
-		SkipRekor: true,
-	}
+	cfg := &v1alpha1.SignConfig{}
 	cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 	return cfg
 }
 
 func offlineVerifyConfig() *v1alpha1.VerifyConfig {
-	cfg := &v1alpha1.VerifyConfig{
-		SkipRekor: true,
-	}
+	cfg := &v1alpha1.VerifyConfig{}
 	cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 	return cfg
 }
@@ -484,7 +480,6 @@ func Test_Handler_Verify(t *testing.T) {
 		// network-dependent fallback. Without a public key, trusted root,
 		// or reachable TUF mirror, verification must fail deterministically.
 		verifyCfg := &v1alpha1.VerifyConfig{
-			SkipRekor:  true,
 			TUFRootURL: "https://nonexistent-tuf.invalid",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
@@ -609,19 +604,18 @@ func Test_ConfigureTransparencyLog_RekorVersion(t *testing.T) {
 	r.Len(opts.TransparencyLogs, 1, "should add one transparency log")
 }
 
-func Test_ConfigureTransparencyLog_SkipRekor(t *testing.T) {
+func Test_ConfigureTransparencyLog_NoRekorURL(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
 	cfg := &v1alpha1.SignConfig{
-		SkipRekor:    true,
 		RekorVersion: 2,
 	}
 
 	var opts sign.BundleOptions
 	configureTransparencyLog(&opts, cfg)
 
-	r.Empty(opts.TransparencyLogs, "SkipRekor should prevent adding transparency logs")
+	r.Empty(opts.TransparencyLogs, "empty RekorURL should prevent adding transparency logs")
 }
 
 func Test_ConfigureTransparencyLog_DefaultVersion(t *testing.T) {
@@ -1648,7 +1642,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 func Test_BuildVerifier_Keyless(t *testing.T) {
 	t.Parallel()
 
-	t.Run("default config requires transparency log", func(t *testing.T) {
+	t.Run("trusted material with Rekor logs requires transparency log", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1656,13 +1650,12 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		cfg := &v1alpha1.VerifyConfig{}
-		v, err := buildVerifier(tm, cfg, false)
+		v, err := buildVerifier(tm, false)
 		r.NoError(err)
-		r.NotNil(v, "should build verifier with tlog requirement")
+		r.NotNil(v, "should build verifier")
 	})
 
-	t.Run("SkipRekor disables transparency log", func(t *testing.T) {
+	t.Run("empty Rekor logs auto-detects no transparency log requirement", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1670,10 +1663,9 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
-		v, err := buildVerifier(tm, cfg, false)
+		v, err := buildVerifier(tm, false)
 		r.NoError(err)
-		r.NotNil(v, "should build verifier without tlog")
+		r.NotNil(v, "should build verifier without tlog when no Rekor logs in trusted material")
 	})
 
 }
@@ -1695,7 +1687,6 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 		}
 		cfg := &v1alpha1.SignConfig{
 			FulcioURL: "https://fulcio.example.com",
-			SkipRekor: true,
 		}
 		cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
@@ -1886,7 +1877,6 @@ func Test_ValidateConfig(t *testing.T) {
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 		cfg := &v1alpha1.SignConfig{
-			SkipRekor:    true,
 			RekorVersion: 3,
 		}
 		cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
@@ -1977,8 +1967,7 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
-		cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
-		v, err := buildVerifier(tm, cfg, false)
+		v, err := buildVerifier(tm, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with SCT requirement for keyless")
 	})
@@ -1992,8 +1981,7 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
-		cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
-		v, err := buildVerifier(tm, cfg, true)
+		v, err := buildVerifier(tm, true)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier without SCT for key-based")
 	})
@@ -2012,11 +2000,6 @@ func Test_HasExplicitEndpoints(t *testing.T) {
 		{
 			name:     "empty config",
 			cfg:      &v1alpha1.SignConfig{},
-			expected: false,
-		},
-		{
-			name:     "only SkipRekor",
-			cfg:      &v1alpha1.SignConfig{SkipRekor: true},
 			expected: false,
 		},
 		{
@@ -2239,8 +2222,7 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.TimestampingAuthorities()), 0, "trusted material should have TSA")
 
-		cfg := &v1alpha1.VerifyConfig{}
-		v, err := buildVerifier(tm, cfg, false)
+		v, err := buildVerifier(tm, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with observer timestamps from material TSA")
 	})
@@ -2254,23 +2236,11 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		r.NoError(err)
 		r.Empty(tm.TimestampingAuthorities(), "trusted material should not have TSA")
 
-		cfg := &v1alpha1.VerifyConfig{}
-		v, err := buildVerifier(tm, cfg, false)
+		v, err := buildVerifier(tm, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with integrated timestamps")
 	})
 }
 
 // ---- resolveTrustedRoot auto-discovery tests ----
-
-func Test_ResolveTrustedRoot_SkipRekor_NoFallback(t *testing.T) {
-	t.Parallel()
-	r := require.New(t)
-
-	cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
-	creds := map[string]string{}
-
-	tm, err := resolveTrustedRoot(t.Context(), cfg, creds)
-	r.NoError(err)
-	r.Nil(tm, "SkipRekor with no explicit source should return nil without fetching public TUF")
-}
+// (Tests requiring network access for TUF auto-discovery are in integration tests.)

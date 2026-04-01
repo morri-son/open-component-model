@@ -4,7 +4,7 @@
   "$id": "ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1/schemas/SignConfig.schema.json",
   "title": "SignConfig",
   "type": "object",
-  "description": "SignConfig defines configuration for Sigstore-based signing.\n\n# Endpoint Discovery\n\nWhen no endpoint URLs (FulcioURL, RekorURL, TSAURL), SigningConfigPath, or SkipRekor\nare configured, the library automatically fetches the public-good Sigstore signing\nconfiguration and trusted root from the Sigstore TUF repository. This enables\nzero-configuration signing against the public Sigstore infrastructure.\nThis matches the default behavior of Cosign v3 (https://blog.sigstore.dev/cosign-3-0-available/).\n\nTo use explicit endpoints instead, set the individual URL fields or provide a\nSigningConfigPath. SkipRekor disables transparency log integration entirely.\n\n# Signing Modes\n\nKeyless: an OIDC token (from credentials or interactive browser flow) produces a\nshort-lived Fulcio certificate embedded in the bundle along with the signer's identity.\n\nKey-based: a private key from credentials signs the artifact. The bundle stores only a\npublic key hint (an opaque identifier), not the actual public key material. This follows\nthe Sigstore bundle specification: \"Like traditional PKI key distribution the format of\nthe hint must be agreed upon out of band by the signer and the verifiers. The key itself\nis not embedded in the Sigstore bundle.\" (https://docs.sigstore.dev/about/bundle)",
+  "description": "SignConfig defines configuration for Sigstore-based signing.\n\n# Endpoint Discovery\n\nWhen no endpoint URLs (FulcioURL, RekorURL, TSAURL) or SigningConfigPath\nare configured, the library automatically fetches the public-good Sigstore signing\nconfiguration from the Sigstore TUF repository. This enables\nzero-configuration signing against the public Sigstore infrastructure.\nThis matches the default behavior of Cosign v3 (https://blog.sigstore.dev/cosign-3-0-available/).\n\nTo use explicit endpoints instead, set the individual URL fields or provide a\nSigningConfigPath.\n\n# Signing Modes\n\nKeyless: an OIDC token (from credentials or a credential plugin) produces a\nshort-lived Fulcio certificate embedded in the bundle along with the signer's identity.\n\nKey-based: a private key from credentials signs the artifact. The bundle stores only a\npublic key hint (an opaque identifier), not the actual public key material. This follows\nthe Sigstore bundle specification: \"Like traditional PKI key distribution the format of\nthe hint must be agreed upon out of band by the signer and the verifiers. The key itself\nis not embedded in the Sigstore bundle.\" (https://docs.sigstore.dev/about/bundle)",
   "properties": {
     "fulcioURL": {
       "type": "string",
@@ -23,10 +23,6 @@
     "signingConfigPath": {
       "type": "string",
       "description": "SigningConfigPath is a filesystem path to a signing_config.json file.\nWhen set, service endpoints (Fulcio, Rekor, TSA) are discovered from this file\ninstead of using the individual URL fields. This is the standard Sigstore mechanism\nfor service endpoint discovery and supports automatic Rekor v2 selection."
-    },
-    "skipRekor": {
-      "type": "boolean",
-      "description": "SkipRekor disables transparency log integration.\nWhen true, signatures are not uploaded to Rekor."
     },
     "tsaURL": {
       "type": "string",

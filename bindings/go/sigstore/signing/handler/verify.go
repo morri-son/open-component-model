@@ -55,7 +55,7 @@ func doVerify(
 		return fmt.Errorf("resolve trusted material: %w", err)
 	}
 
-	verifier, err := buildVerifier(trustedMaterial, cfg, pubKey != nil)
+	verifier, err := buildVerifier(trustedMaterial, pubKey != nil)
 	if err != nil {
 		return fmt.Errorf("build verifier: %w", err)
 	}
@@ -88,13 +88,16 @@ func doVerify(
 // Without a public key the function falls back to a trusted root alone
 // (keyless / certificate-based verification).
 func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds map[string]string, pubKey crypto.PublicKey) (root.TrustedMaterial, error) {
-	trustedRoot, err := resolveTrustedRoot(ctx, cfg, creds)
-	if err != nil {
-		return nil, err
-	}
-
 	if pubKey != nil {
 		keyMaterial, err := trustedMaterialFromPublicKey(pubKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// For key-based verification, try to resolve a trusted root from
+		// explicit sources only. TUF auto-discovery is skipped because
+		// key-based verification works without infrastructure keys.
+		trustedRoot, err := resolveTrustedRootExplicit(ctx, cfg, creds)
 		if err != nil {
 			return nil, err
 		}
@@ -107,6 +110,11 @@ func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.VerifyConfig, cre
 		return keyMaterial, nil
 	}
 
+	// Keyless: a trusted root is required (for Fulcio CA chain verification).
+	trustedRoot, err := resolveTrustedRoot(ctx, cfg, creds)
+	if err != nil {
+		return nil, err
+	}
 	if trustedRoot != nil {
 		return trustedRoot, nil
 	}
@@ -114,15 +122,11 @@ func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.VerifyConfig, cre
 	return nil, fmt.Errorf("no trusted material available: provide a public key, trusted root, or enable network access for public-good TUF")
 }
 
-// resolveTrustedRoot loads a trusted root from the first available source:
-// credentials JSON, config file path, TUF (when TUFRootURL is set), or the
-// public-good Sigstore TUF repository (when no explicit source is configured
-// and Rekor is not skipped).
-//
-// Returns nil, nil only when SkipRekor is set and no explicit source is
-// configured. For all other zero-config cases the public-good trusted root
-// is fetched automatically.
-func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds map[string]string) (root.TrustedMaterial, error) {
+// resolveTrustedRootExplicit loads a trusted root from explicit sources only:
+// credentials JSON, config file path, or a configured TUF mirror URL.
+// It does NOT fall back to public-good TUF auto-discovery.
+// Returns nil, nil when no explicit source is configured.
+func resolveTrustedRootExplicit(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds map[string]string) (root.TrustedMaterial, error) {
 	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
 	if err != nil {
 		return nil, fmt.Errorf("load trusted root from credentials: %w", err)
@@ -135,13 +139,23 @@ func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds m
 		return root.NewTrustedRootFromPath(cfg.TrustedRootPath)
 	}
 
-	// TUF is only used when an explicit TUF mirror URL is configured.
 	if cfg.TUFRootURL != "" {
 		return trustedMaterialFromTUF(ctx, cfg)
 	}
 
-	if cfg.SkipRekor {
-		return nil, nil
+	return nil, nil
+}
+
+// resolveTrustedRoot loads a trusted root from the first available source:
+// credentials JSON, config file path, TUF (when TUFRootURL is set), or the
+// public-good Sigstore TUF repository as fallback.
+func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds map[string]string) (root.TrustedMaterial, error) {
+	tm, err := resolveTrustedRootExplicit(ctx, cfg, creds)
+	if err != nil {
+		return nil, err
+	}
+	if tm != nil {
+		return tm, nil
 	}
 
 	slog.InfoContext(ctx, "no trusted root configured, fetching from public-good Sigstore TUF")
@@ -208,27 +222,28 @@ func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.VerifyConfig) (ro
 	return root.GetTrustedRoot(client)
 }
 
-// buildVerifier creates a sigstore-go Verifier with appropriate options based on config.
+// buildVerifier creates a sigstore-go Verifier with appropriate options based on the
+// trusted material available. Transparency log and timestamp requirements are auto-detected
+// from the trusted material rather than configured explicitly.
+//
 // isKeyBased indicates whether the verification uses a public key (true) or certificates (false).
 // For certificate-based (keyless) verification, SCT verification is enabled when the
 // trusted material includes CT log authorities, following sigstore-go's reference pattern.
-func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.VerifyConfig, isKeyBased bool) (*verify.Verifier, error) {
+func buildVerifier(trustedMaterial root.TrustedMaterial, isKeyBased bool) (*verify.Verifier, error) {
 	var opts []verify.VerifierOption
 
-	switch {
-	case cfg.SkipRekor:
-		opts = append(opts, verify.WithNoObserverTimestamps())
-	default:
+	hasRekorLogs := len(trustedMaterial.RekorLogs()) > 0
+	if hasRekorLogs {
 		opts = append(opts, verify.WithTransparencyLog(1))
 
-		hasTSAFromMaterial := len(trustedMaterial.TimestampingAuthorities()) > 0
-		if hasTSAFromMaterial {
-			// Auto-discovery: TSA available in trusted material (e.g. from public-good TUF).
-			// WithObserverTimestamps accepts both v1 SETs and v2 TSA timestamps.
+		hasTSA := len(trustedMaterial.TimestampingAuthorities()) > 0
+		if hasTSA {
 			opts = append(opts, verify.WithObserverTimestamps(1))
 		} else {
 			opts = append(opts, verify.WithIntegratedTimestamps(1))
 		}
+	} else {
+		opts = append(opts, verify.WithNoObserverTimestamps())
 	}
 
 	if !isKeyBased && len(trustedMaterial.CTLogs()) > 0 {
