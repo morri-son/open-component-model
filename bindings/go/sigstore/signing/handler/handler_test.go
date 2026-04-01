@@ -45,9 +45,15 @@ func newHandler(t *testing.T) *Handler {
 	return New()
 }
 
-func defaultConfig() *v1alpha1.Config {
-	cfg := &v1alpha1.Config{}
-	cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+func defaultSignConfig() *v1alpha1.SignConfig {
+	cfg := &v1alpha1.SignConfig{}
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+	return cfg
+}
+
+func defaultVerifyConfig() *v1alpha1.VerifyConfig {
+	cfg := &v1alpha1.VerifyConfig{}
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 	return cfg
 }
 
@@ -74,7 +80,7 @@ func Test_Handler_GetSigningCredentialConsumerIdentity(t *testing.T) {
 				NormalisationAlgorithm: "jsonNormalisation/v2",
 				Value:                  "abc123",
 			},
-			defaultConfig(),
+			defaultSignConfig(),
 		)
 		r.NoError(err)
 		r.NotNil(id)
@@ -82,7 +88,7 @@ func Test_Handler_GetSigningCredentialConsumerIdentity(t *testing.T) {
 		r.Equal("my-signature", id[IdentityAttributeSignature])
 
 		idType := id.GetType()
-		r.Equal(credentials.IdentityTypeSigstore, idType)
+		r.Equal(credentials.IdentityTypeSign, idType)
 	})
 }
 
@@ -108,14 +114,14 @@ func Test_Handler_GetVerifyingCredentialConsumerIdentity(t *testing.T) {
 			},
 		}
 
-		id, err := h.GetVerifyingCredentialConsumerIdentity(t.Context(), sig, defaultConfig())
+		id, err := h.GetVerifyingCredentialConsumerIdentity(t.Context(), sig, defaultVerifyConfig())
 		r.NoError(err)
 		r.NotNil(id)
 		r.Equal(v1alpha1.AlgorithmSigstore, id[IdentityAttributeAlgorithm])
 		r.Equal("my-signature", id[IdentityAttributeSignature])
 
 		idType := id.GetType()
-		r.Equal(credentials.IdentityTypeSigstore, idType)
+		r.Equal(credentials.IdentityTypeVerify, idType)
 	})
 
 	t.Run("rejects unsupported media type", func(t *testing.T) {
@@ -132,7 +138,7 @@ func Test_Handler_GetVerifyingCredentialConsumerIdentity(t *testing.T) {
 			},
 		}
 
-		_, err := h.GetVerifyingCredentialConsumerIdentity(t.Context(), sig, defaultConfig())
+		_, err := h.GetVerifyingCredentialConsumerIdentity(t.Context(), sig, defaultVerifyConfig())
 		r.Error(err)
 		r.Contains(err.Error(), "unsupported media type")
 	})
@@ -148,7 +154,7 @@ func Test_Handler_Sign_InvalidConfig(t *testing.T) {
 	badCfg := &runtime.Raw{
 		Data: []byte(`{invalid`),
 	}
-	badCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+	badCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
 	_, err := h.Sign(t.Context(), sampleDigest(t), badCfg, map[string]string{})
 	r.Error(err)
@@ -163,7 +169,7 @@ func Test_Handler_Verify_InvalidConfig(t *testing.T) {
 	badCfg := &runtime.Raw{
 		Data: []byte(`{invalid`),
 	}
-	badCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+	badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
 	signed := descruntime.Signature{
 		Name:   "test-sig",
@@ -213,11 +219,19 @@ func sampleDigest(t *testing.T) descruntime.Digest {
 	}
 }
 
-func offlineConfig() *v1alpha1.Config {
-	cfg := &v1alpha1.Config{
+func offlineSignConfig() *v1alpha1.SignConfig {
+	cfg := &v1alpha1.SignConfig{
 		SkipRekor: true,
 	}
-	cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+	return cfg
+}
+
+func offlineVerifyConfig() *v1alpha1.VerifyConfig {
+	cfg := &v1alpha1.VerifyConfig{
+		SkipRekor: true,
+	}
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 	return cfg
 }
 
@@ -236,7 +250,7 @@ func Test_Handler_Sign(t *testing.T) {
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), sampleDigest(t), offlineConfig(), creds)
+		sigInfo, err := h.Sign(t.Context(), sampleDigest(t), offlineSignConfig(), creds)
 		r.NoError(err)
 
 		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
@@ -279,7 +293,7 @@ func Test_Handler_Sign(t *testing.T) {
 			Value:                  "not-valid-hex!",
 		}
 
-		_, err := h.Sign(t.Context(), badDigest, offlineConfig(), creds)
+		_, err := h.Sign(t.Context(), badDigest, offlineSignConfig(), creds)
 		r.Error(err)
 		r.Contains(err.Error(), "decode digest hex value")
 	})
@@ -293,7 +307,7 @@ func Test_Handler_Sign(t *testing.T) {
 			credentials.CredentialKeyPrivateKeyPEM: "not-a-pem",
 		}
 
-		_, err := h.Sign(t.Context(), sampleDigest(t), offlineConfig(), creds)
+		_, err := h.Sign(t.Context(), sampleDigest(t), offlineSignConfig(), creds)
 		r.Error(err)
 		r.Contains(err.Error(), "private key")
 	})
@@ -312,13 +326,12 @@ func Test_Handler_Verify(t *testing.T) {
 
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
 		r.NoError(err)
 
 		signed := descruntime.Signature{
@@ -331,7 +344,7 @@ func Test_Handler_Verify(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 		}
 
-		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
 		r.NoError(err)
 	})
 
@@ -343,13 +356,12 @@ func Test_Handler_Verify(t *testing.T) {
 		signKey := mustECDSAKey(t)
 		wrongKey := mustECDSAKey(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, signKey),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
 		r.NoError(err)
 
 		signed := descruntime.Signature{
@@ -362,7 +374,7 @@ func Test_Handler_Verify(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &wrongKey.PublicKey),
 		}
 
-		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
 		r.Error(err)
 		r.Contains(err.Error(), "verification failed")
 	})
@@ -374,13 +386,12 @@ func Test_Handler_Verify(t *testing.T) {
 
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
 		r.NoError(err)
 
 		tamperedDigest := descruntime.Digest{
@@ -399,7 +410,7 @@ func Test_Handler_Verify(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 		}
 
-		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
 		r.Error(err)
 		r.Contains(err.Error(), "verification failed")
 	})
@@ -419,7 +430,7 @@ func Test_Handler_Verify(t *testing.T) {
 			},
 		}
 
-		err := h.Verify(t.Context(), signed, offlineConfig(), map[string]string{
+		err := h.Verify(t.Context(), signed, offlineVerifyConfig(), map[string]string{
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &mustECDSAKey(t).PublicKey),
 		})
 		r.Error(err)
@@ -441,7 +452,7 @@ func Test_Handler_Verify(t *testing.T) {
 			},
 		}
 
-		err := h.Verify(t.Context(), signed, offlineConfig(), map[string]string{
+		err := h.Verify(t.Context(), signed, offlineVerifyConfig(), map[string]string{
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &mustECDSAKey(t).PublicKey),
 		})
 		r.Error(err)
@@ -456,7 +467,7 @@ func Test_Handler_Verify(t *testing.T) {
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
 
-		signCfg := offlineConfig()
+		signCfg := offlineSignConfig()
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
@@ -473,11 +484,11 @@ func Test_Handler_Verify(t *testing.T) {
 		// Force TUF to fail by pointing at an invalid URL, ensuring no
 		// network-dependent fallback. Without a public key, trusted root,
 		// or reachable TUF mirror, verification must fail deterministically.
-		verifyCfg := &v1alpha1.Config{
+		verifyCfg := &v1alpha1.VerifyConfig{
 			SkipRekor:  true,
 			TUFRootURL: "https://nonexistent-tuf.invalid",
 		}
-		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
 		err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{})
 		r.Error(err)
@@ -491,13 +502,12 @@ func Test_Handler_Verify(t *testing.T) {
 
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
 		r.NoError(err)
 
 		badDigest := descruntime.Digest{
@@ -516,7 +526,7 @@ func Test_Handler_Verify(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 		}
 
-		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
 		r.Error(err)
 		r.Contains(err.Error(), "decode digest hex")
 	})
@@ -528,13 +538,12 @@ func Test_Handler_Verify(t *testing.T) {
 
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
 		creds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, creds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), creds)
 		r.NoError(err)
 
 		signed := descruntime.Signature{
@@ -544,7 +553,7 @@ func Test_Handler_Verify(t *testing.T) {
 		}
 
 		// Verify with same private key cred — public key should be derived
-		err = h.Verify(t.Context(), signed, cfg, creds)
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), creds)
 		r.NoError(err)
 	})
 
@@ -555,13 +564,12 @@ func Test_Handler_Verify(t *testing.T) {
 
 		key := mustEd25519Key(t)
 		digest := sampleDigest(t)
-		cfg := offlineConfig()
 
 		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: mustPKCS8PrivateKeyPEM(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, cfg, signCreds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
 		r.NoError(err)
 		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
 		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
@@ -580,7 +588,7 @@ func Test_Handler_Verify(t *testing.T) {
 			credentials.CredentialKeyPublicKeyPEM: pubPEM,
 		}
 
-		err = h.Verify(t.Context(), signed, cfg, verifyCreds)
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
 		r.NoError(err)
 	})
 }
@@ -591,7 +599,7 @@ func Test_ConfigureTransparencyLog_RekorVersion(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.SignConfig{
 		RekorURL:     "https://custom-rekor.example.com",
 		RekorVersion: 2,
 	}
@@ -606,7 +614,7 @@ func Test_ConfigureTransparencyLog_SkipRekor(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.SignConfig{
 		SkipRekor:    true,
 		RekorVersion: 2,
 	}
@@ -621,7 +629,7 @@ func Test_ConfigureTransparencyLog_DefaultVersion(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.SignConfig{
 		RekorURL: "https://rekor.example.com",
 	}
 
@@ -650,7 +658,7 @@ func Test_ConfigureTimestampAuthority(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{TSAURL: "https://custom-tsa.example.com/api/v1/timestamp"}
+		cfg := &v1alpha1.SignConfig{TSAURL: "https://custom-tsa.example.com/api/v1/timestamp"}
 
 		var opts sign.BundleOptions
 		configureTimestampAuthority(&opts, cfg)
@@ -662,7 +670,7 @@ func Test_ConfigureTimestampAuthority(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.SignConfig{}
 
 		var opts sign.BundleOptions
 		configureTimestampAuthority(&opts, cfg)
@@ -708,7 +716,7 @@ func Test_ConfigureFromSigningConfig_ValidFile(t *testing.T) {
 	scPath := filepath.Join(dir, "signing_config.json")
 	r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.SignConfig{
 		SigningConfigPath: scPath,
 	}
 
@@ -743,7 +751,7 @@ func Test_ConfigureFromSigningConfig_NoIDToken_SkipsFulcio(t *testing.T) {
 	scPath := filepath.Join(dir, "signing_config.json")
 	r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.SignConfig{
 		SigningConfigPath: scPath,
 	}
 
@@ -760,7 +768,7 @@ func Test_ConfigureFromSigningConfig_InvalidPath(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.SignConfig{
 		SigningConfigPath: "/nonexistent/signing_config.json",
 	}
 
@@ -777,32 +785,32 @@ func Test_HasIdentityConfig(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		cfg    *v1alpha1.Config
+		cfg    *v1alpha1.VerifyConfig
 		expect bool
 	}{
 		{
 			name:   "empty config",
-			cfg:    &v1alpha1.Config{},
+			cfg:    &v1alpha1.VerifyConfig{},
 			expect: false,
 		},
 		{
 			name:   "issuer set",
-			cfg:    &v1alpha1.Config{ExpectedIssuer: "https://accounts.google.com"},
+			cfg:    &v1alpha1.VerifyConfig{ExpectedIssuer: "https://accounts.google.com"},
 			expect: true,
 		},
 		{
 			name:   "issuer regex set",
-			cfg:    &v1alpha1.Config{ExpectedIssuerRegex: ".*google.*"},
+			cfg:    &v1alpha1.VerifyConfig{ExpectedIssuerRegex: ".*google.*"},
 			expect: true,
 		},
 		{
 			name:   "SAN set",
-			cfg:    &v1alpha1.Config{ExpectedSAN: "user@example.com"},
+			cfg:    &v1alpha1.VerifyConfig{ExpectedSAN: "user@example.com"},
 			expect: true,
 		},
 		{
 			name:   "SAN regex set",
-			cfg:    &v1alpha1.Config{ExpectedSANRegex: ".*@example\\.com"},
+			cfg:    &v1alpha1.VerifyConfig{ExpectedSANRegex: ".*@example\\.com"},
 			expect: true,
 		},
 	}
@@ -822,7 +830,7 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.VerifyConfig{
 		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
 	}
 
@@ -841,28 +849,11 @@ func Test_ResolveOfflineTrustedRoot(t *testing.T) {
 		r := require.New(t)
 
 		trustedRoot := makeTrustedRootJSON(t)
-		cfg := &v1alpha1.Config{}
 		creds := map[string]string{
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveOfflineTrustedRoot(cfg, creds)
-		r.NoError(err)
-		r.NotNil(tm)
-	})
-
-	t.Run("returns trusted root from file path", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		dir := t.TempDir()
-		trPath := filepath.Join(dir, "trusted_root.json")
-		r.NoError(os.WriteFile(trPath, trustedRoot, 0o644))
-
-		cfg := &v1alpha1.Config{TrustedRootPath: trPath}
-
-		tm, err := resolveOfflineTrustedRoot(cfg, map[string]string{})
+		tm, err := resolveOfflineTrustedRoot(creds)
 		r.NoError(err)
 		r.NotNil(tm)
 	})
@@ -871,9 +862,7 @@ func Test_ResolveOfflineTrustedRoot(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{}
-
-		tm, err := resolveOfflineTrustedRoot(cfg, map[string]string{})
+		tm, err := resolveOfflineTrustedRoot(map[string]string{})
 		r.NoError(err)
 		r.Nil(tm, "should return nil when no offline sources are available")
 	})
@@ -882,12 +871,11 @@ func Test_ResolveOfflineTrustedRoot(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{}
 		creds := map[string]string{
 			credentials.CredentialKeyTrustedRootJSON: `{not valid json`,
 		}
 
-		_, err := resolveOfflineTrustedRoot(cfg, creds)
+		_, err := resolveOfflineTrustedRoot(creds)
 		r.Error(err)
 	})
 }
@@ -1265,7 +1253,7 @@ func Test_ConfigureCertificateProvider(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.SignConfig{
 			FulcioURL: "https://fulcio.example.com",
 		}
 		var opts sign.BundleOptions
@@ -1281,7 +1269,7 @@ func Test_ConfigureCertificateProvider(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.SignConfig{
 			FulcioURL: "https://fulcio.example.com",
 		}
 		var opts sign.BundleOptions
@@ -1296,7 +1284,7 @@ func Test_ConfigureCertificateProvider(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.SignConfig{}
 		var opts sign.BundleOptions
 		err := configureCertificateProvider(&opts, cfg, "my-token")
 		r.Error(err)
@@ -1534,7 +1522,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 		digestBytes, err := hex.DecodeString(digest.Value)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.VerifyConfig{
 			ExpectedIssuer: "https://accounts.google.com",
 			ExpectedSAN:    "user@example.com",
 		}
@@ -1557,7 +1545,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 		digestBytes, err := hex.DecodeString(digest.Value)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.VerifyConfig{
 			ExpectedIssuerRegex: ".*google.*",
 			ExpectedSANRegex:    ".*@example\\.com",
 		}
@@ -1579,7 +1567,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 		digestBytes, err := hex.DecodeString(digest.Value)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.VerifyConfig{}
 
 		_, err = buildPolicy(
 			bytes.NewReader(digestBytes),
@@ -1599,7 +1587,7 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 		digestBytes, err := hex.DecodeString(digest.Value)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.VerifyConfig{
 			ExpectedIssuer: "https://accounts.google.com",
 			ExpectedSAN:    "user@example.com",
 		}
@@ -1628,7 +1616,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 		trPath := filepath.Join(dir, "trusted_root.json")
 		r.NoError(os.WriteFile(trPath, trustedRoot, 0o644))
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.VerifyConfig{
 			TrustedRootPath: trPath,
 		}
 
@@ -1643,7 +1631,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 
 		trustedRoot := makeTrustedRootJSON(t)
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.VerifyConfig{}
 		creds := map[string]string{
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
@@ -1663,7 +1651,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 		r.NoError(os.WriteFile(trPath, trustedRoot, 0o644))
 
 		key := mustECDSAKey(t)
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.VerifyConfig{
 			TrustedRootPath: trPath,
 		}
 		creds := map[string]string{
@@ -1689,7 +1677,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 
 		trustedRoot := makeTrustedRootJSON(t)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.VerifyConfig{
 			TrustedRootPath: "/nonexistent/should/not/be/read",
 		}
 		creds := map[string]string{
@@ -1715,7 +1703,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.VerifyConfig{}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with tlog requirement")
@@ -1729,71 +1717,12 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		cfg := &v1alpha1.Config{SkipRekor: true}
+		cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier without tlog")
 	})
 
-	t.Run("TSAURL adds signed timestamp requirement", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com/api/v1/timestamp"}
-		v, err := buildVerifier(tm, cfg, false)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier with TSA requirement")
-	})
-
-	t.Run("RekorVersion 2 without TSA returns error for keyless", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		// Without a TSA, Rekor v2 bundles carry no timestamps at all (no SETs,
-		// no RFC 3161 timestamps). Keyless verification requires timestamps to
-		// prove the certificate was valid at signing time.
-		cfg := &v1alpha1.Config{RekorVersion: 2}
-		_, err = buildVerifier(tm, cfg, false)
-		r.Error(err)
-		r.Contains(err.Error(), "Rekor v2 requires a Timestamp Authority")
-	})
-
-	t.Run("RekorVersion 2 without TSA succeeds for key-based", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		// Key-based verification doesn't need timestamps — public keys don't expire.
-		cfg := &v1alpha1.Config{RekorVersion: 2}
-		v, err := buildVerifier(tm, cfg, true)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier for key-based Rekor v2 without TSA")
-	})
-
-	t.Run("RekorVersion 2 with TSA uses observer timestamps", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		cfg := &v1alpha1.Config{RekorVersion: 2, TSAURL: "https://tsa.example.com/api/v1/timestamp"}
-		v, err := buildVerifier(tm, cfg, false)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier for Rekor v2 with TSA")
-	})
 }
 
 // ---- Keyless sign flow (ephemeral keypair, offline) ----
@@ -1811,11 +1740,11 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 		creds := map[string]string{
 			credentials.CredentialKeyOIDCToken: "not-a-valid-jwt",
 		}
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.SignConfig{
 			FulcioURL: "https://fulcio.example.com",
 			SkipRekor: true,
 		}
-		cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
 		_, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
 		r.Error(err)
@@ -1830,7 +1759,7 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 		// No private key and no OIDC token → ephemeral keypair, no Fulcio,
 		// offline mode produces a valid bundle with a public key hint
 		creds := map[string]string{}
-		cfg := offlineConfig()
+		cfg := offlineSignConfig()
 
 		sigInfo, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
 		r.NoError(err)
@@ -1895,7 +1824,7 @@ func Test_ConfigureFromSigningConfig_ExpiredServices(t *testing.T) {
 		scPath := filepath.Join(dir, "signing_config.json")
 		r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
 
-		cfg := &v1alpha1.Config{SigningConfigPath: scPath}
+		cfg := &v1alpha1.SignConfig{SigningConfigPath: scPath}
 
 		var opts sign.BundleOptions
 		opts.Context = t.Context()
@@ -1924,7 +1853,7 @@ func Test_ConfigureFromSigningConfig_ExpiredServices(t *testing.T) {
 		scPath := filepath.Join(dir, "signing_config.json")
 		r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
 
-		cfg := &v1alpha1.Config{SigningConfigPath: scPath}
+		cfg := &v1alpha1.SignConfig{SigningConfigPath: scPath}
 
 		var opts sign.BundleOptions
 		opts.Context = t.Context()
@@ -1953,7 +1882,7 @@ func Test_ConfigureFromSigningConfig_ExpiredServices(t *testing.T) {
 		scPath := filepath.Join(dir, "signing_config.json")
 		r.NoError(os.WriteFile(scPath, []byte(signingConfigJSON), 0o644))
 
-		cfg := &v1alpha1.Config{SigningConfigPath: scPath}
+		cfg := &v1alpha1.SignConfig{SigningConfigPath: scPath}
 
 		var opts sign.BundleOptions
 		opts.Context = t.Context()
@@ -1971,25 +1900,25 @@ func Test_ValidateConfig(t *testing.T) {
 	t.Run("RekorVersion 0 is valid", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
-		r.NoError(validateConfig(&v1alpha1.Config{RekorVersion: 0}))
+		r.NoError(validateSignConfig(&v1alpha1.SignConfig{RekorVersion: 0}))
 	})
 
 	t.Run("RekorVersion 1 is valid", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
-		r.NoError(validateConfig(&v1alpha1.Config{RekorVersion: 1}))
+		r.NoError(validateSignConfig(&v1alpha1.SignConfig{RekorVersion: 1}))
 	})
 
 	t.Run("RekorVersion 2 is valid", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
-		r.NoError(validateConfig(&v1alpha1.Config{RekorVersion: 2}))
+		r.NoError(validateSignConfig(&v1alpha1.SignConfig{RekorVersion: 2}))
 	})
 
 	t.Run("RekorVersion 3 is rejected", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
-		err := validateConfig(&v1alpha1.Config{RekorVersion: 3})
+		err := validateSignConfig(&v1alpha1.SignConfig{RekorVersion: 3})
 		r.Error(err)
 		r.Contains(err.Error(), "unsupported RekorVersion 3")
 	})
@@ -2003,50 +1932,15 @@ func Test_ValidateConfig(t *testing.T) {
 		creds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.SignConfig{
 			SkipRekor:    true,
 			RekorVersion: 3,
 		}
-		cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
 		_, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
 		r.Error(err)
 		r.Contains(err.Error(), "unsupported RekorVersion 3")
-	})
-
-	t.Run("invalid RekorVersion blocks verify", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCfg := offlineConfig()
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-		sigInfo, err := h.Sign(t.Context(), digest, signCfg, signCreds)
-		r.NoError(err)
-
-		verifyCfg := &v1alpha1.Config{
-			SkipRekor:    true,
-			RekorVersion: 5,
-		}
-		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
-
-		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    digest,
-			Signature: sigInfo,
-		}
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-
-		err = h.Verify(t.Context(), signed, verifyCfg, verifyCreds)
-		r.Error(err)
-		r.Contains(err.Error(), "unsupported RekorVersion 5")
 	})
 }
 
@@ -2057,7 +1951,7 @@ func Test_ResolveTrustedMaterial_TUFFailure_PublicKeyFallback(t *testing.T) {
 	r := require.New(t)
 
 	key := mustECDSAKey(t)
-	cfg := &v1alpha1.Config{
+	cfg := &v1alpha1.VerifyConfig{
 		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
 	}
 	creds := map[string]string{
@@ -2130,7 +2024,7 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
-		cfg := &v1alpha1.Config{SkipRekor: true}
+		cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with SCT requirement for keyless")
@@ -2145,7 +2039,7 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
-		cfg := &v1alpha1.Config{SkipRekor: true}
+		cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
 		v, err := buildVerifier(tm, cfg, true)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier without SCT for key-based")
@@ -2159,37 +2053,37 @@ func Test_HasExplicitEndpoints(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		cfg      *v1alpha1.Config
+		cfg      *v1alpha1.SignConfig
 		expected bool
 	}{
 		{
 			name:     "empty config",
-			cfg:      &v1alpha1.Config{},
+			cfg:      &v1alpha1.SignConfig{},
 			expected: false,
 		},
 		{
 			name:     "only SkipRekor",
-			cfg:      &v1alpha1.Config{SkipRekor: true},
+			cfg:      &v1alpha1.SignConfig{SkipRekor: true},
 			expected: false,
 		},
 		{
 			name:     "FulcioURL set",
-			cfg:      &v1alpha1.Config{FulcioURL: "https://fulcio.example.com"},
+			cfg:      &v1alpha1.SignConfig{FulcioURL: "https://fulcio.example.com"},
 			expected: true,
 		},
 		{
 			name:     "RekorURL set",
-			cfg:      &v1alpha1.Config{RekorURL: "https://rekor.example.com"},
+			cfg:      &v1alpha1.SignConfig{RekorURL: "https://rekor.example.com"},
 			expected: true,
 		},
 		{
 			name:     "TSAURL set",
-			cfg:      &v1alpha1.Config{TSAURL: "https://tsa.example.com"},
+			cfg:      &v1alpha1.SignConfig{TSAURL: "https://tsa.example.com"},
 			expected: true,
 		},
 		{
 			name: "all URLs set",
-			cfg: &v1alpha1.Config{
+			cfg: &v1alpha1.SignConfig{
 				FulcioURL: "https://fulcio.example.com",
 				RekorURL:  "https://rekor.example.com",
 				TSAURL:    "https://tsa.example.com",
@@ -2197,18 +2091,8 @@ func Test_HasExplicitEndpoints(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "TUFRootURL does not count as explicit endpoint",
-			cfg:      &v1alpha1.Config{TUFRootURL: "https://tuf.example.com"},
-			expected: false,
-		},
-		{
-			name:     "TrustedRootPath does not count as explicit endpoint",
-			cfg:      &v1alpha1.Config{TrustedRootPath: "/path/to/root.json"},
-			expected: false,
-		},
-		{
 			name:     "SigningConfigPath does not count as explicit endpoint",
-			cfg:      &v1alpha1.Config{SigningConfigPath: "/path/to/config.json"},
+			cfg:      &v1alpha1.SignConfig{SigningConfigPath: "/path/to/config.json"},
 			expected: false,
 		},
 	}
@@ -2402,24 +2286,10 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.TimestampingAuthorities()), 0, "trusted material should have TSA")
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.VerifyConfig{}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with observer timestamps from material TSA")
-	})
-
-	t.Run("TSA in material with explicit TSAURL uses config TSA", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootWithTSAJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		cfg := &v1alpha1.Config{TSAURL: "https://tsa.example.com"}
-		v, err := buildVerifier(tm, cfg, false)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier with config-explicit TSA")
 	})
 
 	t.Run("no TSA anywhere uses integrated timestamps", func(t *testing.T) {
@@ -2431,25 +2301,10 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		r.NoError(err)
 		r.Empty(tm.TimestampingAuthorities(), "trusted material should not have TSA")
 
-		cfg := &v1alpha1.Config{}
+		cfg := &v1alpha1.VerifyConfig{}
 		v, err := buildVerifier(tm, cfg, false)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with integrated timestamps")
-	})
-
-	t.Run("RekorVersion 2 with TSA from trusted material uses observer timestamps", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootWithTSAJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-		r.Greater(len(tm.TimestampingAuthorities()), 0, "trusted material should have TSA")
-
-		cfg := &v1alpha1.Config{RekorVersion: 2}
-		v, err := buildVerifier(tm, cfg, false)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier for Rekor v2 with TSA from trusted material")
 	})
 }
 
@@ -2459,7 +2314,7 @@ func Test_ResolveTrustedRoot_SkipRekor_NoFallback(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	cfg := &v1alpha1.Config{SkipRekor: true}
+	cfg := &v1alpha1.VerifyConfig{SkipRekor: true}
 	creds := map[string]string{}
 
 	tm, err := resolveTrustedRoot(t.Context(), cfg, creds)

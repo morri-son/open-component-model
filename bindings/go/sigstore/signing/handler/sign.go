@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
+	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler/internal/credentials"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
 )
@@ -32,11 +33,11 @@ import (
 func doSign(
 	ctx context.Context,
 	unsigned descruntime.Digest,
-	cfg *v1alpha1.Config,
+	cfg *v1alpha1.SignConfig,
 	creds map[string]string,
 	tg TokenGetter,
 ) (descruntime.SignatureInfo, error) {
-	if err := validateConfig(cfg); err != nil {
+	if err := validateSignConfig(cfg); err != nil {
 		return descruntime.SignatureInfo{}, err
 	}
 
@@ -82,7 +83,7 @@ func doSign(
 	// would always fail. TUF is intentionally excluded to avoid a
 	// network round-trip at sign time.
 	if idToken != "" {
-		if tr, err := resolveOfflineTrustedRoot(cfg, creds); err != nil {
+		if tr, err := resolveOfflineTrustedRoot(creds); err != nil {
 			slog.WarnContext(ctx, "failed to resolve offline trusted root for sign-time verification", "error", err)
 		} else if tr != nil {
 			opts.TrustedRoot = tr
@@ -165,7 +166,7 @@ func keypairFromPrivateKey(key crypto.PrivateKey) (sign.Keypair, error) {
 	}
 }
 
-func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.Config, idToken string) error {
+func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.SignConfig, idToken string) error {
 	if idToken == "" {
 		return nil
 	}
@@ -182,7 +183,7 @@ func configureCertificateProvider(opts *sign.BundleOptions, cfg *v1alpha1.Config
 	return nil
 }
 
-func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
+func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.SignConfig) {
 	if cfg.TSAURL == "" {
 		return
 	}
@@ -191,7 +192,7 @@ func configureTimestampAuthority(opts *sign.BundleOptions, cfg *v1alpha1.Config)
 	}))
 }
 
-func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
+func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.SignConfig) {
 	if cfg.SkipRekor || cfg.RekorURL == "" {
 		return
 	}
@@ -206,13 +207,13 @@ func configureTransparencyLog(opts *sign.BundleOptions, cfg *v1alpha1.Config) {
 
 // hasExplicitEndpoints returns true when the config contains at least one
 // explicitly configured Sigstore service endpoint.
-func hasExplicitEndpoints(cfg *v1alpha1.Config) bool {
+func hasExplicitEndpoints(cfg *v1alpha1.SignConfig) bool {
 	return cfg.FulcioURL != "" || cfg.RekorURL != "" || cfg.TSAURL != ""
 }
 
 // configureFromSigningConfig loads a signing_config.json and uses it to discover
 // Fulcio, Rekor, and TSA endpoints, replacing the individual URL config fields.
-func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.Config, idToken string) error {
+func configureFromSigningConfig(opts *sign.BundleOptions, cfg *v1alpha1.SignConfig, idToken string) error {
 	sc, err := root.NewSigningConfigFromPath(cfg.SigningConfigPath)
 	if err != nil {
 		return fmt.Errorf("load signing config: %w", err)
@@ -291,6 +292,33 @@ func extractIssuer(bundle *protobundle.Bundle) string {
 		return ""
 	}
 	return extensions.Issuer
+}
+
+// validateSignConfig checks signing config fields for obviously invalid values.
+func validateSignConfig(cfg *v1alpha1.SignConfig) error {
+	if cfg.RekorVersion > 2 {
+		return fmt.Errorf("unsupported RekorVersion %d: must be 0 (default), 1, or 2", cfg.RekorVersion)
+	}
+	return nil
+}
+
+func signWithConfig(
+	ctx context.Context,
+	unsigned descruntime.Digest,
+	rawCfg runtime.Typed,
+	creds map[string]string,
+	scheme *runtime.Scheme,
+	tg TokenGetter,
+) (descruntime.SignatureInfo, error) {
+	var cfg v1alpha1.SignConfig
+	if err := scheme.Convert(rawCfg, &cfg); err != nil {
+		return descruntime.SignatureInfo{}, fmt.Errorf("convert config: %w", err)
+	}
+	if got := cfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.SignConfigType {
+		return descruntime.SignatureInfo{}, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
+	}
+
+	return doSign(ctx, unsigned, &cfg, creds, tg)
 }
 
 // ecdsaKeypair adapts an *ecdsa.PrivateKey to sigstore-go's sign.Keypair interface.
