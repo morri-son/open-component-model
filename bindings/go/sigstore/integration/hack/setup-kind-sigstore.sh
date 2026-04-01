@@ -33,6 +33,14 @@ TUF_LOCAL_PORT=8088
 
 log() { echo "==> $*" >&2; }
 
+# Set KUBECONFIG to the KIND cluster if not already set
+if [[ -z "${KUBECONFIG:-}" ]]; then
+  KUBECONFIG=$(mktemp)
+  kind get kubeconfig --name "$CLUSTER_NAME" > "$KUBECONFIG" 2>/dev/null || true
+  export KUBECONFIG
+  trap "rm -f '$KUBECONFIG'" EXIT
+fi
+
 # --- Prerequisites -----------------------------------------------------------
 
 for cmd in kind kubectl helm curl openssl xxd shasum jq; do
