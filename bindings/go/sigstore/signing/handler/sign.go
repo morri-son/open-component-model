@@ -303,12 +303,13 @@ func signWithConfig(
 	creds map[string]string,
 	scheme *runtime.Scheme,
 ) (descruntime.SignatureInfo, error) {
+	if got := rawCfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.SignConfigType {
+		return descruntime.SignatureInfo{}, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
+	}
+
 	var cfg v1alpha1.SignConfig
 	if err := scheme.Convert(rawCfg, &cfg); err != nil {
 		return descruntime.SignatureInfo{}, fmt.Errorf("convert config: %w", err)
-	}
-	if got := cfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.SignConfigType {
-		return descruntime.SignatureInfo{}, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
 	}
 
 	return doSign(ctx, unsigned, &cfg, creds)
