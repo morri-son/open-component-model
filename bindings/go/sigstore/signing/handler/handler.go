@@ -51,12 +51,7 @@ func (h *Handler) Sign(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 ) (descruntime.SignatureInfo, error) {
-	var cfg v1alpha1.Config
-	if err := h.GetSigningHandlerScheme().Convert(rawCfg, &cfg); err != nil {
-		return descruntime.SignatureInfo{}, fmt.Errorf("convert config: %w", err)
-	}
-
-	return doSign(ctx, unsigned, &cfg, creds, h.tokenGetter)
+	return signWithConfig(ctx, unsigned, rawCfg, creds, h.GetSigningHandlerScheme(), h.tokenGetter)
 }
 
 func (h *Handler) Verify(
@@ -65,12 +60,7 @@ func (h *Handler) Verify(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 ) error {
-	var cfg v1alpha1.Config
-	if err := h.GetSigningHandlerScheme().Convert(rawCfg, &cfg); err != nil {
-		return fmt.Errorf("convert config: %w", err)
-	}
-
-	return doVerify(ctx, signed, &cfg, creds)
+	return verifyWithConfig(ctx, signed, rawCfg, creds, h.GetSigningHandlerScheme())
 }
 
 func (*Handler) GetSigningCredentialConsumerIdentity(
@@ -79,11 +69,14 @@ func (*Handler) GetSigningCredentialConsumerIdentity(
 	_ descruntime.Digest,
 	rawCfg runtime.Typed,
 ) (runtime.Identity, error) {
-	var cfg v1alpha1.Config
+	var cfg v1alpha1.SignConfig
 	if err := v1alpha1.Scheme.Convert(rawCfg, &cfg); err != nil {
 		return nil, fmt.Errorf("convert config: %w", err)
 	}
-	id := baseIdentity()
+	if got := cfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.SignConfigType {
+		return nil, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
+	}
+	id := signingIdentity()
 	id[IdentityAttributeSignature] = name
 	return id, nil
 }
@@ -96,13 +89,19 @@ func (*Handler) GetVerifyingCredentialConsumerIdentity(
 	if signature.Signature.MediaType != v1alpha1.MediaTypeSigstoreBundle {
 		return nil, fmt.Errorf("unsupported media type %q for sigstore verification", signature.Signature.MediaType)
 	}
-	id := baseIdentity()
+	id := verifyingIdentity()
 	id[IdentityAttributeSignature] = signature.Name
 	return id, nil
 }
 
-func baseIdentity() runtime.Identity {
+func signingIdentity() runtime.Identity {
 	id := runtime.Identity{IdentityAttributeAlgorithm: v1alpha1.AlgorithmSigstore}
-	id.SetType(credentials.IdentityTypeSigstore)
+	id.SetType(credentials.IdentityTypeSign)
+	return id
+}
+
+func verifyingIdentity() runtime.Identity {
+	id := runtime.Identity{IdentityAttributeAlgorithm: v1alpha1.AlgorithmSigstore}
+	id.SetType(credentials.IdentityTypeVerify)
 	return id
 }

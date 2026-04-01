@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
+	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler/internal/credentials"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
 )
@@ -26,13 +27,9 @@ import (
 func doVerify(
 	ctx context.Context,
 	signed descruntime.Signature,
-	cfg *v1alpha1.Config,
+	cfg *v1alpha1.VerifyConfig,
 	creds map[string]string,
 ) error {
-	if err := validateConfig(cfg); err != nil {
-		return err
-	}
-
 	bundleJSON, err := base64.StdEncoding.DecodeString(signed.Signature.Value)
 	if err != nil {
 		return fmt.Errorf("decode bundle base64: %w", err)
@@ -90,7 +87,7 @@ func doVerify(
 //
 // Without a public key the function falls back to a trusted root alone
 // (keyless / certificate-based verification).
-func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string, pubKey crypto.PublicKey) (root.TrustedMaterial, error) {
+func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds map[string]string, pubKey crypto.PublicKey) (root.TrustedMaterial, error) {
 	trustedRoot, err := resolveTrustedRoot(ctx, cfg, creds)
 	if err != nil {
 		return nil, err
@@ -125,7 +122,7 @@ func resolveTrustedMaterial(ctx context.Context, cfg *v1alpha1.Config, creds map
 // Returns nil, nil only when SkipRekor is set and no explicit source is
 // configured. For all other zero-config cases the public-good trusted root
 // is fetched automatically.
-func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
+func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds map[string]string) (root.TrustedMaterial, error) {
 	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
 	if err != nil {
 		return nil, fmt.Errorf("load trusted root from credentials: %w", err)
@@ -156,20 +153,16 @@ func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.Config, creds map[str
 }
 
 // resolveOfflineTrustedRoot loads a trusted root from offline sources only:
-// credentials JSON or config file path. Unlike resolveTrustedRoot, it never
-// falls back to TUF (which requires network access). Returns nil, nil when
-// no offline source is configured.
-func resolveOfflineTrustedRoot(cfg *v1alpha1.Config, creds map[string]string) (root.TrustedMaterial, error) {
+// credentials JSON. Unlike resolveTrustedRoot, it never falls back to TUF
+// (which requires network access). Returns nil, nil when no offline source
+// is configured.
+func resolveOfflineTrustedRoot(creds map[string]string) (root.TrustedMaterial, error) {
 	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
 	if err != nil {
 		return nil, fmt.Errorf("load trusted root from credentials: %w", err)
 	}
 	if len(trustedRootJSON) > 0 {
 		return root.NewTrustedRootFromJSON(trustedRootJSON)
-	}
-
-	if cfg.TrustedRootPath != "" {
-		return root.NewTrustedRootFromPath(cfg.TrustedRootPath)
 	}
 
 	return nil, nil
@@ -196,7 +189,7 @@ func trustedMaterialFromPublicKey(pubKey crypto.PublicKey) (root.TrustedMaterial
 // serves as the cryptographic trust anchor — the TUF security model requires
 // a known-good initial root.json to verify all subsequent metadata.
 // Local caching is disabled to avoid conflicts between different TUF repositories.
-func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.Config) (root.TrustedMaterial, error) {
+func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.VerifyConfig) (root.TrustedMaterial, error) {
 	if cfg.TUFInitialRoot == "" {
 		return nil, fmt.Errorf("TUFInitialRoot is required when TUFRootURL is set: the TUF security model requires a pinned initial root.json as trust anchor")
 	}
@@ -219,11 +212,8 @@ func trustedMaterialFromTUF(ctx context.Context, cfg *v1alpha1.Config) (root.Tru
 // isKeyBased indicates whether the verification uses a public key (true) or certificates (false).
 // For certificate-based (keyless) verification, SCT verification is enabled when the
 // trusted material includes CT log authorities, following sigstore-go's reference pattern.
-func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, isKeyBased bool) (*verify.Verifier, error) {
+func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.VerifyConfig, isKeyBased bool) (*verify.Verifier, error) {
 	var opts []verify.VerifierOption
-
-	hasTSAFromConfig := cfg.TSAURL != ""
-	hasTSAFromMaterial := !hasTSAFromConfig && len(trustedMaterial.TimestampingAuthorities()) > 0
 
 	switch {
 	case cfg.SkipRekor:
@@ -231,27 +221,14 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, i
 	default:
 		opts = append(opts, verify.WithTransparencyLog(1))
 
-		switch {
-		case cfg.RekorVersion == 2 && (hasTSAFromConfig || hasTSAFromMaterial):
-			// Rekor v2 does not produce signed entry timestamps (SETs).
-			// WithObserverTimestamps accepts both RFC3161 TSA timestamps and SETs.
-			opts = append(opts, verify.WithObserverTimestamps(1))
-		case cfg.RekorVersion == 2 && !isKeyBased:
-			return nil, fmt.Errorf("Rekor v2 requires a Timestamp Authority (TSA) for keyless verification: configure TSAURL or provide trusted material with TSA entries, because v2 does not produce signed entry timestamps")
-		case cfg.RekorVersion == 2:
-			// Key-based v2 without TSA: no timestamps needed since public keys don't expire.
-			opts = append(opts, verify.WithNoObserverTimestamps())
-		case hasTSAFromMaterial:
+		hasTSAFromMaterial := len(trustedMaterial.TimestampingAuthorities()) > 0
+		if hasTSAFromMaterial {
 			// Auto-discovery: TSA available in trusted material (e.g. from public-good TUF).
 			// WithObserverTimestamps accepts both v1 SETs and v2 TSA timestamps.
 			opts = append(opts, verify.WithObserverTimestamps(1))
-		default:
+		} else {
 			opts = append(opts, verify.WithIntegratedTimestamps(1))
 		}
-	}
-
-	if hasTSAFromConfig {
-		opts = append(opts, verify.WithSignedTimestamps(1))
 	}
 
 	if !isKeyBased && len(trustedMaterial.CTLogs()) > 0 {
@@ -272,7 +249,7 @@ func buildVerifier(trustedMaterial root.TrustedMaterial, cfg *v1alpha1.Config, i
 // If neither a public key nor identity fields are provided, an error is returned.
 // Keyless verification without identity constraints is not supported because it
 // would accept any Fulcio-issued certificate regardless of the signer.
-func buildPolicy(artifact *bytes.Reader, pubKey crypto.PublicKey, cfg *v1alpha1.Config) (verify.PolicyBuilder, error) {
+func buildPolicy(artifact *bytes.Reader, pubKey crypto.PublicKey, cfg *v1alpha1.VerifyConfig) (verify.PolicyBuilder, error) {
 	artifactOpt := verify.WithArtifact(artifact)
 
 	if pubKey != nil {
@@ -309,15 +286,25 @@ func (c *composedTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConst
 	return c.keyTrustedMaterial.PublicKeyVerifier(hint)
 }
 
-func hasIdentityConfig(cfg *v1alpha1.Config) bool {
+func hasIdentityConfig(cfg *v1alpha1.VerifyConfig) bool {
 	return cfg.ExpectedIssuer != "" || cfg.ExpectedIssuerRegex != "" ||
 		cfg.ExpectedSAN != "" || cfg.ExpectedSANRegex != ""
 }
 
-// validateConfig checks config fields for obviously invalid values.
-func validateConfig(cfg *v1alpha1.Config) error {
-	if cfg.RekorVersion > 2 {
-		return fmt.Errorf("unsupported RekorVersion %d: must be 0 (default), 1, or 2", cfg.RekorVersion)
+func verifyWithConfig(
+	ctx context.Context,
+	signed descruntime.Signature,
+	rawCfg runtime.Typed,
+	creds map[string]string,
+	scheme *runtime.Scheme,
+) error {
+	var cfg v1alpha1.VerifyConfig
+	if err := scheme.Convert(rawCfg, &cfg); err != nil {
+		return fmt.Errorf("convert config: %w", err)
 	}
-	return nil
+	if got := cfg.GetType(); got != (runtime.Type{}) && got.GetName() != v1alpha1.VerifyConfigType {
+		return fmt.Errorf("expected config type %s but got %s", v1alpha1.VerifyConfigType, got)
+	}
+
+	return doVerify(ctx, signed, &cfg, creds)
 }
