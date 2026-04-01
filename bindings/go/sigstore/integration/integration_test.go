@@ -39,8 +39,6 @@ const (
 	credTrustedRootJSONFile = "trusted_root_json_file"
 )
 
-const envIntegration = "SIGSTORE_INTEGRATION_TEST"
-
 // ---------------------------------------------------------------------------
 // testBackend — all core tests iterate over both Rekor v1 and v2
 // ---------------------------------------------------------------------------
@@ -89,13 +87,6 @@ func backends(t *testing.T) []testBackend {
 // ---------------------------------------------------------------------------
 // Env helpers
 // ---------------------------------------------------------------------------
-
-func skipUnlessIntegration(t *testing.T) {
-	t.Helper()
-	if os.Getenv(envIntegration) == "" {
-		t.Skipf("skipping: set %s=1 to run Sigstore integration tests", envIntegration)
-	}
-}
 
 func envOrDefault(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
@@ -236,7 +227,6 @@ func writeKeyToFile(t *testing.T, pemData string) string {
 // ---------------------------------------------------------------------------
 
 func Test_Integration_KeyBased_SignVerify(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	for _, b := range backends(t) {
 		t.Run(b.Name, func(t *testing.T) {
@@ -294,7 +284,6 @@ func Test_Integration_KeyBased_SignVerify(t *testing.T) {
 }
 
 func Test_Integration_MultipleSigs_SameDigest(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	for _, b := range backends(t) {
 		t.Run(b.Name, func(t *testing.T) {
@@ -338,7 +327,6 @@ func Test_Integration_MultipleSigs_SameDigest(t *testing.T) {
 }
 
 func Test_Integration_TamperedDigest(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	for _, b := range backends(t) {
 		t.Run(b.Name, func(t *testing.T) {
@@ -374,7 +362,6 @@ func Test_Integration_TamperedDigest(t *testing.T) {
 }
 
 func Test_Integration_Keyless_SignVerify(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	token := oidcToken()
 	if token == "" {
@@ -446,7 +433,6 @@ func Test_Integration_Keyless_SignVerify(t *testing.T) {
 }
 
 func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	token := oidcToken()
 	if token == "" {
@@ -518,7 +504,6 @@ func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
 }
 
 func Test_Integration_TSA_SignVerify(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	tsa := tsaURL()
 	if tsa == "" {
@@ -569,7 +554,6 @@ func Test_Integration_TSA_SignVerify(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func Test_Integration_KeyBased_SignVerify_FileCredentials(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	h := newTestHandler(t)
 
@@ -643,7 +627,6 @@ func signingConfigV1Path(t *testing.T) string {
 }
 
 func Test_Integration_SigningConfig(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	t.Run("rekor-v1", func(t *testing.T) {
 		r := require.New(t)
@@ -731,7 +714,6 @@ func Test_Integration_SigningConfig(t *testing.T) {
 }
 
 func Test_Integration_TUF_TrustedRoot(t *testing.T) {
-	skipUnlessIntegration(t)
 
 	tufURL := tufMirrorURL()
 	if tufURL == "" {
@@ -781,7 +763,7 @@ func Test_Integration_TUF_TrustedRoot(t *testing.T) {
 }
 
 func Test_Integration_KeyBased_MinimalBundle(t *testing.T) {
-	skipUnlessIntegration(t)
+
 	r := require.New(t)
 
 	h := newTestHandler(t)

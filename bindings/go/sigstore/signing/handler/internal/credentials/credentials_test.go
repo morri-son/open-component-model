@@ -179,7 +179,6 @@ func Test_PublicKeyFromCredentials(t *testing.T) {
 			t.Parallel()
 			key := mustECDSAKey(t, tc.curve)
 			pubPEM := mustPublicKeyPEM(t, &key.PublicKey)
-			privPEM := mustECPrivateKeyPEM(t, key)
 
 			t.Run("inline public key PEM", func(t *testing.T) {
 				t.Parallel()
@@ -190,41 +189,6 @@ func Test_PublicKeyFromCredentials(t *testing.T) {
 				r.NoError(err)
 				r.NotNil(result)
 				r.True(key.PublicKey.Equal(result))
-			})
-
-			t.Run("derived from private key", func(t *testing.T) {
-				t.Parallel()
-				r := require.New(t)
-				result, err := PublicKeyFromCredentials(map[string]string{
-					CredentialKeyPrivateKeyPEM: privPEM,
-				})
-				r.NoError(err)
-				r.NotNil(result)
-				r.True(key.PublicKey.Equal(result))
-			})
-
-			t.Run("matching public and private key", func(t *testing.T) {
-				t.Parallel()
-				r := require.New(t)
-				result, err := PublicKeyFromCredentials(map[string]string{
-					CredentialKeyPublicKeyPEM:  pubPEM,
-					CredentialKeyPrivateKeyPEM: privPEM,
-				})
-				r.NoError(err)
-				r.NotNil(result)
-				r.True(key.PublicKey.Equal(result))
-			})
-
-			t.Run("mismatched public and private key", func(t *testing.T) {
-				t.Parallel()
-				r := require.New(t)
-				otherKey := mustECDSAKey(t, tc.curve)
-				_, err := PublicKeyFromCredentials(map[string]string{
-					CredentialKeyPublicKeyPEM:  pubPEM,
-					CredentialKeyPrivateKeyPEM: mustECPrivateKeyPEM(t, otherKey),
-				})
-				r.Error(err)
-				r.Contains(err.Error(), "does not match")
 			})
 		})
 	}
@@ -240,46 +204,6 @@ func Test_PublicKeyFromCredentials(t *testing.T) {
 		r.NoError(err)
 		r.NotNil(result)
 		r.True(key.Public().(ed25519.PublicKey).Equal(result))
-	})
-
-	t.Run("Ed25519 derived from private key", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key := mustEd25519Key(t)
-		result, err := PublicKeyFromCredentials(map[string]string{
-			CredentialKeyPrivateKeyPEM: mustPKCS8PrivateKeyPEM(t, key),
-		})
-		r.NoError(err)
-		r.NotNil(result)
-		r.True(key.Public().(ed25519.PublicKey).Equal(result))
-	})
-
-	t.Run("Ed25519 matching public and private key", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key := mustEd25519Key(t)
-		pubPEM := mustPublicKeyPEM(t, key.Public())
-		result, err := PublicKeyFromCredentials(map[string]string{
-			CredentialKeyPublicKeyPEM:  pubPEM,
-			CredentialKeyPrivateKeyPEM: mustPKCS8PrivateKeyPEM(t, key),
-		})
-		r.NoError(err)
-		r.NotNil(result)
-		r.True(key.Public().(ed25519.PublicKey).Equal(result))
-	})
-
-	t.Run("Ed25519 mismatched public and private key", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key := mustEd25519Key(t)
-		otherKey := mustEd25519Key(t)
-		pubPEM := mustPublicKeyPEM(t, key.Public())
-		_, err := PublicKeyFromCredentials(map[string]string{
-			CredentialKeyPublicKeyPEM:  pubPEM,
-			CredentialKeyPrivateKeyPEM: mustPKCS8PrivateKeyPEM(t, otherKey),
-		})
-		r.Error(err)
-		r.Contains(err.Error(), "does not match")
 	})
 }
 

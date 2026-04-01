@@ -572,7 +572,7 @@ func Test_Handler_Verify(t *testing.T) {
 		r.Contains(err.Error(), "decode digest hex")
 	})
 
-	t.Run("public key derived from private key in credentials", func(t *testing.T) {
+	t.Run("verify requires explicit public key, not derived from private key", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 		h := newHandler(t)
@@ -580,11 +580,11 @@ func Test_Handler_Verify(t *testing.T) {
 		key := mustECDSAKey(t)
 		digest := sampleDigest(t)
 
-		creds := map[string]string{
+		signCreds := map[string]string{
 			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
 		}
 
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), creds)
+		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
 		r.NoError(err)
 
 		signed := descruntime.Signature{
@@ -593,8 +593,18 @@ func Test_Handler_Verify(t *testing.T) {
 			Signature: sigInfo,
 		}
 
-		// Verify with same private key cred — public key should be derived
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), creds)
+		// Verify with only private key cred — should fail because public key is not derived
+		privateOnlyCreds := map[string]string{
+			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
+		}
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), privateOnlyCreds)
+		r.Error(err)
+
+		// Verify with explicit public key — should succeed
+		verifyCreds := map[string]string{
+			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
+		}
+		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
 		r.NoError(err)
 	})
 
