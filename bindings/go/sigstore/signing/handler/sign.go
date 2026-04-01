@@ -35,7 +35,6 @@ func doSign(
 	unsigned descruntime.Digest,
 	cfg *v1alpha1.SignConfig,
 	creds map[string]string,
-	tg TokenGetter,
 ) (descruntime.SignatureInfo, error) {
 	if err := validateSignConfig(cfg); err != nil {
 		return descruntime.SignatureInfo{}, err
@@ -46,7 +45,7 @@ func doSign(
 		return descruntime.SignatureInfo{}, fmt.Errorf("decode digest hex value: %w", err)
 	}
 
-	keypair, idToken, err := resolveKeypair(creds, tg)
+	keypair, idToken, err := resolveKeypair(creds)
 	if err != nil {
 		return descruntime.SignatureInfo{}, err
 	}
@@ -114,18 +113,14 @@ func doSign(
 
 // resolveKeypair determines the signing keypair and optional OIDC token from credentials.
 //
-// Three modes are supported (checked in order):
+// Two modes are supported (checked in order):
 //  1. Key-based: a private key PEM is present in creds. Returns a keypair
 //     wrapping that key and an empty OIDC token.
-//  2. Credential token: an OIDC token is present in creds. Returns an ephemeral
-//     keypair and the token (for Fulcio certificate issuance).
-//  3. TokenGetter (injected): if tg is non-nil, calls tg.GetIDToken() to acquire
-//     a token interactively or from the environment. Returns an ephemeral keypair
-//     and the obtained token. Errors from the getter are propagated.
-//
-// If no token is obtained (tg is nil or not called), an ephemeral keypair is
-// returned with an empty token (offline/unsigned mode — no Fulcio certificate).
-func resolveKeypair(creds map[string]string, tg TokenGetter) (sign.Keypair, string, error) {
+//  2. Keyless: returns an ephemeral keypair and any OIDC token from creds.
+//     If no token is available, the returned token is empty — the caller is
+//     responsible for ensuring a token is provided through the credential graph
+//     (e.g. via the SigstoreOIDC credential plugin).
+func resolveKeypair(creds map[string]string) (sign.Keypair, string, error) {
 	privKey, err := credentials.PrivateKeyFromCredentials(creds)
 	if err != nil {
 		return nil, "", fmt.Errorf("load private key: %w", err)
@@ -140,12 +135,6 @@ func resolveKeypair(creds map[string]string, tg TokenGetter) (sign.Keypair, stri
 	}
 
 	idToken := credentials.OIDCTokenFromCredentials(creds)
-	if idToken == "" && tg != nil {
-		idToken, err = tg.GetIDToken()
-		if err != nil {
-			return nil, "", fmt.Errorf("acquire OIDC token: %w", err)
-		}
-	}
 
 	keypair, err := sign.NewEphemeralKeypair(nil)
 	if err != nil {
@@ -308,7 +297,6 @@ func signWithConfig(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 	scheme *runtime.Scheme,
-	tg TokenGetter,
 ) (descruntime.SignatureInfo, error) {
 	var cfg v1alpha1.SignConfig
 	if err := scheme.Convert(rawCfg, &cfg); err != nil {
@@ -318,7 +306,7 @@ func signWithConfig(
 		return descruntime.SignatureInfo{}, fmt.Errorf("expected config type %s but got %s", v1alpha1.SignConfigType, got)
 	}
 
-	return doSign(ctx, unsigned, &cfg, creds, tg)
+	return doSign(ctx, unsigned, &cfg, creds)
 }
 
 // ecdsaKeypair adapts an *ecdsa.PrivateKey to sigstore-go's sign.Keypair interface.
