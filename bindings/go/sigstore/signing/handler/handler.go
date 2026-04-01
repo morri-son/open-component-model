@@ -18,27 +18,10 @@ const (
 	IdentityAttributeSignature = "signature"
 )
 
-// TokenGetter acquires an OIDC identity token for keyless signing.
-// Implementations are responsible for determining the OIDC provider
-// (issuer and client ID) — typically from environment variables,
-// configuration, or an interactive browser flow.
-type TokenGetter interface {
-	GetIDToken() (string, error)
-}
-
-type Handler struct {
-	tokenGetter TokenGetter
-}
+type Handler struct{}
 
 func New() *Handler {
 	return &Handler{}
-}
-
-// NewWithTokenGetter creates a Handler with an interactive token acquisition flow.
-// When no private key or OIDC token is available from credentials, the handler
-// calls tg.GetIDToken to obtain a token (e.g. via browser-based OIDC).
-func NewWithTokenGetter(tg TokenGetter) *Handler {
-	return &Handler{tokenGetter: tg}
 }
 
 func (h *Handler) GetSigningHandlerScheme() *runtime.Scheme {
@@ -51,7 +34,7 @@ func (h *Handler) Sign(
 	rawCfg runtime.Typed,
 	creds map[string]string,
 ) (descruntime.SignatureInfo, error) {
-	return signWithConfig(ctx, unsigned, rawCfg, creds, h.GetSigningHandlerScheme(), h.tokenGetter)
+	return signWithConfig(ctx, unsigned, rawCfg, creds, h.GetSigningHandlerScheme())
 }
 
 func (h *Handler) Verify(
