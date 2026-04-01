@@ -119,46 +119,53 @@ func newTestHandler(t *testing.T) *handler.Handler {
 	return handler.New()
 }
 
-func setType(cfg *v1alpha1.Config) {
-	cfg.SetType(runtime.NewVersionedType(v1alpha1.ConfigType, v1alpha1.Version))
+func setSignType(cfg *v1alpha1.SignConfig) {
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 }
 
-// keyBasedConfig returns a signing/verification config for key-based flows.
-func keyBasedConfig(b testBackend) *v1alpha1.Config {
-	cfg := &v1alpha1.Config{
-		RekorURL:        b.RekorURL,
-		RekorVersion:    b.RekorVersion,
-		TrustedRootPath: b.TrustedRootPath,
+func setVerifyType(cfg *v1alpha1.VerifyConfig) {
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+}
+
+// keyBasedSignConfig returns a signing config for key-based flows.
+func keyBasedSignConfig(b testBackend) *v1alpha1.SignConfig {
+	cfg := &v1alpha1.SignConfig{
+		RekorURL:     b.RekorURL,
+		RekorVersion: b.RekorVersion,
 	}
-	setType(cfg)
+	setSignType(cfg)
 	return cfg
 }
 
-// keylessConfig returns a signing config for keyless (Fulcio+OIDC) flows.
-func keylessConfig(b testBackend) *v1alpha1.Config {
-	cfg := &v1alpha1.Config{
-		RekorURL:        b.RekorURL,
-		RekorVersion:    b.RekorVersion,
-		FulcioURL:       fulcioURL(),
+// keyBasedVerifyConfig returns a verification config for key-based flows.
+func keyBasedVerifyConfig(b testBackend) *v1alpha1.VerifyConfig {
+	cfg := &v1alpha1.VerifyConfig{
 		TrustedRootPath: b.TrustedRootPath,
+	}
+	setVerifyType(cfg)
+	return cfg
+}
+
+// keylessSignConfig returns a signing config for keyless (Fulcio+OIDC) flows.
+func keylessSignConfig(b testBackend) *v1alpha1.SignConfig {
+	cfg := &v1alpha1.SignConfig{
+		RekorURL:     b.RekorURL,
+		RekorVersion: b.RekorVersion,
+		FulcioURL:    fulcioURL(),
 	}
 	if tsa := tsaURL(); tsa != "" {
 		cfg.TSAURL = tsa
 	}
-	setType(cfg)
+	setSignType(cfg)
 	return cfg
 }
 
 // keylessVerifyConfig returns a verification config for keyless flows.
-func keylessVerifyConfig(b testBackend) *v1alpha1.Config {
-	cfg := &v1alpha1.Config{
-		RekorVersion:    b.RekorVersion,
+func keylessVerifyConfig(b testBackend) *v1alpha1.VerifyConfig {
+	cfg := &v1alpha1.VerifyConfig{
 		TrustedRootPath: b.TrustedRootPath,
 	}
-	if tsa := tsaURL(); tsa != "" {
-		cfg.TSAURL = tsa
-	}
-	setType(cfg)
+	setVerifyType(cfg)
 	return cfg
 }
 
@@ -236,10 +243,11 @@ func Test_Integration_KeyBased_SignVerify(t *testing.T) {
 			r := require.New(t)
 			h := newTestHandler(t)
 			digest := uniqueDigest(t, "keybased")
-			cfg := keyBasedConfig(b)
+			signCfg := keyBasedSignConfig(b)
+			verifyCfg := keyBasedVerifyConfig(b)
 
 			key := mustECDSAKey(t)
-			sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credPrivateKeyPEM: pemEncodePrivateKey(t, key),
 			})
 			r.NoError(err, "signing should succeed")
@@ -277,7 +285,7 @@ func Test_Integration_KeyBased_SignVerify(t *testing.T) {
 				Digest:    digest,
 				Signature: sigInfo,
 			}
-			err = h.Verify(t.Context(), signed, cfg, map[string]string{
+			err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 				credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 			})
 			r.NoError(err, "verification should succeed")
@@ -293,17 +301,18 @@ func Test_Integration_MultipleSigs_SameDigest(t *testing.T) {
 			r := require.New(t)
 			h := newTestHandler(t)
 			digest := uniqueDigest(t, "multi-sig")
-			cfg := keyBasedConfig(b)
+			signCfg := keyBasedSignConfig(b)
+			verifyCfg := keyBasedVerifyConfig(b)
 
 			keyA := mustECDSAKey(t)
 			keyB := mustECDSAKey(t)
 
-			sigInfoA, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+			sigInfoA, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credPrivateKeyPEM: pemEncodePrivateKey(t, keyA),
 			})
 			r.NoError(err)
 
-			sigInfoB, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+			sigInfoB, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credPrivateKeyPEM: pemEncodePrivateKey(t, keyB),
 			})
 			r.NoError(err)
@@ -313,14 +322,14 @@ func Test_Integration_MultipleSigs_SameDigest(t *testing.T) {
 			signedA := descruntime.Signature{Name: "sig-a", Digest: digest, Signature: sigInfoA}
 			signedB := descruntime.Signature{Name: "sig-b", Digest: digest, Signature: sigInfoB}
 
-			r.NoError(h.Verify(t.Context(), signedA, cfg, map[string]string{
+			r.NoError(h.Verify(t.Context(), signedA, verifyCfg, map[string]string{
 				credPublicKeyPEM: pemEncodePublicKey(t, &keyA.PublicKey),
 			}))
-			r.NoError(h.Verify(t.Context(), signedB, cfg, map[string]string{
+			r.NoError(h.Verify(t.Context(), signedB, verifyCfg, map[string]string{
 				credPublicKeyPEM: pemEncodePublicKey(t, &keyB.PublicKey),
 			}))
 
-			err = h.Verify(t.Context(), signedA, cfg, map[string]string{
+			err = h.Verify(t.Context(), signedA, verifyCfg, map[string]string{
 				credPublicKeyPEM: pemEncodePublicKey(t, &keyB.PublicKey),
 			})
 			r.Error(err, "cross-key verification must fail")
@@ -336,10 +345,11 @@ func Test_Integration_TamperedDigest(t *testing.T) {
 			r := require.New(t)
 			h := newTestHandler(t)
 			digest := uniqueDigest(t, "tamper")
-			cfg := keyBasedConfig(b)
+			signCfg := keyBasedSignConfig(b)
+			verifyCfg := keyBasedVerifyConfig(b)
 
 			key := mustECDSAKey(t)
-			sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credPrivateKeyPEM: pemEncodePrivateKey(t, key),
 			})
 			r.NoError(err)
@@ -355,7 +365,7 @@ func Test_Integration_TamperedDigest(t *testing.T) {
 				Digest:    tampered,
 				Signature: sigInfo,
 			}
-			err = h.Verify(t.Context(), signed, cfg, map[string]string{
+			err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 				credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 			})
 			r.Error(err, "tampered digest must fail verification")
@@ -383,7 +393,7 @@ func Test_Integration_Keyless_SignVerify(t *testing.T) {
 			r := require.New(t)
 			h := newTestHandler(t)
 			digest := uniqueDigest(t, "keyless")
-			signCfg := keylessConfig(b)
+			signCfg := keylessSignConfig(b)
 
 			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credOIDCToken: token,
@@ -455,7 +465,7 @@ func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
 			r := require.New(t)
 			h := newTestHandler(t)
 			digest := uniqueDigest(t, "identity-verify")
-			signCfg := keylessConfig(b)
+			signCfg := keylessSignConfig(b)
 
 			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credOIDCToken: token,
@@ -521,16 +531,15 @@ func Test_Integration_TSA_SignVerify(t *testing.T) {
 			h := newTestHandler(t)
 			digest := uniqueDigest(t, "tsa")
 
-			cfg := &v1alpha1.Config{
-				RekorURL:        b.RekorURL,
-				RekorVersion:    b.RekorVersion,
-				TSAURL:          tsa,
-				TrustedRootPath: b.TrustedRootPath,
+			signCfg := &v1alpha1.SignConfig{
+				RekorURL:     b.RekorURL,
+				RekorVersion: b.RekorVersion,
+				TSAURL:       tsa,
 			}
-			setType(cfg)
+			setSignType(signCfg)
 
 			key := mustECDSAKey(t)
-			sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credPrivateKeyPEM: pemEncodePrivateKey(t, key),
 			})
 			r.NoError(err)
@@ -546,7 +555,8 @@ func Test_Integration_TSA_SignVerify(t *testing.T) {
 				Digest:    digest,
 				Signature: sigInfo,
 			}
-			err = h.Verify(t.Context(), signed, cfg, map[string]string{
+			verifyCfg := keyBasedVerifyConfig(b)
+			err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 				credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
 			})
 			r.NoError(err, "verification with TSA timestamps should succeed")
@@ -568,13 +578,14 @@ func Test_Integration_KeyBased_SignVerify_FileCredentials(t *testing.T) {
 			r := require.New(t)
 
 			digest := uniqueDigest(t, "file-creds-"+b.Name)
-			cfg := keyBasedConfig(b)
+			signCfg := keyBasedSignConfig(b)
+			verifyCfg := keyBasedVerifyConfig(b)
 
 			key := mustECDSAKey(t)
 			privKeyFile := writeKeyToFile(t, pemEncodePrivateKey(t, key))
 			pubKeyFile := writeKeyToFile(t, pemEncodePublicKey(t, &key.PublicKey))
 
-			sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
+			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 				credPrivateKeyPEMFile: privKeyFile,
 			})
 			r.NoError(err)
@@ -585,7 +596,7 @@ func Test_Integration_KeyBased_SignVerify_FileCredentials(t *testing.T) {
 				Digest:    digest,
 				Signature: sigInfo,
 			}
-			err = h.Verify(t.Context(), signed, cfg, map[string]string{
+			err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 				credPublicKeyPEMFile: pubKeyFile,
 			})
 			r.NoError(err)
@@ -640,10 +651,10 @@ func Test_Integration_SigningConfig(t *testing.T) {
 		digest := uniqueDigest(t, "signing-config-v1")
 		scPath := signingConfigV1Path(t)
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.SignConfig{
 			SigningConfigPath: scPath,
 		}
-		setType(cfg)
+		setSignType(cfg)
 
 		key := mustECDSAKey(t)
 		sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
@@ -661,10 +672,10 @@ func Test_Integration_SigningConfig(t *testing.T) {
 			Signature: sigInfo,
 		}
 
-		verifyCfg := &v1alpha1.Config{
+		verifyCfg := &v1alpha1.VerifyConfig{
 			TrustedRootPath: os.Getenv("SIGSTORE_TRUSTED_ROOT_PATH"),
 		}
-		setType(verifyCfg)
+		setVerifyType(verifyCfg)
 
 		err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 			credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
@@ -686,10 +697,10 @@ func Test_Integration_SigningConfig(t *testing.T) {
 		h := newTestHandler(t)
 		digest := uniqueDigest(t, "signing-config-v2")
 
-		cfg := &v1alpha1.Config{
+		cfg := &v1alpha1.SignConfig{
 			SigningConfigPath: scPath,
 		}
-		setType(cfg)
+		setSignType(cfg)
 
 		key := mustECDSAKey(t)
 		sigInfo, err := h.Sign(t.Context(), digest, cfg, map[string]string{
@@ -707,11 +718,10 @@ func Test_Integration_SigningConfig(t *testing.T) {
 			Signature: sigInfo,
 		}
 
-		verifyCfg := &v1alpha1.Config{
+		verifyCfg := &v1alpha1.VerifyConfig{
 			TrustedRootPath: v2Root,
-			RekorVersion:    2,
 		}
-		setType(verifyCfg)
+		setVerifyType(verifyCfg)
 
 		err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 			credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
@@ -741,12 +751,10 @@ func Test_Integration_TUF_TrustedRoot(t *testing.T) {
 
 	// Sign via v1 (key-based), verify via TUF mirror.
 	v1URL := envOrDefault("SIGSTORE_REKOR_URL", "https://rekor.sigstore.dev")
-	v1Root := os.Getenv("SIGSTORE_TRUSTED_ROOT_PATH")
-	signCfg := &v1alpha1.Config{
-		RekorURL:        v1URL,
-		TrustedRootPath: v1Root,
+	signCfg := &v1alpha1.SignConfig{
+		RekorURL: v1URL,
 	}
-	setType(signCfg)
+	setSignType(signCfg)
 
 	key := mustECDSAKey(t)
 	sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
@@ -760,11 +768,11 @@ func Test_Integration_TUF_TrustedRoot(t *testing.T) {
 		Signature: sigInfo,
 	}
 
-	verifyCfg := &v1alpha1.Config{
+	verifyCfg := &v1alpha1.VerifyConfig{
 		TUFRootURL:     tufURL,
 		TUFInitialRoot: string(initialRoot),
 	}
-	setType(verifyCfg)
+	setVerifyType(verifyCfg)
 
 	err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 		credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
@@ -782,11 +790,10 @@ func Test_Integration_SkipRekor_KeyBased(t *testing.T) {
 	// Sign normally with Rekor v1 — the bundle will contain a tlog entry.
 	v1URL := envOrDefault("SIGSTORE_REKOR_URL", "https://rekor.sigstore.dev")
 	v1Root := os.Getenv("SIGSTORE_TRUSTED_ROOT_PATH")
-	signCfg := &v1alpha1.Config{
-		RekorURL:        v1URL,
-		TrustedRootPath: v1Root,
+	signCfg := &v1alpha1.SignConfig{
+		RekorURL: v1URL,
 	}
-	setType(signCfg)
+	setSignType(signCfg)
 
 	key := mustECDSAKey(t)
 	sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
@@ -802,11 +809,11 @@ func Test_Integration_SkipRekor_KeyBased(t *testing.T) {
 
 	// Verify with SkipRekor: only checks the signature against the public key,
 	// tlog entries in the bundle are ignored.
-	verifyCfg := &v1alpha1.Config{
+	verifyCfg := &v1alpha1.VerifyConfig{
 		SkipRekor:       true,
 		TrustedRootPath: v1Root,
 	}
-	setType(verifyCfg)
+	setVerifyType(verifyCfg)
 
 	err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 		credPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),

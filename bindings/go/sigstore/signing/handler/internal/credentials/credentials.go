@@ -13,7 +13,10 @@ import (
 	"ocm.software/open-component-model/bindings/go/runtime"
 )
 
-var IdentityTypeSigstore = runtime.NewVersionedType("Sigstore", "v1alpha1")
+var (
+	IdentityTypeSign   = runtime.NewVersionedType("SigstoreSigningConfiguration", "v1alpha1")
+	IdentityTypeVerify = runtime.NewVersionedType("SigstoreVerificationConfiguration", "v1alpha1")
+)
 
 // Credential keys.
 //
