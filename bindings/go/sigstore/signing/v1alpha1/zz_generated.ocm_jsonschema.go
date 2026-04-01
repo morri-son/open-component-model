@@ -9,10 +9,18 @@ import (
 	_ "embed"
 )
 
-//go:embed schemas/Config.schema.json
-var schemaConfig []byte
+//go:embed schemas/SignConfig.schema.json
+var schemaSignConfig []byte
 
-// JSONSchema returns the JSON Schema for Config.
-func (Config) JSONSchema() []byte {
-	return schemaConfig
+//go:embed schemas/VerifyConfig.schema.json
+var schemaVerifyConfig []byte
+
+// JSONSchema returns the JSON Schema for SignConfig.
+func (SignConfig) JSONSchema() []byte {
+	return schemaSignConfig
+}
+
+// JSONSchema returns the JSON Schema for VerifyConfig.
+func (VerifyConfig) JSONSchema() []byte {
+	return schemaVerifyConfig
 }
