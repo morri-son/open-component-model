@@ -8,7 +8,8 @@ vars:
 
 tasks:
   test/integration:
-    desc: Run Sigstore integration tests (requires SIGSTORE_INTEGRATION_TEST=1 and service URLs)
+    desc: Run Sigstore integration tests (optional SIGSTORE_* env vars configure endpoints)
+    dotenv: ['{{.TASKFILE_DIR}}/hack/generated.env']
     cmds:
       - task: reuse:run-go-test
         vars:

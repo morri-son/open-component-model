@@ -5,7 +5,10 @@
 # Trillian, TUF, and TSA. All services are port-forwarded to localhost.
 #
 # Usage:
-#   eval "$(./setup-kind-sigstore.sh)"
+#   ./setup-kind-sigstore.sh
+#
+# The script writes hack/generated.env which is automatically loaded
+# by the Taskfile's test/integration task via dotenv.
 #
 # Prerequisites: kind, kubectl, helm, curl, openssl, xxd, shasum, jq
 
@@ -362,26 +365,27 @@ cat > "$SIGNING_CONFIG_V2_PATH" <<SIGCFG
 }
 SIGCFG
 
-# --- Output env vars ---------------------------------------------------------
+# --- Write generated env file ------------------------------------------------
 
-log "Setup complete. Export the following variables:"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/generated.env"
 
-cat <<EXPORTS
-export SIGSTORE_INTEGRATION_TEST=1
-export SIGSTORE_KIND_CLUSTER=${CLUSTER_NAME}
-export SIGSTORE_REKOR_URL=${REKOR_V1_LOCAL_URL}
-export SIGSTORE_FULCIO_URL=${FULCIO_LOCAL_URL}
-export SIGSTORE_TSA_URL=${TSA_LOCAL_URL}
-export SIGSTORE_TUF_MIRROR_URL=${TUF_LOCAL_URL}
-export SIGSTORE_TUF_INITIAL_ROOT_PATH=${TUF_INITIAL_ROOT_PATH}
-export SIGSTORE_OIDC_TOKEN=${OIDC_TOKEN}
-export SIGSTORE_TRUSTED_ROOT_PATH=${V1_TRUSTED_ROOT_PATH}
-export SIGSTORE_SIGNING_CONFIG_V1_PATH=${SIGNING_CONFIG_V1_PATH}
-export SIGSTORE_SIGNING_CONFIG_V2_PATH=${SIGNING_CONFIG_V2_PATH}
-export SIGSTORE_REKOR_V2_URL=${REKOR_V2_LOCAL_URL}
-export SIGSTORE_REKOR_V2_TRUSTED_ROOT_PATH=${V2_TRUSTED_ROOT_PATH}
-EXPORTS
+cat > "${ENV_FILE}" <<ENVFILE
+SIGSTORE_KIND_CLUSTER=${CLUSTER_NAME}
+SIGSTORE_REKOR_URL=${REKOR_V1_LOCAL_URL}
+SIGSTORE_FULCIO_URL=${FULCIO_LOCAL_URL}
+SIGSTORE_TSA_URL=${TSA_LOCAL_URL}
+SIGSTORE_TUF_MIRROR_URL=${TUF_LOCAL_URL}
+SIGSTORE_TUF_INITIAL_ROOT_PATH=${TUF_INITIAL_ROOT_PATH}
+SIGSTORE_OIDC_TOKEN=${OIDC_TOKEN}
+SIGSTORE_TRUSTED_ROOT_PATH=${V1_TRUSTED_ROOT_PATH}
+SIGSTORE_SIGNING_CONFIG_V1_PATH=${SIGNING_CONFIG_V1_PATH}
+SIGSTORE_SIGNING_CONFIG_V2_PATH=${SIGNING_CONFIG_V2_PATH}
+SIGSTORE_REKOR_V2_URL=${REKOR_V2_LOCAL_URL}
+SIGSTORE_REKOR_V2_TRUSTED_ROOT_PATH=${V2_TRUSTED_ROOT_PATH}
+ENVFILE
 
+log "Wrote env file: ${ENV_FILE}"
 log ""
 log "Port-forwards running:"
 log "  Fulcio:   http://localhost:${FULCIO_LOCAL_PORT}"

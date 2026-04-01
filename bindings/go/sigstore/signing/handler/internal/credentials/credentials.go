@@ -48,33 +48,9 @@ func PublicKeyFromCredentials(credentials map[string]string) (crypto.PublicKey, 
 		return nil, fmt.Errorf("failed loading public key PEM: %w", err)
 	}
 	if len(b) == 0 {
-		pk, err := PrivateKeyFromCredentials(credentials)
-		if err != nil {
-			return nil, err
-		}
-		if pk == nil {
-			return nil, nil
-		}
-		return publicKeyOf(pk)
+		return nil, nil
 	}
-	pubKey, err := parsePublicKeyPEM(b)
-	if err != nil {
-		return nil, err
-	}
-	pk, err := PrivateKeyFromCredentials(credentials)
-	if err != nil {
-		return nil, err
-	}
-	if pk != nil {
-		expectedPub, err := publicKeyOf(pk)
-		if err != nil {
-			return nil, err
-		}
-		if !expectedPub.(interface{ Equal(x crypto.PublicKey) bool }).Equal(pubKey) {
-			return nil, fmt.Errorf("provided public key does not match the private key")
-		}
-	}
-	return pubKey, nil
+	return parsePublicKeyPEM(b)
 }
 
 func OIDCTokenFromCredentials(credentials map[string]string) string {
@@ -93,17 +69,6 @@ func loadBytes(val string, fileKey string, credentials map[string]string) ([]byt
 		return os.ReadFile(path)
 	}
 	return nil, nil
-}
-
-// publicKeyOf extracts the public key from a private key.
-func publicKeyOf(priv crypto.PrivateKey) (crypto.PublicKey, error) {
-	type publicker interface {
-		Public() crypto.PublicKey
-	}
-	if p, ok := priv.(publicker); ok {
-		return p.Public(), nil
-	}
-	return nil, fmt.Errorf("private key type %T does not expose a public key", priv)
 }
 
 // parsePrivateKeyPEM parses a PEM-encoded private key.
