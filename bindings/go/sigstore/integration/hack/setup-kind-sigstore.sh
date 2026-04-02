@@ -53,6 +53,12 @@ done
 #   Podman:  podman machine ssh sudo sysctl -w fs.inotify.max_user_instances=8192
 #   Linux:   sudo sysctl -w fs.inotify.max_user_instances=8192
 
+if [[ "$(uname)" == "Linux" ]]; then
+  log "Tuning inotify limits for Sigstore stack"
+  sudo sysctl -w fs.inotify.max_user_instances=8192 2>/dev/null || true
+  sudo sysctl -w fs.inotify.max_user_watches=1048576 2>/dev/null || true
+fi
+
 # --- Kind cluster ------------------------------------------------------------
 
 if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
@@ -74,12 +80,33 @@ kubectl config use-context "kind-${CLUSTER_NAME}"
 helm repo add sigstore https://sigstore.github.io/helm-charts 2>/dev/null || true
 helm repo update sigstore >&2
 
-# --- Sigstore scaffold (Fulcio, Rekor v1, CTLog, Trillian, TUF, TSA) --------
-# TSA uses in-memory signer; ingress disabled — we port-forward instead.
+# --- Prepare Rekor v2 signing key (before parallel installs) -----------------
+# Fresh Ed25519 keypair per deployment. Private key → K8s secret, public key → trusted root.
 
-if helm status scaffold -n "$SCAFFOLD_NAMESPACE" &>/dev/null; then
-  log "Sigstore scaffold already installed"
-else
+ARTIFACTS_DIR=$(mktemp -d)
+PRIVKEY_PEM="${ARTIFACTS_DIR}/signing-key.pem"
+PUBKEY_PEM="${ARTIFACTS_DIR}/signing-key-pub.pem"
+
+log "Generating Rekor v2 Ed25519 signing keypair"
+openssl genpkey -algorithm Ed25519 -out "${PRIVKEY_PEM}" 2>/dev/null
+openssl pkey -in "${PRIVKEY_PEM}" -pubout -out "${PUBKEY_PEM}" 2>/dev/null
+
+kubectl create namespace "${REKOR_TILES_NAMESPACE}" 2>/dev/null || true
+kubectl create secret generic signing-key \
+  --namespace "${REKOR_TILES_NAMESPACE}" \
+  --from-file=signing-key="${PRIVKEY_PEM}" \
+  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+
+# --- Install Scaffold + Rekor v2 in parallel --------------------------------
+# These two Helm installs have no dependency on each other. Config generation
+# (TUF root fetch, trusted root composition) happens after both complete.
+
+install_scaffold() {
+  if helm status scaffold -n "$SCAFFOLD_NAMESPACE" &>/dev/null; then
+    log "Sigstore scaffold already installed"
+    return 0
+  fi
+
   log "Installing Sigstore scaffold (v${SCAFFOLD_VERSION})"
   helm upgrade --install scaffold sigstore/scaffold \
     --namespace "$SCAFFOLD_NAMESPACE" \
@@ -119,57 +146,47 @@ else
     }' \
     --timeout "$TIMEOUT" \
     --wait >&2
-fi
+}
 
-# --- Rekor v2 (rekor-tiles, POSIX backend) -----------------------------------
-# Fresh Ed25519 keypair per deployment. Private key → K8s secret, public key → trusted root.
+install_rekor_v2() {
+  # nodeSelector override: GKE label doesn't exist on Kind nodes.
+  # readOnlyRootFilesystem=false: POSIX backend writes tiles to local FS.
+  if helm status rekor-tiles -n "${REKOR_TILES_NAMESPACE}" &>/dev/null; then
+    log "rekor-tiles already installed, upgrading"
+  fi
 
-ARTIFACTS_DIR=$(mktemp -d)
-PRIVKEY_PEM="${ARTIFACTS_DIR}/signing-key.pem"
-PUBKEY_PEM="${ARTIFACTS_DIR}/signing-key-pub.pem"
+  log "Installing rekor-tiles (v${REKOR_TILES_CHART_VERSION}, POSIX backend)"
+  helm upgrade --install rekor-tiles sigstore/rekor-tiles \
+    --namespace "${REKOR_TILES_NAMESPACE}" \
+    --version "${REKOR_TILES_CHART_VERSION}" \
+    --skip-schema-validation \
+    --set "image.flavor=posix" \
+    --set-json 'nodeSelector=null' \
+    --set "namespace.create=false" \
+    --set "namespace.name=${REKOR_TILES_NAMESPACE}" \
+    --set "server.hostname=${REKOR_V2_HOSTNAME}" \
+    --set "server.posix.storageDir.path=/storage" \
+    --set "server.posix.storageDir.name=storage" \
+    --set "server.posix.storageDir.volume.emptyDir.sizeLimit=1Gi" \
+    --set "server.signer.file.path=/pki/signer.pem" \
+    --set "server.signer.file.secret.name=signing-key" \
+    --set "server.signer.file.secret.key=signing-key" \
+    --set "server.signer.file.secret.mountPath=/pki" \
+    --set "server.signer.file.secret.mountSubPath=signer.pem" \
+    --set "securityContext.readOnlyRootFilesystem=false" \
+    --timeout "$TIMEOUT" \
+    --wait >&2
+}
 
-log "Generating Rekor v2 Ed25519 signing keypair"
-openssl genpkey -algorithm Ed25519 -out "${PRIVKEY_PEM}" 2>/dev/null
-openssl pkey -in "${PRIVKEY_PEM}" -pubout -out "${PUBKEY_PEM}" 2>/dev/null
+install_scaffold &
+SCAFFOLD_PID=$!
+install_rekor_v2 &
+REKOR_V2_PID=$!
 
-kubectl create namespace "${REKOR_TILES_NAMESPACE}" 2>/dev/null || true
-kubectl create secret generic signing-key \
-  --namespace "${REKOR_TILES_NAMESPACE}" \
-  --from-file=signing-key="${PRIVKEY_PEM}" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-
-# nodeSelector override: GKE label doesn't exist on Kind nodes.
-# readOnlyRootFilesystem=false: POSIX backend writes tiles to local FS.
-if helm status rekor-tiles -n "${REKOR_TILES_NAMESPACE}" &>/dev/null; then
-  log "rekor-tiles already installed, upgrading"
-fi
-
-log "Installing rekor-tiles (v${REKOR_TILES_CHART_VERSION}, POSIX backend)"
-helm upgrade --install rekor-tiles sigstore/rekor-tiles \
-  --namespace "${REKOR_TILES_NAMESPACE}" \
-  --version "${REKOR_TILES_CHART_VERSION}" \
-  --skip-schema-validation \
-  --set "image.flavor=posix" \
-  --set-json 'nodeSelector=null' \
-  --set "namespace.create=false" \
-  --set "namespace.name=${REKOR_TILES_NAMESPACE}" \
-  --set "server.hostname=${REKOR_V2_HOSTNAME}" \
-  --set "server.posix.storageDir.path=/storage" \
-  --set "server.posix.storageDir.name=storage" \
-  --set "server.posix.storageDir.volume.emptyDir.sizeLimit=1Gi" \
-  --set "server.signer.file.path=/pki/signer.pem" \
-  --set "server.signer.file.secret.name=signing-key" \
-  --set "server.signer.file.secret.key=signing-key" \
-  --set "server.signer.file.secret.mountPath=/pki" \
-  --set "server.signer.file.secret.mountSubPath=signer.pem" \
-  --set "securityContext.readOnlyRootFilesystem=false" \
-  --timeout "$TIMEOUT" \
-  --wait >&2
-
-log "Waiting for rekor-tiles pods"
-kubectl wait --namespace "${REKOR_TILES_NAMESPACE}" \
-  --for=condition=ready pod --all \
-  --timeout="$TIMEOUT" 2>/dev/null || log "Warning: some pods may not be ready"
+INSTALL_FAILED=0
+wait $SCAFFOLD_PID || { echo "ERROR: scaffold Helm install failed" >&2; INSTALL_FAILED=1; }
+wait $REKOR_V2_PID || { echo "ERROR: rekor-tiles Helm install failed" >&2; INSTALL_FAILED=1; }
+[[ $INSTALL_FAILED -eq 0 ]] || exit 1
 
 # --- Port-forwards -----------------------------------------------------------
 
@@ -180,23 +197,26 @@ kubectl port-forward -n rekor-system     svc/rekor-server  "${REKOR_V1_LOCAL_POR
 kubectl port-forward -n tsa-system       svc/tsa-server    "${TSA_LOCAL_PORT}:80"       &>/dev/null &
 kubectl port-forward -n tuf-system       svc/tuf-server    "${TUF_LOCAL_PORT}:80"       &>/dev/null &
 kubectl port-forward -n "${REKOR_TILES_NAMESPACE}" svc/rekor-tiles "${REKOR_V2_LOCAL_PORT}:80" &>/dev/null &
-sleep 3
 
-log "Checking service health"
-
-check_health() {
-  local name="$1" url="$2"
-  if curl -sf "$url" -o /dev/null; then
-    log "$name is healthy"
-  else
-    log "Warning: $name health check failed"
-  fi
+wait_for_portforward() {
+  local name="$1" url="$2" max_attempts="${3:-15}"
+  for i in $(seq 1 "$max_attempts"); do
+    if curl -sf "$url" -o /dev/null 2>/dev/null; then
+      log "$name is ready"
+      return 0
+    fi
+    sleep 1
+  done
+  log "Warning: $name not reachable after ${max_attempts}s"
+  return 1
 }
 
-check_health "Fulcio"   "http://localhost:${FULCIO_LOCAL_PORT}/healthz"
-check_health "Rekor v1" "http://localhost:${REKOR_V1_LOCAL_PORT}/api/v1/log"
+log "Waiting for port-forwards to become ready"
+wait_for_portforward "Fulcio"   "http://localhost:${FULCIO_LOCAL_PORT}/healthz"
+wait_for_portforward "Rekor v1" "http://localhost:${REKOR_V1_LOCAL_PORT}/api/v1/log"
+wait_for_portforward "TUF"      "http://localhost:${TUF_LOCAL_PORT}"
 
-# Rekor v2 needs more time — wait with retries.
+# Rekor v2 needs more time — its healthz returns "SERVING" when ready.
 log "Waiting for Rekor v2 to become healthy..."
 for i in $(seq 1 30); do
   if curl -sf "http://localhost:${REKOR_V2_LOCAL_PORT}/healthz" 2>/dev/null | grep -q "SERVING"; then
@@ -204,11 +224,11 @@ for i in $(seq 1 30); do
     break
   fi
   if [[ $i -eq 30 ]]; then
-    echo "ERROR: Rekor v2 failed to become healthy after 90s" >&2
+    echo "ERROR: Rekor v2 failed to become healthy after 60s" >&2
     kubectl logs -n "${REKOR_TILES_NAMESPACE}" -l app.kubernetes.io/name=rekor-tiles --tail=50 >&2
     exit 1
   fi
-  sleep 3
+  sleep 2
 done
 
 # --- OIDC token --------------------------------------------------------------

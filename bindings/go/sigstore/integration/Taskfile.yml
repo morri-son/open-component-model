@@ -8,7 +8,14 @@ vars:
 
 tasks:
   test/integration:
-    desc: Run Sigstore integration tests (optional SIGSTORE_* env vars configure endpoints)
+    desc: Setup Kind cluster, run Sigstore integration tests, tear down
+    cmds:
+      - task: kind/setup
+      - defer: {task: kind/teardown}
+      - task: _run-go-tests
+
+  _run-go-tests:
+    internal: true
     dotenv: ['{{.TASKFILE_DIR}}/hack/generated.env']
     cmds:
       - task: reuse:run-go-test
@@ -21,6 +28,7 @@ tasks:
       - ./hack/setup-kind-sigstore.sh
 
   kind/teardown:
-    desc: Delete the Kind cluster
+    desc: Delete the Kind cluster (set SIGSTORE_KEEP_CLUSTER=true to skip)
     cmds:
-      - ./hack/teardown-kind-sigstore.sh
+      - cmd: ./hack/teardown-kind-sigstore.sh
+        if: '[ "${SIGSTORE_KEEP_CLUSTER:-false}" != "true" ]'
