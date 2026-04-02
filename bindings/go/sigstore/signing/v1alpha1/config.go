@@ -20,6 +20,10 @@ func init() {
 		runtime.NewUnversionedType(VerifyConfigType),
 		runtime.NewVersionedType(VerifyConfigType, Version),
 	)
+	Scheme.MustRegisterWithAlias(&OIDCIdentityToken{},
+		runtime.NewUnversionedType(OIDCIdentityTokenType),
+		runtime.NewVersionedType(OIDCIdentityTokenType, Version),
+	)
 }
 
 // SignConfig defines configuration for Sigstore-based signing.
