@@ -2,12 +2,9 @@ package handler
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -15,7 +12,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -29,8 +25,6 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore-go/pkg/testing/ca"
 	"github.com/sigstore/sigstore-go/pkg/verify"
-	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
@@ -198,12 +192,7 @@ func Test_Handler_Sign_WrongConfigType(t *testing.T) {
 	}
 	wrongCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-	key := mustECDSAKey(t)
-	creds := map[string]string{
-		credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-	}
-
-	_, err := h.Sign(t.Context(), sampleDigest(t), wrongCfg, creds)
+	_, err := h.Sign(t.Context(), sampleDigest(t), wrongCfg, map[string]string{})
 	r.Error(err)
 	r.Contains(err.Error(), "expected config type")
 }
@@ -236,27 +225,6 @@ func Test_Handler_Verify_WrongConfigType(t *testing.T) {
 
 // ---- helpers for sign tests ----
 
-func mustECDSAKey(t *testing.T) *ecdsa.PrivateKey {
-	t.Helper()
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	return key
-}
-
-func pemEncodePrivateKey(t *testing.T, key *ecdsa.PrivateKey) string {
-	t.Helper()
-	der, err := x509.MarshalECPrivateKey(key)
-	require.NoError(t, err)
-	return string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}))
-}
-
-func pemEncodePublicKey(t *testing.T, key *ecdsa.PublicKey) string {
-	t.Helper()
-	der, err := x509.MarshalPKIXPublicKey(key)
-	require.NoError(t, err)
-	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
-}
-
 func sampleDigest(t *testing.T) descruntime.Digest {
 	t.Helper()
 	h := sha256.Sum256([]byte("test content for sigstore signing"))
@@ -267,197 +235,43 @@ func sampleDigest(t *testing.T) descruntime.Digest {
 	}
 }
 
-func offlineSignConfig() *v1alpha1.SignConfig {
-	cfg := &v1alpha1.SignConfig{}
-	cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
-	return cfg
-}
+// makeDummyBundleJSON creates a minimal structurally valid Sigstore bundle JSON
+// that passes bundle.NewBundle() parsing but is not cryptographically valid.
+func makeDummyBundleJSON(t *testing.T, digest descruntime.Digest) []byte {
+	t.Helper()
 
-func offlineVerifyConfig() *v1alpha1.VerifyConfig {
-	cfg := &v1alpha1.VerifyConfig{}
-	cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
-	return cfg
-}
+	digestBytes, err := hex.DecodeString(digest.Value)
+	require.NoError(t, err)
 
-// ---- Sign tests ----
+	pbundle := &protobundle.Bundle{
+		MediaType: v1alpha1.MediaTypeSigstoreBundle,
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_Certificate{
+				Certificate: &protocommon.X509Certificate{
+					RawBytes: []byte("dummy-cert"),
+				},
+			},
+		},
+		Content: &protobundle.Bundle_MessageSignature{
+			MessageSignature: &protocommon.MessageSignature{
+				MessageDigest: &protocommon.HashOutput{
+					Algorithm: protocommon.HashAlgorithm_SHA2_256,
+					Digest:    digestBytes,
+				},
+				Signature: []byte("dummy-signature"),
+			},
+		},
+	}
 
-func Test_Handler_Sign(t *testing.T) {
-	t.Parallel()
-
-	t.Run("key-based sign produces valid bundle (offline)", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		creds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), sampleDigest(t), offlineSignConfig(), creds)
-		r.NoError(err)
-
-		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
-		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
-		r.NotEmpty(sigInfo.Value)
-		// Key-based signing has no Fulcio cert, so issuer is empty
-		r.Empty(sigInfo.Issuer)
-
-		// Decode and verify the bundle is valid protobuf JSON
-		bundleJSON, err := base64.StdEncoding.DecodeString(sigInfo.Value)
-		r.NoError(err)
-
-		var bundle protobundle.Bundle
-		err = protojson.Unmarshal(bundleJSON, &bundle)
-		r.NoError(err)
-
-		r.Equal(v1alpha1.MediaTypeSigstoreBundle, bundle.GetMediaType())
-		r.NotNil(bundle.GetVerificationMaterial())
-		// Key-based: verification material should have a public key, not a certificate
-		r.NotNil(bundle.GetVerificationMaterial().GetPublicKey())
-		r.NotEmpty(bundle.GetVerificationMaterial().GetPublicKey().GetHint())
-		// Should have a message signature
-		r.NotNil(bundle.GetMessageSignature())
-		r.NotEmpty(bundle.GetMessageSignature().GetSignature())
-	})
-
-	t.Run("sign with invalid digest hex returns error", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		creds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		badDigest := descruntime.Digest{
-			HashAlgorithm:          "SHA-256",
-			NormalisationAlgorithm: "jsonNormalisation/v2",
-			Value:                  "not-valid-hex!",
-		}
-
-		_, err := h.Sign(t.Context(), badDigest, offlineSignConfig(), creds)
-		r.Error(err)
-		r.Contains(err.Error(), "decode digest hex value")
-	})
-
-	t.Run("sign with invalid private key PEM returns error", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		creds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: "not-a-pem",
-		}
-
-		_, err := h.Sign(t.Context(), sampleDigest(t), offlineSignConfig(), creds)
-		r.Error(err)
-		r.Contains(err.Error(), "private key")
-	})
-
+	bundleJSON, err := protojson.Marshal(pbundle)
+	require.NoError(t, err)
+	return bundleJSON
 }
 
 // ---- Verify tests ----
 
 func Test_Handler_Verify(t *testing.T) {
 	t.Parallel()
-
-	t.Run("key-based sign-then-verify roundtrip (offline)", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-
-		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    digest,
-			Signature: sigInfo,
-		}
-
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.NoError(err)
-	})
-
-	t.Run("verification fails with wrong public key", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		signKey := mustECDSAKey(t)
-		wrongKey := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, signKey),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-
-		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    digest,
-			Signature: sigInfo,
-		}
-
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &wrongKey.PublicKey),
-		}
-
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.Error(err)
-		r.Contains(err.Error(), "verification failed")
-	})
-
-	t.Run("verification fails with tampered digest", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-
-		tamperedDigest := descruntime.Digest{
-			HashAlgorithm:          digest.HashAlgorithm,
-			NormalisationAlgorithm: digest.NormalisationAlgorithm,
-			Value:                  hex.EncodeToString(make([]byte, 32)),
-		}
-
-		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    tamperedDigest,
-			Signature: sigInfo,
-		}
-
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.Error(err)
-		r.Contains(err.Error(), "verification failed")
-	})
 
 	t.Run("verification fails with invalid base64 bundle", func(t *testing.T) {
 		t.Parallel()
@@ -474,9 +288,11 @@ func Test_Handler_Verify(t *testing.T) {
 			},
 		}
 
-		err := h.Verify(t.Context(), signed, offlineVerifyConfig(), map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &mustECDSAKey(t).PublicKey),
-		})
+		cfg := defaultVerifyConfig()
+		cfg.ExpectedIssuer = "https://accounts.google.com"
+		cfg.ExpectedSAN = "user@example.com"
+
+		err := h.Verify(t.Context(), signed, cfg, map[string]string{})
 		r.Error(err)
 		r.Contains(err.Error(), "decode bundle base64")
 	})
@@ -496,9 +312,11 @@ func Test_Handler_Verify(t *testing.T) {
 			},
 		}
 
-		err := h.Verify(t.Context(), signed, offlineVerifyConfig(), map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &mustECDSAKey(t).PublicKey),
-		})
+		cfg := defaultVerifyConfig()
+		cfg.ExpectedIssuer = "https://accounts.google.com"
+		cfg.ExpectedSAN = "user@example.com"
+
+		err := h.Verify(t.Context(), signed, cfg, map[string]string{})
 		r.Error(err)
 		r.Contains(err.Error(), "unmarshal sigstore bundle")
 	})
@@ -508,181 +326,32 @@ func Test_Handler_Verify(t *testing.T) {
 		r := require.New(t)
 		h := newHandler(t)
 
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCfg := offlineSignConfig()
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, signCfg, signCreds)
-		r.NoError(err)
+		// Build a minimal but structurally valid Sigstore bundle so parsing
+		// succeeds and the error surfaces from trusted material resolution.
+		minBundle := makeDummyBundleJSON(t, sampleDigest(t))
 
 		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    digest,
-			Signature: sigInfo,
+			Name:   "test-sig",
+			Digest: sampleDigest(t),
+			Signature: descruntime.SignatureInfo{
+				Algorithm: v1alpha1.AlgorithmSigstore,
+				MediaType: v1alpha1.MediaTypeSigstoreBundle,
+				Value:     base64.StdEncoding.EncodeToString(minBundle),
+			},
 		}
 
 		// Force TUF to fail by pointing at an invalid URL, ensuring no
-		// network-dependent fallback. Without a public key, trusted root,
-		// or reachable TUF mirror, verification must fail deterministically.
+		// network-dependent fallback.
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TUFRootURL: "https://nonexistent-tuf.invalid",
+			TUFRootURL:     "https://nonexistent-tuf.invalid",
+			ExpectedIssuer: "https://accounts.google.com",
+			ExpectedSAN:    "user@example.com",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-		err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{})
+		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{})
 		r.Error(err)
 		r.Contains(err.Error(), "resolve trusted material")
-	})
-
-	t.Run("verification fails with invalid digest hex", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-
-		badDigest := descruntime.Digest{
-			HashAlgorithm:          digest.HashAlgorithm,
-			NormalisationAlgorithm: digest.NormalisationAlgorithm,
-			Value:                  "not-valid-hex-gg$$",
-		}
-
-		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    badDigest,
-			Signature: sigInfo,
-		}
-
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.Error(err)
-		r.Contains(err.Error(), "decode digest hex")
-	})
-
-	t.Run("verify requires explicit public key, not derived from private key", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-
-		signed := descruntime.Signature{
-			Name:      "test-sig",
-			Digest:    digest,
-			Signature: sigInfo,
-		}
-
-		// Verify with only private key cred — should fail because public key is not derived
-		privateOnlyCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-		}
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), privateOnlyCreds)
-		r.Error(err)
-
-		// Verify with explicit public key — should succeed
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.NoError(err)
-	})
-
-	t.Run("Ed25519 sign-then-verify roundtrip (offline)", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key := mustEd25519Key(t)
-		digest := sampleDigest(t)
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: mustPKCS8PrivateKeyPEM(t, key),
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
-		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
-
-		signed := descruntime.Signature{
-			Name:      "test-sig-ed25519",
-			Digest:    digest,
-			Signature: sigInfo,
-		}
-
-		pubDER, err := x509.MarshalPKIXPublicKey(key.Public())
-		r.NoError(err)
-		pubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))
-
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pubPEM,
-		}
-
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.NoError(err)
-	})
-
-	t.Run("ECDSA P-384 sign-then-verify roundtrip (offline)", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		h := newHandler(t)
-
-		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		r.NoError(err)
-		digest := sampleDigest(t)
-
-		privDER, err := x509.MarshalECPrivateKey(key)
-		r.NoError(err)
-		privPEM := string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privDER}))
-
-		signCreds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: privPEM,
-		}
-
-		sigInfo, err := h.Sign(t.Context(), digest, offlineSignConfig(), signCreds)
-		r.NoError(err)
-		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
-		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
-
-		signed := descruntime.Signature{
-			Name:      "test-sig-p384",
-			Digest:    digest,
-			Signature: sigInfo,
-		}
-
-		pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-		r.NoError(err)
-		pubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))
-
-		verifyCreds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pubPEM,
-		}
-
-		err = h.Verify(t.Context(), signed, offlineVerifyConfig(), verifyCreds)
-		r.NoError(err)
 	})
 }
 
@@ -729,18 +398,6 @@ func Test_ConfigureTransparencyLog_DefaultVersion(t *testing.T) {
 	configureTransparencyLog(&opts, cfg)
 
 	r.Len(opts.TransparencyLogs, 1, "should add transparency log with default version")
-}
-
-func Test_KeypairFromPrivateKey_UnsupportedType(t *testing.T) {
-	t.Parallel()
-	r := require.New(t)
-
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	r.NoError(err)
-
-	_, err = keypairFromPrivateKey(rsaKey)
-	r.Error(err)
-	r.Contains(err.Error(), "unsupported private key type")
 }
 
 func Test_ConfigureTimestampAuthority(t *testing.T) {
@@ -926,7 +583,7 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
 	}
 
-	_, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{}, nil)
+	_, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
 	r.Error(err, "TUF without initial root should fail")
 	r.Contains(err.Error(), "TUFInitialRoot is required")
 }
@@ -972,267 +629,6 @@ func Test_ResolveOfflineTrustedRoot(t *testing.T) {
 	})
 }
 
-// ---- ecdsaKeypair unit tests ----
-
-func Test_ecdsaKeypair(t *testing.T) {
-	t.Parallel()
-	r := require.New(t)
-
-	key := mustECDSAKey(t)
-	kp, err := newECDSAKeypair(key)
-	r.NoError(err)
-
-	// Algorithm details must match PKIX_ECDSA_P256_SHA_256, identical to
-	// sigstore-go's EphemeralKeypair defaults.
-	r.Equal(protocommon.HashAlgorithm_SHA2_256, kp.GetHashAlgorithm())
-	r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, kp.GetSigningAlgorithm())
-	r.Equal("ECDSA", kp.GetKeyAlgorithm())
-
-	// Hint must match sigstore-go's computation: base64(sha256(DER public key)).
-	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-	r.NoError(err)
-	expectedHash := sha256.Sum256(pubDER)
-	expectedHint := []byte(base64.StdEncoding.EncodeToString(expectedHash[:]))
-	r.Equal(expectedHint, kp.GetHint())
-
-	pubPEM, err := kp.GetPublicKeyPem()
-	r.NoError(err)
-	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
-
-	// Verify SignData via signature.LoadVerifierWithOpts, mirroring sigstore-go's
-	// own keys_test.go pattern rather than raw ecdsa.VerifyASN1.
-	data := []byte("test data to sign")
-	sig, digest, err := kp.SignData(t.Context(), data)
-	r.NoError(err)
-	r.NotEmpty(sig)
-
-	h := sha256.Sum256(data)
-	r.Equal(h[:], digest)
-
-	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA256))
-	r.NoError(err)
-	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
-}
-
-func mustEd25519Key(t *testing.T) ed25519.PrivateKey {
-	t.Helper()
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-	return priv
-}
-
-func mustPKCS8PrivateKeyPEM(t *testing.T, key interface{}) string {
-	t.Helper()
-	der, err := x509.MarshalPKCS8PrivateKey(key)
-	require.NoError(t, err)
-	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
-}
-
-func Test_ecdsaKeypair_P384(t *testing.T) {
-	t.Parallel()
-	r := require.New(t)
-
-	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	r.NoError(err)
-	kp, err := newECDSAKeypair(key)
-	r.NoError(err)
-
-	r.Equal(protocommon.HashAlgorithm_SHA2_384, kp.GetHashAlgorithm())
-	r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, kp.GetSigningAlgorithm())
-	r.Equal("ECDSA", kp.GetKeyAlgorithm())
-
-	pubPEM, err := kp.GetPublicKeyPem()
-	r.NoError(err)
-	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
-
-	data := []byte("test data for P-384")
-	sig, digest, err := kp.SignData(t.Context(), data)
-	r.NoError(err)
-	r.NotEmpty(sig)
-	r.NotEmpty(digest)
-
-	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA384))
-	r.NoError(err)
-	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
-}
-
-func Test_ecdsaKeypair_P521(t *testing.T) {
-	t.Parallel()
-	r := require.New(t)
-
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	r.NoError(err)
-	kp, err := newECDSAKeypair(key)
-	r.NoError(err)
-
-	r.Equal(protocommon.HashAlgorithm_SHA2_512, kp.GetHashAlgorithm())
-	r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512, kp.GetSigningAlgorithm())
-	r.Equal("ECDSA", kp.GetKeyAlgorithm())
-
-	pubPEM, err := kp.GetPublicKeyPem()
-	r.NoError(err)
-	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
-
-	data := []byte("test data for P-521")
-	sig, digest, err := kp.SignData(t.Context(), data)
-	r.NoError(err)
-	r.NotEmpty(sig)
-	r.NotEmpty(digest)
-
-	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.SHA512))
-	r.NoError(err)
-	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
-}
-
-func Test_ed25519Keypair(t *testing.T) {
-	t.Parallel()
-	r := require.New(t)
-
-	key := mustEd25519Key(t)
-	kp, err := newEd25519Keypair(key)
-	r.NoError(err)
-
-	r.Equal(protocommon.HashAlgorithm_SHA2_512, kp.GetHashAlgorithm())
-	r.Equal(protocommon.PublicKeyDetails_PKIX_ED25519, kp.GetSigningAlgorithm())
-	r.Equal("Ed25519", kp.GetKeyAlgorithm())
-
-	pubDER, err := x509.MarshalPKIXPublicKey(key.Public())
-	r.NoError(err)
-	expectedHash := sha256.Sum256(pubDER)
-	r.Equal([]byte(base64.StdEncoding.EncodeToString(expectedHash[:])), kp.GetHint())
-
-	pubPEM, err := kp.GetPublicKeyPem()
-	r.NoError(err)
-	r.Contains(pubPEM, "BEGIN PUBLIC KEY")
-
-	data := []byte("test data for Ed25519")
-	sig, returned, err := kp.SignData(t.Context(), data)
-	r.NoError(err)
-	r.NotEmpty(sig)
-	r.Equal(data, returned, "Ed25519 SignData should return raw data, not a digest")
-
-	verifier, err := signature.LoadVerifierWithOpts(kp.GetPublicKey(), options.WithHash(crypto.Hash(0)))
-	r.NoError(err)
-	r.NoError(verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)))
-}
-
-func Test_keypairFromPrivateKey(t *testing.T) {
-	t.Parallel()
-
-	t.Run("P-256 returns ecdsaKeypair", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key := mustECDSAKey(t)
-		kp, err := keypairFromPrivateKey(key)
-		r.NoError(err)
-		_, ok := kp.(*ecdsaKeypair)
-		r.True(ok)
-		r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, kp.GetSigningAlgorithm())
-	})
-
-	t.Run("P-384 returns ecdsaKeypair", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		r.NoError(err)
-		kp, err := keypairFromPrivateKey(key)
-		r.NoError(err)
-		_, ok := kp.(*ecdsaKeypair)
-		r.True(ok)
-		r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, kp.GetSigningAlgorithm())
-	})
-
-	t.Run("P-521 returns ecdsaKeypair", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-		r.NoError(err)
-		kp, err := keypairFromPrivateKey(key)
-		r.NoError(err)
-		_, ok := kp.(*ecdsaKeypair)
-		r.True(ok)
-		r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512, kp.GetSigningAlgorithm())
-	})
-
-	t.Run("Ed25519 returns ed25519Keypair", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-		key := mustEd25519Key(t)
-		kp, err := keypairFromPrivateKey(key)
-		r.NoError(err)
-		_, ok := kp.(*ed25519Keypair)
-		r.True(ok)
-		r.Equal(protocommon.PublicKeyDetails_PKIX_ED25519, kp.GetSigningAlgorithm())
-	})
-}
-
-func Test_ResolveKeypair_KeyBased(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		name    string
-		pemFunc func(t *testing.T) string
-		check   func(t *testing.T, kp sign.Keypair)
-	}{
-		{
-			name: "P-256 EC PRIVATE KEY",
-			pemFunc: func(t *testing.T) string {
-				return pemEncodePrivateKey(t, mustECDSAKey(t))
-			},
-			check: func(t *testing.T, kp sign.Keypair) {
-				t.Helper()
-				r := require.New(t)
-				_, ok := kp.(*ecdsaKeypair)
-				r.True(ok)
-				r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, kp.GetSigningAlgorithm())
-			},
-		},
-		{
-			name: "P-384 EC PRIVATE KEY",
-			pemFunc: func(t *testing.T) string {
-				key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-				require.NoError(t, err)
-				der, err := x509.MarshalECPrivateKey(key)
-				require.NoError(t, err)
-				return string(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}))
-			},
-			check: func(t *testing.T, kp sign.Keypair) {
-				t.Helper()
-				r := require.New(t)
-				_, ok := kp.(*ecdsaKeypair)
-				r.True(ok)
-				r.Equal(protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, kp.GetSigningAlgorithm())
-			},
-		},
-		{
-			name: "Ed25519 PKCS8",
-			pemFunc: func(t *testing.T) string {
-				return mustPKCS8PrivateKeyPEM(t, mustEd25519Key(t))
-			},
-			check: func(t *testing.T, kp sign.Keypair) {
-				t.Helper()
-				r := require.New(t)
-				_, ok := kp.(*ed25519Keypair)
-				r.True(ok)
-				r.Equal(protocommon.PublicKeyDetails_PKIX_ED25519, kp.GetSigningAlgorithm())
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			r := require.New(t)
-			creds := map[string]string{
-				credentials.CredentialKeyPrivateKeyPEM: tc.pemFunc(t),
-			}
-			kp, token, err := resolveKeypair(creds)
-			r.NoError(err)
-			r.NotNil(kp)
-			r.Empty(token)
-			tc.check(t, kp)
-		})
-	}
-}
-
 // ===========================================================================
 // Keyless signing unit tests
 // ===========================================================================
@@ -1267,26 +663,6 @@ func Test_ResolveKeypair_Keyless(t *testing.T) {
 		r.NoError(err)
 		r.NotNil(kp)
 		r.Empty(token, "without OIDC token, token string should be empty")
-	})
-
-	t.Run("private key takes precedence over OIDC token", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		key := mustECDSAKey(t)
-		creds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
-			credentials.CredentialKeyOIDCToken:     "some-token",
-		}
-
-		kp, token, err := resolveKeypair(creds)
-		r.NoError(err)
-		r.NotNil(kp)
-		r.Empty(token, "key-based mode should not return an OIDC token")
-
-		// The keypair should be our ecdsaKeypair, not an ephemeral one
-		_, isOurs := kp.(*ecdsaKeypair)
-		r.True(isOurs, "should return ecdsaKeypair when private key is provided")
 	})
 }
 
@@ -1555,12 +931,12 @@ func Test_ExtractIssuer(t *testing.T) {
 	})
 }
 
-// ---- buildPolicy keyless tests ----
+// ---- buildPolicy tests ----
 
-func Test_BuildPolicy_Keyless(t *testing.T) {
+func Test_BuildPolicy(t *testing.T) {
 	t.Parallel()
 
-	t.Run("without public key and with identity config uses certificate identity", func(t *testing.T) {
+	t.Run("with identity config uses certificate identity", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1575,15 +951,13 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		policy, err := buildPolicy(
 			bytes.NewReader(digestBytes),
-			nil,
 			cfg,
 		)
 		r.NoError(err)
-		// Policy should be non-zero (constructed successfully)
 		r.NotEqual(verify.PolicyBuilder{}, policy)
 	})
 
-	t.Run("without public key and with issuer regex uses certificate identity", func(t *testing.T) {
+	t.Run("with issuer regex uses certificate identity", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1598,14 +972,13 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		policy, err := buildPolicy(
 			bytes.NewReader(digestBytes),
-			nil,
 			cfg,
 		)
 		r.NoError(err)
 		r.NotEqual(verify.PolicyBuilder{}, policy)
 	})
 
-	t.Run("without public key and without identity config returns error", func(t *testing.T) {
+	t.Run("without identity config returns error", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -1617,34 +990,10 @@ func Test_BuildPolicy_Keyless(t *testing.T) {
 
 		_, err = buildPolicy(
 			bytes.NewReader(digestBytes),
-			nil,
 			cfg,
 		)
 		r.Error(err)
 		r.Contains(err.Error(), "keyless verification requires identity config")
-	})
-
-	t.Run("with public key always uses key policy regardless of identity config", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		key := mustECDSAKey(t)
-		digest := sampleDigest(t)
-		digestBytes, err := hex.DecodeString(digest.Value)
-		r.NoError(err)
-
-		cfg := &v1alpha1.VerifyConfig{
-			ExpectedIssuer: "https://accounts.google.com",
-			ExpectedSAN:    "user@example.com",
-		}
-
-		policy, err := buildPolicy(
-			bytes.NewReader(digestBytes),
-			&key.PublicKey,
-			cfg,
-		)
-		r.NoError(err)
-		r.NotEqual(verify.PolicyBuilder{}, policy)
 	})
 }
 
@@ -1666,7 +1015,7 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			TrustedRootPath: trPath,
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{}, nil)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, map[string]string{})
 		r.NoError(err)
 		r.NotNil(tm, "should return trusted material from file")
 	})
@@ -1682,39 +1031,9 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, nil)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
 		r.NoError(err)
 		r.NotNil(tm, "should return trusted material from credentials")
-	})
-
-	t.Run("trusted root from file with public key composes material", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		dir := t.TempDir()
-		trPath := filepath.Join(dir, "trusted_root.json")
-		r.NoError(os.WriteFile(trPath, trustedRoot, 0o644))
-
-		key := mustECDSAKey(t)
-		cfg := &v1alpha1.VerifyConfig{
-			TrustedRootPath: trPath,
-		}
-		creds := map[string]string{
-			credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-		}
-
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, &key.PublicKey)
-		r.NoError(err)
-		r.NotNil(tm)
-
-		composed, ok := tm.(*composedTrustedMaterial)
-		r.True(ok, "should return composedTrustedMaterial when both trusted root and key are present")
-
-		// The composed material should delegate PublicKeyVerifier to the key material
-		verifier, err := composed.PublicKeyVerifier("")
-		r.NoError(err)
-		r.NotNil(verifier)
 	})
 
 	t.Run("trusted root credentials take precedence over file path", func(t *testing.T) {
@@ -1730,15 +1049,15 @@ func Test_ResolveTrustedMaterial_Keyless(t *testing.T) {
 			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
 		}
 
-		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, nil)
+		tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
 		r.NoError(err)
 		r.NotNil(tm, "credentials trusted root should take precedence")
 	})
 }
 
-// ---- buildVerifier keyless tests ----
+// ---- buildVerifier tests ----
 
-func Test_BuildVerifier_Keyless(t *testing.T) {
+func Test_BuildVerifier(t *testing.T) {
 	t.Parallel()
 
 	t.Run("trusted material with Rekor logs requires transparency log", func(t *testing.T) {
@@ -1750,7 +1069,7 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.RekorLogs()), 0, "trusted material should have Rekor log entries")
 
-		v, err := buildVerifier(tm, false)
+		v, err := buildVerifier(tm)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with transparency log requirement")
 	})
@@ -1763,41 +1082,9 @@ func Test_BuildVerifier_Keyless(t *testing.T) {
 		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
 		r.NoError(err)
 
-		v, err := buildVerifier(tm, false)
+		v, err := buildVerifier(tm)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier without tlog when no Rekor logs in trusted material")
-	})
-
-}
-
-func Test_BuildVerifier_KeyBased(t *testing.T) {
-	t.Parallel()
-
-	t.Run("key-based with Rekor logs enables transparency log", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootWithRekorJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-		r.Greater(len(tm.RekorLogs()), 0, "trusted material should have Rekor log entries")
-
-		v, err := buildVerifier(tm, true)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier with transparency log for key-based when Rekor logs present")
-	})
-
-	t.Run("key-based without Rekor logs auto-detects", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-
-		v, err := buildVerifier(tm, true)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier without tlog for key-based when no Rekor logs")
 	})
 }
 
@@ -1826,31 +1113,18 @@ func Test_Handler_Sign_Keyless(t *testing.T) {
 		r.Contains(err.Error(), "create sigstore bundle")
 	})
 
-	t.Run("keyless sign without OIDC token produces ephemeral bundle", func(t *testing.T) {
+	t.Run("keyless sign without OIDC token and no endpoints returns error", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 		h := newHandler(t)
 
-		// No private key and no OIDC token → ephemeral keypair, no Fulcio,
-		// offline mode produces a valid bundle with a public key hint
 		creds := map[string]string{}
-		cfg := offlineSignConfig()
+		cfg := &v1alpha1.SignConfig{}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
-		sigInfo, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
-		r.NoError(err)
-		r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
-		r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
-		r.NotEmpty(sigInfo.Value)
-
-		bundleJSON, err := base64.StdEncoding.DecodeString(sigInfo.Value)
-		r.NoError(err)
-
-		var bundle protobundle.Bundle
-		r.NoError(protojson.Unmarshal(bundleJSON, &bundle))
-
-		vm := bundle.GetVerificationMaterial()
-		r.NotNil(vm)
-		r.NotNil(vm.GetPublicKey(), "ephemeral keypair should produce public key hint")
+		_, err := h.Sign(t.Context(), sampleDigest(t), cfg, creds)
+		r.Error(err)
+		r.Contains(err.Error(), "keyless signing requires an OIDC identity token")
 	})
 
 }
@@ -2044,11 +1318,11 @@ func Test_ValidateConfig(t *testing.T) {
 		r := require.New(t)
 		h := newHandler(t)
 
-		key := mustECDSAKey(t)
 		creds := map[string]string{
-			credentials.CredentialKeyPrivateKeyPEM: pemEncodePrivateKey(t, key),
+			credentials.CredentialKeyOIDCToken: "not-a-valid-jwt",
 		}
 		cfg := &v1alpha1.SignConfig{
+			FulcioURL:    "https://fulcio.example.com",
 			RekorVersion: 3,
 		}
 		cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
@@ -2059,27 +1333,19 @@ func Test_ValidateConfig(t *testing.T) {
 	})
 }
 
-// ---- TUF failure with public key fallback ----
+// ---- TUF failure test ----
 
-func Test_ResolveTrustedMaterial_TUFFailure_PublicKeyFallback(t *testing.T) {
+func Test_ResolveTrustedMaterial_TUFFailure(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	key := mustECDSAKey(t)
 	cfg := &v1alpha1.VerifyConfig{
 		TUFRootURL: "https://nonexistent-tuf-repo.invalid",
 	}
-	creds := map[string]string{
-		credentials.CredentialKeyPublicKeyPEM: pemEncodePublicKey(t, &key.PublicKey),
-	}
+	creds := map[string]string{}
 
-	// TUF requires a pinned initial root — without it, resolution fails
-	// even when a public key is available (TUF resolution happens unconditionally).
-	tm, err := resolveTrustedMaterial(t.Context(), cfg, creds, &key.PublicKey)
-
-	// Missing TUFInitialRoot causes resolveTrustedRoot to fail, which propagates up.
-	// Even though we have a public key, the TUF error takes precedence.
-	r.Error(err, "TUF failure should propagate even when public key is available")
+	tm, err := resolveTrustedMaterial(t.Context(), cfg, creds)
+	r.Error(err, "TUF failure should propagate")
 	r.Contains(err.Error(), "TUFInitialRoot is required")
 	r.Nil(tm)
 }
@@ -2130,7 +1396,7 @@ func makeTrustedRootWithCTLogJSON(t *testing.T) []byte {
 func Test_BuildVerifier_SCT(t *testing.T) {
 	t.Parallel()
 
-	t.Run("keyless with CT logs enables SCT verification", func(t *testing.T) {
+	t.Run("with CT logs enables SCT verification", func(t *testing.T) {
 		t.Parallel()
 		r := require.New(t)
 
@@ -2139,23 +1405,9 @@ func Test_BuildVerifier_SCT(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
 
-		v, err := buildVerifier(tm, false)
+		v, err := buildVerifier(tm)
 		r.NoError(err)
-		r.NotNil(v, "should build verifier with SCT requirement for keyless")
-	})
-
-	t.Run("key-based skips SCT even with CT logs", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootWithCTLogJSON(t)
-		tm, err := root.NewTrustedRootFromJSON(trustedRoot)
-		r.NoError(err)
-		r.Greater(len(tm.CTLogs()), 0, "trusted material should have CT log entries")
-
-		v, err := buildVerifier(tm, true)
-		r.NoError(err)
-		r.NotNil(v, "should build verifier without SCT for key-based")
+		r.NotNil(v, "should build verifier with SCT requirement")
 	})
 }
 
@@ -2339,7 +1591,8 @@ func Test_ApplySigningConfig(t *testing.T) {
 func makeTrustedRootWithTSAJSON(t *testing.T) []byte {
 	t.Helper()
 
-	key := mustECDSAKey(t)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
 	certTemplate := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		Subject:               pkix.Name{CommonName: "Test TSA"},
@@ -2394,7 +1647,7 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		r.NoError(err)
 		r.Greater(len(tm.TimestampingAuthorities()), 0, "trusted material should have TSA")
 
-		v, err := buildVerifier(tm, false)
+		v, err := buildVerifier(tm)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with observer timestamps from material TSA")
 	})
@@ -2408,7 +1661,7 @@ func Test_BuildVerifier_TSAFromTrustedMaterial(t *testing.T) {
 		r.NoError(err)
 		r.Empty(tm.TimestampingAuthorities(), "trusted material should not have TSA")
 
-		v, err := buildVerifier(tm, false)
+		v, err := buildVerifier(tm)
 		r.NoError(err)
 		r.NotNil(v, "should build verifier with integrated timestamps")
 	})
