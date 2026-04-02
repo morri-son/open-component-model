@@ -129,22 +129,6 @@ func resolveTrustedRoot(ctx context.Context, cfg *v1alpha1.VerifyConfig, creds m
 	return tr, nil
 }
 
-// resolveOfflineTrustedRoot loads a trusted root from offline sources only:
-// credentials JSON. Unlike resolveTrustedRoot, it never falls back to TUF
-// (which requires network access). Returns nil, nil when no offline source
-// is configured.
-func resolveOfflineTrustedRoot(creds map[string]string) (root.TrustedMaterial, error) {
-	trustedRootJSON, err := credentials.TrustedRootFromCredentials(creds)
-	if err != nil {
-		return nil, fmt.Errorf("load trusted root from credentials: %w", err)
-	}
-	if len(trustedRootJSON) > 0 {
-		return root.NewTrustedRootFromJSON(trustedRootJSON)
-	}
-
-	return nil, nil
-}
-
 // trustedMaterialFromTUF fetches a trusted root from a custom TUF mirror.
 // cfg.TUFRootURL and cfg.TUFInitialRoot must both be set. The initial root
 // serves as the cryptographic trust anchor — the TUF security model requires

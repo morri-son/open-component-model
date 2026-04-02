@@ -67,16 +67,6 @@ func doSign(
 		return descruntime.SignatureInfo{}, fmt.Errorf("keyless signing requires an OIDC identity token: provide one via credentials or configure explicit endpoints")
 	}
 
-	// When a trusted root is available from an offline source, set it on
-	// BundleOptions so sign.Bundle can verify the created bundle before
-	// returning it (defense-in-depth). TUF is intentionally excluded to
-	// avoid a network round-trip at sign time.
-	if tr, err := resolveOfflineTrustedRoot(creds); err != nil {
-		slog.WarnContext(ctx, "failed to resolve offline trusted root for sign-time verification", "error", err)
-	} else if tr != nil {
-		opts.TrustedRoot = tr
-	}
-
 	content := &sign.PlainData{Data: digestBytes}
 
 	bundle, err := sign.Bundle(content, keypair, opts)
