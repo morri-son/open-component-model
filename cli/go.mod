@@ -22,8 +22,8 @@ require (
 	ocm.software/open-component-model/bindings/go/credentials v0.0.9
 	ocm.software/open-component-model/bindings/go/ctf v0.3.0
 	ocm.software/open-component-model/bindings/go/dag v0.0.6
-	ocm.software/open-component-model/bindings/go/descriptor/normalisation v0.0.0-20260330094137-cce09ef07431
-	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260330094137-cce09ef07431
+	ocm.software/open-component-model/bindings/go/descriptor/normalisation v0.0.0-20260401155312-e2b46f9fb25c
+	ocm.software/open-component-model/bindings/go/descriptor/runtime v0.0.0-20260402061016-e120070fd921
 	ocm.software/open-component-model/bindings/go/descriptor/v2 v2.0.3-alpha2
 	ocm.software/open-component-model/bindings/go/helm v0.0.0-20260330094137-cce09ef07431
 	ocm.software/open-component-model/bindings/go/input/dir v0.0.2
@@ -34,10 +34,22 @@ require (
 	ocm.software/open-component-model/bindings/go/repository v0.0.8
 	ocm.software/open-component-model/bindings/go/rsa v0.0.0-20260330094137-cce09ef07431
 	ocm.software/open-component-model/bindings/go/runtime v0.0.7
-	ocm.software/open-component-model/bindings/go/signing v0.0.0-20260330094137-cce09ef07431
+	ocm.software/open-component-model/bindings/go/signing v0.0.0-20260402061016-e120070fd921
 	ocm.software/open-component-model/bindings/go/transfer v0.0.0-20260330094137-cce09ef07431
 	ocm.software/open-component-model/bindings/go/transform v0.0.0-20260330094137-cce09ef07431
 	sigs.k8s.io/yaml v1.6.0
+)
+
+require (
+	github.com/docker/docker-credential-helpers v0.9.3 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/redis/go-redis/v9 v9.14.1 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0 // indirect
+	go.opentelemetry.io/otel/exporters/prometheus v0.60.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.39.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
 )
 
 require (
@@ -119,7 +131,7 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251124214823-79d6a2a48846 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
@@ -135,6 +147,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
 	k8s.io/kubectl v0.35.2 // indirect
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
+	ocm.software/open-component-model/bindings/go/cosign v0.0.0
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/controller-runtime v0.23.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
@@ -143,3 +156,5 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
+
+replace ocm.software/open-component-model/bindings/go/cosign => ../bindings/go/cosign
