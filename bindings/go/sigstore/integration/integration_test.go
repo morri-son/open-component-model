@@ -35,7 +35,7 @@ const (
 	credPrivateKeyPEMFile   = "private_key_pem_file"
 	credPublicKeyPEM        = "public_key_pem"
 	credPublicKeyPEMFile    = "public_key_pem_file"
-	credOIDCToken           = "oidc_token"
+	credOIDCToken           = "token"
 	credTrustedRootJSONFile = "trusted_root_json_file"
 )
 

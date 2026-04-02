@@ -26,7 +26,7 @@ const (
 	CredentialKeyPrivateKeyPEMFile   = CredentialKeyPrivateKeyPEM + "_file"
 	CredentialKeyPublicKeyPEM        = "public_key_pem" // inline public key PEM (ECDSA P-256/384/521 or Ed25519)
 	CredentialKeyPublicKeyPEMFile    = CredentialKeyPublicKeyPEM + "_file"
-	CredentialKeyOIDCToken           = "oidc_token"        // pre-obtained OIDC identity token for keyless signing
+	CredentialKeyOIDCToken           = "token"             // pre-obtained OIDC identity token for keyless signing
 	CredentialKeyTrustedRootJSON     = "trusted_root_json" // inline trusted root JSON for offline verification
 	CredentialKeyTrustedRootJSONFile = CredentialKeyTrustedRootJSON + "_file"
 )

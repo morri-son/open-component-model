@@ -27,8 +27,9 @@ const (
 	configKeyClientID = "clientID"
 
 	// credentialKeyOIDCToken is the credential key for the resolved OIDC token.
-	// Must match the constant in sigstore/signing/handler/internal/credentials.
-	credentialKeyOIDCToken = "oidc_token"
+	// Must match v1alpha1.CredentialKeyToken and the constant in
+	// sigstore/signing/handler/internal/credentials.
+	credentialKeyOIDCToken = "token"
 
 	// defaultOIDCIssuer is the public-good Sigstore OIDC issuer.
 	defaultOIDCIssuer = "https://oauth2.sigstore.dev/auth"
