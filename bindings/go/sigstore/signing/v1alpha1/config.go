@@ -26,7 +26,7 @@ func init() {
 	)
 }
 
-// SignConfig defines configuration for Sigstore-based signing.
+// SignConfig defines configuration for Sigstore-based keyless signing.
 //
 // # Endpoint Discovery
 //
@@ -39,16 +39,8 @@ func init() {
 // To use explicit endpoints instead, set the individual URL fields or provide a
 // SigningConfigPath.
 //
-// # Signing Modes
-//
-// Keyless: an OIDC token (from credentials or a credential plugin) produces a
-// short-lived Fulcio certificate embedded in the bundle along with the signer's identity.
-//
-// Key-based: a private key from credentials signs the artifact. The bundle stores only a
-// public key hint (an opaque identifier), not the actual public key material. This follows
-// the Sigstore bundle specification: "Like traditional PKI key distribution the format of
-// the hint must be agreed upon out of band by the signer and the verifiers. The key itself
-// is not embedded in the Sigstore bundle." (https://docs.sigstore.dev/about/bundle)
+// An OIDC token (from credentials or a credential plugin) produces a short-lived
+// Fulcio certificate embedded in the bundle along with the signer's identity.
 //
 // +k8s:deepcopy-gen:interfaces=ocm.software/open-component-model/bindings/go/runtime.Typed
 // +k8s:deepcopy-gen=true
@@ -86,23 +78,16 @@ type SignConfig struct {
 	RekorVersion uint32 `json:"rekorVersion,omitempty"`
 }
 
-// VerifyConfig defines configuration for Sigstore-based verification.
+// VerifyConfig defines configuration for Sigstore-based keyless verification.
 //
 // # Trusted Root Discovery
 //
 // Trusted root material is resolved from credentials, TrustedRootPath,
 // TUFRootURL, or (as a fallback) the public-good Sigstore TUF repository.
-// For key-based verification, TUF auto-discovery is skipped when no explicit
-// source is configured — the public key alone is sufficient.
 //
-// # Verification Modes
-//
-// Keyless verification requires at least one identity field (ExpectedIssuer, ExpectedSAN,
+// Verification requires at least one identity field (ExpectedIssuer, ExpectedSAN,
 // or their regex variants). The Fulcio certificate in the bundle is validated against the
-// trusted root's CA key and the identity constraints. No external key material is needed.
-//
-// Key-based verification requires the public key to be provided out of band via credentials,
-// since the bundle only contains a hint. Without the public key, verification fails.
+// trusted root's CA key and the identity constraints.
 //
 // Transparency log and timestamp requirements are auto-detected from the trusted material:
 // if the trusted root contains Rekor log entries, transparency log verification is enforced;
