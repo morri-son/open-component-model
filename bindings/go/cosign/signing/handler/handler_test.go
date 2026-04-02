@@ -174,7 +174,7 @@ func TestSign_BuildsCorrectFlags(t *testing.T) {
 	r.Equal("https://tsa.example.com/api/v1/timestamp", mock.signOpts.TSAURL)
 }
 
-func TestSign_WithoutToken(t *testing.T) {
+func TestSign_WithoutToken_Fails(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
@@ -185,9 +185,9 @@ func TestSign_WithoutToken(t *testing.T) {
 	creds := map[string]string{}
 
 	_, err := h.Sign(t.Context(), testDigest(), cfg, creds)
-	r.NoError(err)
-	r.True(mock.signCalled)
-	r.Empty(mock.signOpts.IdentityToken)
+	r.Error(err)
+	r.Contains(err.Error(), "OIDC identity token required")
+	r.False(mock.signCalled, "executor should not be called without a token")
 }
 
 func TestSign_WritesDigestBytesToTempFile(t *testing.T) {
@@ -208,7 +208,7 @@ func TestSign_WritesDigestBytesToTempFile(t *testing.T) {
 	cfg := testSignConfig()
 	digest := testDigest()
 
-	_, err := h.Sign(t.Context(), digest, cfg, map[string]string{})
+	_, err := h.Sign(t.Context(), digest, cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.NoError(err)
 
 	expectedBytes, err := hex.DecodeString(digest.Value)
@@ -225,7 +225,7 @@ func TestSign_BundleEncoding(t *testing.T) {
 	h := NewWithExecutor(mock)
 
 	cfg := testSignConfig()
-	result, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{})
+	result, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.NoError(err)
 
 	r.Equal(v1alpha1.AlgorithmSigstore, result.Algorithm)
@@ -247,7 +247,7 @@ func TestSign_IssuerExtraction(t *testing.T) {
 	h := NewWithExecutor(mock)
 
 	cfg := testSignConfig()
-	result, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{})
+	result, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.NoError(err)
 	r.Equal(expectedIssuer, result.Issuer)
 }
@@ -293,7 +293,7 @@ func TestSign_IssuerV2Extraction(t *testing.T) {
 	h := NewWithExecutor(mock)
 
 	cfg := testSignConfig()
-	result, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{})
+	result, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.NoError(err)
 	r.Equal(expectedIssuer, result.Issuer)
 }
@@ -306,7 +306,7 @@ func TestSign_CosignError(t *testing.T) {
 	h := NewWithExecutor(mock)
 
 	cfg := testSignConfig()
-	_, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{})
+	_, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.Error(err)
 	r.Contains(err.Error(), "cosign sign")
 }
@@ -320,7 +320,7 @@ func TestSign_InvalidHexDigest(t *testing.T) {
 
 	cfg := testSignConfig()
 	digest := descruntime.Digest{Value: "not-hex!"}
-	_, err := h.Sign(t.Context(), digest, cfg, map[string]string{})
+	_, err := h.Sign(t.Context(), digest, cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.Error(err)
 	r.Contains(err.Error(), "decode digest hex")
 }
@@ -353,7 +353,7 @@ func TestSign_TempFileCleanup(t *testing.T) {
 	h := NewWithExecutor(recording)
 
 	cfg := testSignConfig()
-	_, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{})
+	_, err := h.Sign(t.Context(), testDigest(), cfg, map[string]string{CredentialKeyOIDCToken: "test-token"})
 	r.NoError(err)
 
 	r.NotEmpty(dataPath)
@@ -654,9 +654,9 @@ func TestGetVerifyingCredentialConsumerIdentity_WrongMediaType(t *testing.T) {
 
 func TestDefaultExecutor_SignBlobArgs(t *testing.T) {
 	t.Parallel()
-	r := require.New(t)
 
-	e := &DefaultExecutor{BinaryPath: "echo"}
+	e := NewDefaultExecutor()
+	e.binaryPath = "echo"
 	opts := SignOpts{
 		BundleOutPath: "/dev/null",
 		IdentityToken: "my-token",
@@ -665,11 +665,7 @@ func TestDefaultExecutor_SignBlobArgs(t *testing.T) {
 		TSAURL:        "https://tsa.example.com",
 	}
 
-	_, err := e.SignBlob(t.Context(), "/dev/null", opts)
-	// echo will succeed but bundle file read will produce empty/error — that's fine,
-	// we just want to verify the command doesn't panic
-	_ = err
-	_ = r
+	_, _ = e.SignBlob(t.Context(), "/dev/null", opts)
 }
 
 // --- Helper executors for recording ---

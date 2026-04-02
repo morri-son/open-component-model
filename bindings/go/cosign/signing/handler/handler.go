@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
 	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/signing"
-
-	"ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
 )
 
 var _ signing.Handler = (*Handler)(nil)
@@ -101,7 +100,7 @@ func (*Handler) GetVerifyingCredentialConsumerIdentity(
 	_ runtime.Typed,
 ) (runtime.Identity, error) {
 	if signature.Signature.MediaType != v1alpha1.MediaTypeSigstoreBundle {
-		return nil, fmt.Errorf("unsupported media type %q for cosign verification", signature.Signature.MediaType)
+		return nil, fmt.Errorf("unsupported media type %q for sigstore verification", signature.Signature.MediaType)
 	}
 	id := verifyingIdentity()
 	id[IdentityAttributeSignature] = signature.Name

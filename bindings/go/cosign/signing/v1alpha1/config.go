@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	SignConfigType   = "CosignSigningConfiguration"
-	VerifyConfigType = "CosignVerificationConfiguration"
+	SignConfigType   = "SigstoreSigningConfiguration"
+	VerifyConfigType = "SigstoreVerificationConfiguration"
 )
 
 var Scheme = runtime.NewScheme()

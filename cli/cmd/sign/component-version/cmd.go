@@ -14,13 +14,13 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
+	cosignv1alpha1 "ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
 	"ocm.software/open-component-model/bindings/go/credentials"
 	"ocm.software/open-component-model/bindings/go/descriptor/normalisation/json/v4alpha1"
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
 	"ocm.software/open-component-model/bindings/go/oci/compref"
 	ctfv1 "ocm.software/open-component-model/bindings/go/oci/spec/repository/v1/ctf"
 	ociv1 "ocm.software/open-component-model/bindings/go/oci/spec/repository/v1/oci"
-	"ocm.software/open-component-model/bindings/go/rsa/signing/v1alpha1"
 	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/signing"
 	ocmctx "ocm.software/open-component-model/cli/internal/context"
@@ -76,7 +76,7 @@ func New() *cobra.Command {
 - Conflicting signatures cause failure unless --force is set (then overwrite)
 - --dry-run: compute only, do not persist signature
 - Default signature name: default
-- Default signer: RSASSA-PSS plugin (needs private key)
+- Default signer: Sigstore keyless signing via cosign (OIDC-based, no keys needed)
 
 Use this command to establish provenance of component versions.`,
 			compref.DefaultPrefix,
@@ -84,12 +84,40 @@ Use this command to establish provenance of component versions.`,
 			strings.Join([]string{ociv1.ShortType, ociv1.ShortType2, ctfv1.ShortType, ctfv1.ShortType2}, "|"),
 		),
 		Example: strings.TrimSpace(`
-# Sign a component version with default algorithms
+# Sign a component version with default Sigstore keyless signing (opens browser for OIDC)
 sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0
+
+# Sign with custom signature name
+sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature
+
+# Use an RSA signer specification file instead of the default Sigstore handler
+sign component-version ./repo/ocm//ocm.software/ocmcli:0.23.0 --signer-spec ./rsassa-pss.yaml
+
+# Dry-run signing
+sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature test --dry-run
+
+# Force overwrite an existing signature
+sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature --force
 
 ## Example Credential Config (.ocmconfig)
 #
-# Credentials (private/public keys) are always resolved via .ocmconfig.
+# For Sigstore (default): no credentials needed for interactive use.
+# cosign opens a browser for OIDC authentication.
+# For CI/automation, provide an OIDC token:
+
+    type: generic.config.ocm.software/v1
+    configurations:
+    - type: credentials.config.ocm.software
+      consumers:
+      - identity:
+          type: SigstoreOIDC/v1alpha1
+          issuer: https://oauth2.sigstore.dev/auth
+        credentials:
+        - type: Credentials/v1
+          properties:
+            token: <OIDC_JWT_TOKEN>
+
+# For RSA: credentials (private/public keys) are resolved via .ocmconfig.
 # The "signature" field must match the --signature flag (default: "default").
 
     type: generic.config.ocm.software/v1
@@ -107,35 +135,19 @@ sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.2
 
 ## Example Signer Spec File (--signer-spec)
 #
-# A signer spec configures the signing algorithm and encoding policy.
-# It does NOT contain credentials — keys are always resolved via .ocmconfig.
-# If omitted, defaults to RSASSA-PSS with Plain encoding.
+# A signer spec selects the signing handler. If omitted, defaults to Sigstore.
 #
-# Supported fields:
-#   type:                    RSASigningConfiguration/v1alpha1
+# Sigstore (default — no file needed):
+#   type: SigstoreSigningConfiguration/v1alpha1
+#
+# RSA:
+#   type: RSASigningConfiguration/v1alpha1
 #   signatureAlgorithm:      RSASSA-PSS (default) | RSASSA-PKCS1-V1_5
 #   signatureEncodingPolicy: Plain (default) | PEM
-#
-# signatureEncodingPolicy controls the *signature output* format:
-#   Plain — signature stored as hex string; verification needs an external public key
-#   PEM   — signature wrapped in a PEM SIGNATURE block with embedded certificate chain
-#           (experimental; credentials must provide certificates, not bare public keys)
 
     type: RSASigningConfiguration/v1alpha1
     signatureAlgorithm: RSASSA-PSS
-    signatureEncodingPolicy: Plain
-
-# Sign with custom signature name
-sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature
-
-# Use a signer specification file to override algorithm defaults
-sign component-version ./repo/ocm//ocm.software/ocmcli:0.23.0 --signer-spec ./rsassa-pss.yaml
-
-# Dry-run signing
-sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature test --dry-run
-
-# Force overwrite an existing signature
-sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature --force`),
+    signatureEncodingPolicy: Plain`),
 		RunE:              SignComponentVersion,
 		DisableAutoGenTag: true,
 	}
@@ -144,7 +156,7 @@ sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.2
 
 	cmd.Flags().Int(FlagConcurrencyLimit, 4, "maximum amount of parallel requests to the repository for resolving component versions")
 	cmd.Flags().String(FlagSignature, DefaultSignatureName, "name of the signature to create or update. defaults to \"default\"")
-	cmd.Flags().String(FlagSignerSpec, "", "path to a signer specification file (configures algorithm and encoding, not credentials). If empty, defaults to RSASSA-PSS with Plain encoding.")
+	cmd.Flags().String(FlagSignerSpec, "", "path to a signer specification file (configures signing handler). If empty, defaults to Sigstore keyless signing via cosign.")
 	cmd.Flags().Bool(FlagDryRun, false, "compute signature but do not persist it to the repository")
 	cmd.Flags().String(FlagNormalisationAlgorithm, v4alpha1.Algorithm, "normalisation algorithm to use (default jsonNormalisation/v4alpha1)")
 	cmd.Flags().String(FlagHashAlgorithm, crypto.SHA256.String(), "hash algorithm to use (SHA256, SHA512)")
@@ -308,12 +320,9 @@ func SignComponentVersion(cmd *cobra.Command, args []string) error {
 
 func loadSignerSpec(path string, logger *slog.Logger) (_ runtime.Typed, err error) {
 	if path == "" {
-		spec := &v1alpha1.Config{
-			SignatureAlgorithm:      v1alpha1.AlgorithmRSASSAPSS,
-			SignatureEncodingPolicy: v1alpha1.SignatureEncodingPolicyPlain,
-		}
-		logger.Info("no signer spec file provided, using default", "algorithm", spec.SignatureAlgorithm, "encodingPolicy", spec.SignatureEncodingPolicy)
-		_, _ = v1alpha1.Scheme.DefaultType(spec)
+		spec := &cosignv1alpha1.SignConfig{}
+		logger.Info("no signer spec file provided, using default Sigstore keyless signing via cosign")
+		_, _ = cosignv1alpha1.Scheme.DefaultType(spec)
 		return spec, nil
 	}
 

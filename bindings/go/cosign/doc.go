@@ -2,16 +2,17 @@
 // that implements Sigstore-based keyless signing and verification by delegating
 // to the cosign CLI tool.
 //
-// Unlike the sigstore handler (which embeds sigstore-go as a library dependency),
-// this handler invokes cosign as an external process, dramatically reducing the
-// transitive dependency footprint while producing identical Sigstore protobuf
+// This handler invokes cosign as an external process, keeping the transitive
+// dependency footprint minimal while producing standard Sigstore protobuf
 // bundles (v0.3).
 //
-// OIDC token acquisition is delegated to cosign: when no identity token is
-// provided via credentials, cosign opens a browser for interactive authentication.
-// When a token is available (e.g. from the SIGSTORE_ID_TOKEN environment variable
-// or the OCM credential graph), it is passed via --identity-token.
+// OIDC token acquisition for keyless signing is handled by cosign directly.
+// When a token is available in credentials (e.g. via the SIGSTORE_ID_TOKEN
+// environment variable or a manual .ocmconfig entry), it is passed to cosign
+// via --identity-token. When no token is available, cosign opens a browser
+// for interactive OIDC authentication (via --fulcio-auth-flow=normal).
 //
-// This is a proof-of-concept implementation to evaluate the feasibility of
-// replacing the sigstore-go library dependency with cosign CLI invocations.
+// The handler registers under the type names SigstoreSigningConfiguration/v1alpha1
+// and SigstoreVerificationConfiguration/v1alpha1, matching the standard Sigstore
+// signing types in the OCM ecosystem.
 package cosign

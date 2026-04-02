@@ -13,12 +13,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
+	cosignv1alpha1 "ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
 	"ocm.software/open-component-model/bindings/go/credentials"
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
 	"ocm.software/open-component-model/bindings/go/oci/compref"
 	ctfv1 "ocm.software/open-component-model/bindings/go/oci/spec/repository/v1/ctf"
 	ociv1 "ocm.software/open-component-model/bindings/go/oci/spec/repository/v1/oci"
-	"ocm.software/open-component-model/bindings/go/rsa/signing/v1alpha1"
 	"ocm.software/open-component-model/bindings/go/runtime"
 	"ocm.software/open-component-model/bindings/go/signing"
 	ocmctx "ocm.software/open-component-model/cli/internal/context"
@@ -54,16 +54,16 @@ func New() *cobra.Command {
 - Fetch component version 
 - Normalise descriptor (algorithm from signature)  
 - Recompute hash and compare with signature digest  
-- Verify signature (--verifier-spec, default RSASSA-PSS verifier)  
+- Verify signature (--verifier-spec, default Sigstore keyless verifier)  
 
 ## Behavior
 
 - --signature: verify only the named signature  
 - Without --signature: verify all signatures  
 - Fail fast on first invalid signature  
-- Default verifier: RSASSA-PSS plugin  
-  - Supports config-less verification  
-  - Uses discovered credentials or PEM certificates when possible  
+- Default verifier: Sigstore keyless verification via cosign
+  - Verifies Fulcio certificate, Rekor transparency log entry, and identity constraints
+  - For RSA-signed component versions, pass --verifier-spec with an RSA config
 
 Use to validate component versions before promotion, deployment, or further usage to ensure integrity and provenance.`,
 			compref.DefaultPrefix,
@@ -71,10 +71,16 @@ Use to validate component versions before promotion, deployment, or further usag
 			strings.Join([]string{ociv1.ShortType, ociv1.ShortType2, ctfv1.ShortType, ctfv1.ShortType2}, "|"),
 		),
 		Example: strings.TrimSpace(`
-# Verify all component version signatures found in a component version
+# Verify all signatures (default: Sigstore keyless verification)
 verify component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0
 
-## Example Credential Config
+# Verify a specific signature
+verify component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature
+
+# Verify with RSA verifier specification file
+verify component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --verifier-spec ./rsassa-pss.yaml
+
+## Example Credential Config for RSA verification
 
     type: generic.config.ocm.software/v1
     configurations:
@@ -88,12 +94,6 @@ verify component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0
         - type: Credentials/v1
           properties:
             public_key_pem: <PEM>
-
-# Verify a specific signature
-sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature
-
-# Use a verifier specification file
-sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --verifier-spec ./rsassa-pss.yaml
 `),
 		RunE:              VerifyComponentVersion,
 		DisableAutoGenTag: true,
@@ -101,7 +101,7 @@ sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.2
 
 	cmd.Flags().Int(FlagConcurrencyLimit, 4, "maximum amount of parallel requests to the repository for resolving component versions")
 	cmd.Flags().String(FlagSignature, "", "name of the signature to verify. If not set, all signatures are verified.")
-	cmd.Flags().String(FlagVerifierSpec, "", "path to an optional verifier specification file. If empty, defaults to an empty RSASSA-PSS configuration.")
+	cmd.Flags().String(FlagVerifierSpec, "", "path to a verifier specification file. If empty, defaults to Sigstore keyless verification via cosign.")
 
 	return cmd
 }
@@ -197,9 +197,9 @@ func VerifyComponentVersion(cmd *cobra.Command, args []string) error {
 
 	var verifierSpec runtime.Typed
 	if verifierSpecPath == "" {
-		logger.InfoContext(ctx, "no verifier specification file given, using default RSASSA-PSS")
-		verifierSpec = &v1alpha1.Config{}
-		_, _ = v1alpha1.Scheme.DefaultType(verifierSpec)
+		logger.InfoContext(ctx, "no verifier specification file given, using default Sigstore keyless verification via cosign")
+		verifierSpec = &cosignv1alpha1.VerifyConfig{}
+		_, _ = cosignv1alpha1.Scheme.DefaultType(verifierSpec)
 	} else {
 		genericScheme := runtime.NewScheme(runtime.WithAllowUnknown())
 		verifierSpecBytes, err := os.ReadFile(verifierSpecPath)

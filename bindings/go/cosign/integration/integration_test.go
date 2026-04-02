@@ -1,0 +1,285 @@
+package integration_test
+
+import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"os/exec"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
+	"ocm.software/open-component-model/bindings/go/runtime"
+
+	"ocm.software/open-component-model/bindings/go/cosign/signing/handler"
+	"ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
+)
+
+// Credential key constants mirrored from the internal credentials package.
+//
+//nolint:gosec // these are not secrets
+const (
+	credOIDCToken           = "token"
+	credTrustedRootJSONFile = "trusted_root_json_file"
+)
+
+// ---------------------------------------------------------------------------
+// testBackend — tests iterate over Rekor v1 and optionally v2
+// ---------------------------------------------------------------------------
+
+type testBackend struct {
+	Name            string
+	RekorURL        string
+	TrustedRootPath string
+}
+
+func backends(t *testing.T) []testBackend {
+	t.Helper()
+
+	v1URL := envOrDefault("SIGSTORE_REKOR_URL", "https://rekor.sigstore.dev")
+	v1Root := os.Getenv("SIGSTORE_TRUSTED_ROOT_PATH")
+
+	bs := []testBackend{
+		{
+			Name:            "rekor-v1",
+			RekorURL:        v1URL,
+			TrustedRootPath: v1Root,
+		},
+	}
+
+	if v2URL := os.Getenv("SIGSTORE_REKOR_V2_URL"); v2URL != "" {
+		bs = append(bs, testBackend{
+			Name:            "rekor-v2",
+			RekorURL:        v2URL,
+			TrustedRootPath: os.Getenv("SIGSTORE_REKOR_V2_TRUSTED_ROOT_PATH"),
+		})
+	}
+
+	return bs
+}
+
+// ---------------------------------------------------------------------------
+// Env helpers
+// ---------------------------------------------------------------------------
+
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func fulcioURL() string { return envOrDefault("SIGSTORE_FULCIO_URL", "https://fulcio.sigstore.dev") }
+func tsaURL() string    { return os.Getenv("SIGSTORE_TSA_URL") }
+func oidcToken() string { return os.Getenv("SIGSTORE_OIDC_TOKEN") }
+
+// ---------------------------------------------------------------------------
+// Config builders
+// ---------------------------------------------------------------------------
+
+func setSignType(cfg *v1alpha1.SignConfig) {
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+}
+
+func setVerifyType(cfg *v1alpha1.VerifyConfig) {
+	cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+}
+
+func keylessSignConfig(b testBackend) *v1alpha1.SignConfig {
+	cfg := &v1alpha1.SignConfig{
+		FulcioURL: fulcioURL(),
+		RekorURL:  b.RekorURL,
+	}
+	if tsa := tsaURL(); tsa != "" {
+		cfg.TSAURL = tsa
+	}
+	setSignType(cfg)
+	return cfg
+}
+
+func keylessVerifyConfig(b testBackend) *v1alpha1.VerifyConfig {
+	cfg := &v1alpha1.VerifyConfig{
+		TrustedRootPath: b.TrustedRootPath,
+	}
+	setVerifyType(cfg)
+	return cfg
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+func requireCosign(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("cosign"); err != nil {
+		t.Skip("skipping: cosign binary not found on PATH")
+	}
+}
+
+func uniqueDigest(t *testing.T, label string) descruntime.Digest {
+	t.Helper()
+	h := sha256.Sum256([]byte("integration-test-" + label + "-" + t.Name()))
+	return descruntime.Digest{
+		HashAlgorithm:          "SHA-256",
+		NormalisationAlgorithm: "jsonNormalisation/v2",
+		Value:                  hex.EncodeToString(h[:]),
+	}
+}
+
+// bundleJSON is a minimal representation for inspecting bundle contents.
+type bundleJSON struct {
+	MediaType            string `json:"mediaType"`
+	VerificationMaterial struct {
+		Certificate *struct {
+			RawBytes string `json:"rawBytes"`
+		} `json:"certificate"`
+		TlogEntries []struct {
+			LogIndex       string `json:"logIndex"`
+			IntegratedTime string `json:"integratedTime"`
+		} `json:"tlogEntries"`
+	} `json:"verificationMaterial"`
+	MessageSignature *struct {
+		Signature string `json:"signature"`
+	} `json:"messageSignature"`
+}
+
+func decodeBundle(t *testing.T, sigInfo descruntime.SignatureInfo) *bundleJSON {
+	t.Helper()
+	r := require.New(t)
+	raw, err := base64.StdEncoding.DecodeString(sigInfo.Value)
+	r.NoError(err)
+	var b bundleJSON
+	r.NoError(json.Unmarshal(raw, &b))
+	return &b
+}
+
+// ---------------------------------------------------------------------------
+// Keyless tests
+// ---------------------------------------------------------------------------
+
+func Test_Integration_Keyless_SignVerify(t *testing.T) {
+	requireCosign(t)
+
+	token := oidcToken()
+	if token == "" {
+		t.Skip("skipping: SIGSTORE_OIDC_TOKEN not set")
+	}
+
+	for _, b := range backends(t) {
+		t.Run(b.Name, func(t *testing.T) {
+			if b.TrustedRootPath == "" {
+				t.Skipf("skipping: no trusted root path for %s", b.Name)
+			}
+
+			r := require.New(t)
+			h := handler.New()
+			digest := uniqueDigest(t, "keyless")
+			signCfg := keylessSignConfig(b)
+
+			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
+				credOIDCToken: token,
+			})
+			r.NoError(err, "keyless signing should succeed")
+
+			r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
+			r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
+			r.NotEmpty(sigInfo.Value)
+			r.NotEmpty(sigInfo.Issuer, "keyless signature should have OIDC issuer")
+
+			bundle := decodeBundle(t, sigInfo)
+			r.NotNil(bundle.VerificationMaterial.Certificate, "keyless bundle must contain a Fulcio certificate")
+			r.NotEmpty(bundle.VerificationMaterial.Certificate.RawBytes)
+			r.NotEmpty(bundle.VerificationMaterial.TlogEntries, "bundle should contain tlog entries")
+			r.NotNil(bundle.MessageSignature, "bundle should contain message signature")
+			r.NotEmpty(bundle.MessageSignature.Signature)
+
+			signed := descruntime.Signature{
+				Name:      "integration-keyless-test",
+				Digest:    digest,
+				Signature: sigInfo,
+			}
+
+			verifyCfg := keylessVerifyConfig(b)
+			verifyCfg.ExpectedSANRegex = ".*"
+			verifyCfg.ExpectedIssuerRegex = ".*"
+
+			err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+				credTrustedRootJSONFile: b.TrustedRootPath,
+			})
+			r.NoError(err, "keyless verification should succeed")
+		})
+	}
+}
+
+func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
+	requireCosign(t)
+
+	token := oidcToken()
+	if token == "" {
+		t.Skip("skipping: SIGSTORE_OIDC_TOKEN not set")
+	}
+
+	for _, b := range backends(t) {
+		t.Run(b.Name, func(t *testing.T) {
+			if b.TrustedRootPath == "" {
+				t.Skipf("skipping: no trusted root path for %s", b.Name)
+			}
+
+			r := require.New(t)
+			h := handler.New()
+			digest := uniqueDigest(t, "identity-verify")
+			signCfg := keylessSignConfig(b)
+
+			sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
+				credOIDCToken: token,
+			})
+			r.NoError(err)
+			r.NotEmpty(sigInfo.Issuer)
+
+			signed := descruntime.Signature{
+				Name:      "integration-identity-test",
+				Digest:    digest,
+				Signature: sigInfo,
+			}
+
+			t.Run("matching issuer succeeds", func(t *testing.T) {
+				r := require.New(t)
+				verifyCfg := keylessVerifyConfig(b)
+				verifyCfg.ExpectedIssuer = sigInfo.Issuer
+				verifyCfg.ExpectedSANRegex = ".*"
+
+				err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+					credTrustedRootJSONFile: b.TrustedRootPath,
+				})
+				r.NoError(err)
+			})
+
+			t.Run("wrong issuer fails", func(t *testing.T) {
+				r := require.New(t)
+				verifyCfg := keylessVerifyConfig(b)
+				verifyCfg.ExpectedIssuer = "https://wrong-issuer.example.com"
+				verifyCfg.ExpectedSANRegex = ".*"
+
+				err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+					credTrustedRootJSONFile: b.TrustedRootPath,
+				})
+				r.Error(err)
+			})
+
+			t.Run("issuer regex succeeds", func(t *testing.T) {
+				r := require.New(t)
+				verifyCfg := keylessVerifyConfig(b)
+				verifyCfg.ExpectedIssuerRegex = ".*"
+				verifyCfg.ExpectedSANRegex = ".*"
+
+				err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+					credTrustedRootJSONFile: b.TrustedRootPath,
+				})
+				r.NoError(err)
+			})
+		})
+	}
+}

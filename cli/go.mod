@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/nlepage/go-tarfs v1.2.1
 	github.com/opencontainers/image-spec v1.1.1
@@ -42,6 +43,7 @@ require (
 
 require (
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/redis/go-redis/v9 v9.14.1 // indirect
@@ -128,7 +130,7 @@ require (
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
 	golang.org/x/net v0.51.0 // indirect
-	golang.org/x/oauth2 v0.36.0 // indirect
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect

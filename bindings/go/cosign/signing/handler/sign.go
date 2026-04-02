@@ -10,9 +10,8 @@ import (
 	"fmt"
 	"os"
 
-	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
-
 	"ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
+	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
 )
 
 func doSign(
@@ -22,6 +21,13 @@ func doSign(
 	creds map[string]string,
 	executor Executor,
 ) (descruntime.SignatureInfo, error) {
+	token := creds[CredentialKeyOIDCToken]
+	if token == "" {
+		return descruntime.SignatureInfo{}, fmt.Errorf("OIDC identity token required for signing: " +
+			"configure a SigstoreOIDC/v1alpha1 credential in .ocmconfig " +
+			"or set the SIGSTORE_ID_TOKEN environment variable")
+	}
+
 	digestBytes, err := hex.DecodeString(unsigned.Value)
 	if err != nil {
 		return descruntime.SignatureInfo{}, fmt.Errorf("decode digest hex value: %w", err)
@@ -48,7 +54,7 @@ func doSign(
 
 	opts := SignOpts{
 		BundleOutPath: bundleFile.Name(),
-		IdentityToken: creds[CredentialKeyOIDCToken],
+		IdentityToken: token,
 		FulcioURL:     cfg.FulcioURL,
 		RekorURL:      cfg.RekorURL,
 		TSAURL:        cfg.TSAURL,

@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
-
 	"ocm.software/open-component-model/bindings/go/cosign/signing/v1alpha1"
+	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
 )
 
 func doVerify(
