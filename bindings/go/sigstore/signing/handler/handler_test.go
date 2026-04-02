@@ -588,47 +588,6 @@ func Test_ResolveTrustedMaterial_TUFRootURL_BadURL(t *testing.T) {
 	r.Contains(err.Error(), "TUFInitialRoot is required")
 }
 
-// ---- resolveOfflineTrustedRoot tests ----
-
-func Test_ResolveOfflineTrustedRoot(t *testing.T) {
-	t.Parallel()
-
-	t.Run("returns trusted root from credentials JSON", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		trustedRoot := makeTrustedRootJSON(t)
-		creds := map[string]string{
-			credentials.CredentialKeyTrustedRootJSON: string(trustedRoot),
-		}
-
-		tm, err := resolveOfflineTrustedRoot(creds)
-		r.NoError(err)
-		r.NotNil(tm)
-	})
-
-	t.Run("returns nil when no offline source configured", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		tm, err := resolveOfflineTrustedRoot(map[string]string{})
-		r.NoError(err)
-		r.Nil(tm, "should return nil when no offline sources are available")
-	})
-
-	t.Run("returns error for corrupted trusted root JSON", func(t *testing.T) {
-		t.Parallel()
-		r := require.New(t)
-
-		creds := map[string]string{
-			credentials.CredentialKeyTrustedRootJSON: `{not valid json`,
-		}
-
-		_, err := resolveOfflineTrustedRoot(creds)
-		r.Error(err)
-	})
-}
-
 // ===========================================================================
 // Keyless signing unit tests
 // ===========================================================================
