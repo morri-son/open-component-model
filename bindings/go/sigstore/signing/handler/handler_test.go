@@ -24,8 +24,10 @@ import (
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
+	"github.com/sigstore/sigstore-go/pkg/testing/ca"
 	"github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -2484,3 +2486,289 @@ func Test_ResolveTrustedRootExplicit(t *testing.T) {
 
 // ---- resolveTrustedRoot auto-discovery tests ----
 // (Tests requiring network access for TUF auto-discovery are in integration tests.)
+
+// ---------------------------------------------------------------------------
+// VirtualSigstore helpers — Tier 2 keyless verify tests
+// ---------------------------------------------------------------------------
+
+// buildVirtualSigstoreTrustedRoot serializes a VirtualSigstore's trusted material
+// into a trusted_root.json byte slice suitable for passing via credentials.
+func buildVirtualSigstoreTrustedRoot(t *testing.T, vs *ca.VirtualSigstore) []byte {
+	t.Helper()
+
+	rekorLogs := vs.RekorLogs()
+	fixedRekorLogs := make(map[string]*root.TransparencyLog, len(rekorLogs))
+	for id, tl := range rekorLogs {
+		fixed := *tl
+		fixed.BaseURL = "http://rekor.localhost"
+		rawID, decErr := hex.DecodeString(id)
+		if decErr == nil {
+			fixed.ID = rawID
+		}
+		fixedRekorLogs[id] = &fixed
+	}
+
+	tr, err := root.NewTrustedRoot(
+		root.TrustedRootMediaType01,
+		vs.FulcioCertificateAuthorities(),
+		nil,
+		vs.TimestampingAuthorities(),
+		fixedRekorLogs,
+	)
+	require.NoError(t, err, "should create trusted root from VirtualSigstore")
+
+	trJSON, err := tr.MarshalJSON()
+	require.NoError(t, err, "should marshal trusted root to JSON")
+
+	return trJSON
+}
+
+// buildVirtualSigstoreBundle constructs a base64-encoded protobuf bundle JSON
+// from a VirtualSigstore TestEntity, mimicking the output of doSign for keyless flows.
+// The VirtualSigstore is needed to generate an inclusion proof for the tlog entries.
+func buildVirtualSigstoreBundle(t *testing.T, vs *ca.VirtualSigstore, entity *ca.TestEntity) string {
+	t.Helper()
+
+	vc, err := entity.VerificationContent()
+	require.NoError(t, err)
+	leafCert := vc.Certificate()
+	require.NotNil(t, leafCert, "TestEntity should have a leaf certificate")
+
+	sc, err := entity.SignatureContent()
+	require.NoError(t, err)
+	msgSig := sc.MessageSignatureContent()
+	require.NotNil(t, msgSig, "TestEntity should have MessageSignature content")
+
+	tlogEntries, err := entity.TlogEntries()
+	require.NoError(t, err)
+
+	timestamps, err := entity.Timestamps()
+	require.NoError(t, err)
+
+	tlogProtos := make([]*protorekor.TransparencyLogEntry, 0, len(tlogEntries))
+	for _, e := range tlogEntries {
+		tle := e.TransparencyLogEntry()
+		if tle.KindVersion == nil {
+			tle.KindVersion = &protorekor.KindVersion{
+				Kind:    "hashedrekord",
+				Version: "0.0.1",
+			}
+		}
+		if tle.InclusionProof == nil && tle.CanonicalizedBody != nil {
+			ip, ipErr := vs.GetInclusionProof(tle.CanonicalizedBody)
+			require.NoError(t, ipErr, "should generate inclusion proof")
+			hashes := make([][]byte, len(ip.Hashes))
+			for i, h := range ip.Hashes {
+				hashes[i], err = hex.DecodeString(h)
+				require.NoError(t, err)
+			}
+			rootHash, rhErr := hex.DecodeString(*ip.RootHash)
+			require.NoError(t, rhErr)
+			tle.InclusionProof = &protorekor.InclusionProof{
+				LogIndex: *ip.LogIndex,
+				RootHash: rootHash,
+				TreeSize: *ip.TreeSize,
+				Hashes:   hashes,
+				Checkpoint: &protorekor.Checkpoint{
+					Envelope: *ip.Checkpoint,
+				},
+			}
+		}
+		tlogProtos = append(tlogProtos, tle)
+	}
+
+	rfc3161Timestamps := make([]*protocommon.RFC3161SignedTimestamp, 0, len(timestamps))
+	for _, ts := range timestamps {
+		rfc3161Timestamps = append(rfc3161Timestamps, &protocommon.RFC3161SignedTimestamp{
+			SignedTimestamp: ts,
+		})
+	}
+
+	var hashAlg protocommon.HashAlgorithm
+	switch msgSig.DigestAlgorithm() {
+	case "SHA2_256", "SHA-256", "sha256":
+		hashAlg = protocommon.HashAlgorithm_SHA2_256
+	case "SHA2_384", "SHA-384", "sha384":
+		hashAlg = protocommon.HashAlgorithm_SHA2_384
+	case "SHA2_512", "SHA-512", "sha512":
+		hashAlg = protocommon.HashAlgorithm_SHA2_512
+	default:
+		hashAlg = protocommon.HashAlgorithm_SHA2_256
+	}
+
+	pbundle := &protobundle.Bundle{
+		MediaType: v1alpha1.MediaTypeSigstoreBundle,
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_Certificate{
+				Certificate: &protocommon.X509Certificate{
+					RawBytes: leafCert.Raw,
+				},
+			},
+			TlogEntries: tlogProtos,
+			TimestampVerificationData: &protobundle.TimestampVerificationData{
+				Rfc3161Timestamps: rfc3161Timestamps,
+			},
+		},
+		Content: &protobundle.Bundle_MessageSignature{
+			MessageSignature: &protocommon.MessageSignature{
+				MessageDigest: &protocommon.HashOutput{
+					Algorithm: hashAlg,
+					Digest:    msgSig.Digest(),
+				},
+				Signature: msgSig.Signature(),
+			},
+		},
+	}
+
+	bundleJSON, err := protojson.Marshal(pbundle)
+	require.NoError(t, err, "should marshal protobundle to JSON")
+
+	return base64.StdEncoding.EncodeToString(bundleJSON)
+}
+
+// ---------------------------------------------------------------------------
+// Test_Handler_Verify_Keyless_VirtualSigstore — Tier 2 end-to-end keyless
+// verify tests using an in-process VirtualSigstore (no network, no Docker).
+// ---------------------------------------------------------------------------
+
+func Test_Handler_Verify_Keyless_VirtualSigstore(t *testing.T) {
+	t.Parallel()
+
+	vs, err := ca.NewVirtualSigstore()
+	require.NoError(t, err, "should create VirtualSigstore")
+
+	const (
+		testIdentity = "test-user@example.com"
+		testIssuer   = "https://accounts.example.com"
+	)
+
+	digest := sampleDigest(t)
+	digestBytes, err := hex.DecodeString(digest.Value)
+	require.NoError(t, err)
+
+	entity, err := vs.Sign(testIdentity, testIssuer, digestBytes)
+	require.NoError(t, err, "VirtualSigstore should sign artifact")
+
+	trustedRootJSON := buildVirtualSigstoreTrustedRoot(t, vs)
+	bundleB64 := buildVirtualSigstoreBundle(t, vs, entity)
+
+	signed := descruntime.Signature{
+		Name:   "keyless-virtual-sig",
+		Digest: digest,
+		Signature: descruntime.SignatureInfo{
+			Algorithm: v1alpha1.AlgorithmSigstore,
+			Value:     bundleB64,
+			MediaType: v1alpha1.MediaTypeSigstoreBundle,
+		},
+	}
+
+	baseCreds := map[string]string{
+		credentials.CredentialKeyTrustedRootJSON: string(trustedRootJSON),
+	}
+
+	t.Run("valid keyless roundtrip", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{
+			ExpectedSAN:    testIdentity,
+			ExpectedIssuer: testIssuer,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), signed, cfg, baseCreds)
+		r.NoError(err, "keyless verify with matching identity should succeed")
+	})
+
+	t.Run("matching issuer exact succeeds", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{
+			ExpectedSAN:    testIdentity,
+			ExpectedIssuer: testIssuer,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), signed, cfg, baseCreds)
+		r.NoError(err)
+	})
+
+	t.Run("wrong issuer fails", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{
+			ExpectedSAN:    testIdentity,
+			ExpectedIssuer: "https://wrong-issuer.example.com",
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), signed, cfg, baseCreds)
+		r.Error(err, "verify with wrong issuer should fail")
+	})
+
+	t.Run("issuer regex matches", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{
+			ExpectedSAN:         testIdentity,
+			ExpectedIssuerRegex: `https://accounts\.example\.com`,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), signed, cfg, baseCreds)
+		r.NoError(err, "verify with matching issuer regex should succeed")
+	})
+
+	t.Run("SAN regex matches", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{
+			ExpectedSANRegex: `.*@example\.com`,
+			ExpectedIssuer:   testIssuer,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), signed, cfg, baseCreds)
+		r.NoError(err, "verify with matching SAN regex should succeed")
+	})
+
+	t.Run("tampered digest fails", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		tamperedDigest := sampleDigest(t)
+		h := sha256.Sum256([]byte("tampered content"))
+		tamperedDigest.Value = hex.EncodeToString(h[:])
+
+		tamperedSigned := descruntime.Signature{
+			Name:      "keyless-tampered-sig",
+			Digest:    tamperedDigest,
+			Signature: signed.Signature,
+		}
+
+		cfg := &v1alpha1.VerifyConfig{
+			ExpectedSAN:    testIdentity,
+			ExpectedIssuer: testIssuer,
+		}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), tamperedSigned, cfg, baseCreds)
+		r.Error(err, "verify with tampered digest should fail")
+	})
+
+	t.Run("no identity config fails", func(t *testing.T) {
+		t.Parallel()
+		r := require.New(t)
+
+		cfg := &v1alpha1.VerifyConfig{}
+		cfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := doVerify(t.Context(), signed, cfg, baseCreds)
+		r.Error(err, "keyless verify without identity config should fail")
+		r.Contains(err.Error(), "identity")
+	})
+}
