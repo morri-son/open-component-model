@@ -64,7 +64,7 @@ use tabs to keep the learning flow clear:
 ```yaml
 type: helmChart
 input:
-  type: helm
+  type: Helm
   path: ./chart
 ```
 {{< /tab >}}
@@ -104,7 +104,7 @@ components:
     - name: mylocalfile
       type: blob
       input:
-        type: file
+        type: File
         path: ./my-resource.txt
 ```
 {{< /step >}}

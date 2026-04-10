@@ -148,7 +148,7 @@ components:
         type: blob
         version: "1.0.0"
         input:
-          type: file
+          type: File
           path: ./deployment.yaml
 ```
 {{< /step >}}
