@@ -79,7 +79,7 @@ We're interested in the `chart` resource, which is a Helm chart stored as OCI ar
     resources:
       - access:
           imageReference: ghcr.io/stefanprodan/podinfo:6.8.0
-          type: OCIImage
+          type: OCIImage/v1
         digest:
           hashAlgorithm: SHA-256
           normalisationAlgorithm: ociArtifactDigest/v1
