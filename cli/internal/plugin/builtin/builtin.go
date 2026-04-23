@@ -8,6 +8,7 @@ import (
 	helmdigest "ocm.software/open-component-model/bindings/go/helm/digest"
 	helmresource "ocm.software/open-component-model/bindings/go/helm/repository/resource"
 	"ocm.software/open-component-model/bindings/go/plugin/manager"
+	"ocm.software/open-component-model/cli/internal/plugin/builtin/oidc"
 	ocicredentialplugin "ocm.software/open-component-model/cli/internal/plugin/builtin/credentials/oci"
 	"ocm.software/open-component-model/cli/internal/plugin/builtin/input/dir"
 	"ocm.software/open-component-model/cli/internal/plugin/builtin/input/file"
@@ -58,6 +59,9 @@ func Register(manager *manager.PluginManager, filesystemConfig *filesystemv1alph
 	}
 	if err := rsa.Register(manager.SigningRegistry, filesystemConfig); err != nil {
 		return fmt.Errorf("could not register RSA signing plugin: %w", err)
+	}
+	if err := oidc.Register(manager.SigningRegistry); err != nil {
+		return fmt.Errorf("could not register Sigstore signing plugin: %w", err)
 	}
 
 	return nil

@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/nlepage/go-tarfs v1.2.1
 	github.com/opencontainers/image-spec v1.1.1
@@ -38,6 +39,21 @@ require (
 	ocm.software/open-component-model/bindings/go/transfer v0.0.0-20260423205942-5236fa6f4d3f
 	ocm.software/open-component-model/bindings/go/transform v0.0.0-20260423205942-5236fa6f4d3f
 	sigs.k8s.io/yaml v1.6.0
+)
+
+require (
+	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
+	github.com/creack/pty v1.1.24 // indirect
+	github.com/docker/docker-credential-helpers v0.9.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/onsi/gomega v1.39.1 // indirect
+	github.com/prometheus/procfs v0.20.1 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
+	golang.org/x/tools v0.43.0 // indirect
 )
 
 require (
@@ -120,8 +136,8 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -136,6 +152,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
 	k8s.io/kubectl v0.35.3 // indirect
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
+	ocm.software/open-component-model/bindings/go/sigstore v0.0.0
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/controller-runtime v0.23.3 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
@@ -144,3 +161,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
+
+// TODO: remove replace once bindings/go/sigstore is published; split PR into sigstore module + CLI module parts for CI.
+replace ocm.software/open-component-model/bindings/go/sigstore => ../bindings/go/sigstore

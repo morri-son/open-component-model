@@ -4,6 +4,9 @@ go 1.26.1
 
 replace ocm.software/open-component-model/cli => ../
 
+// TODO: remove replace once bindings/go/sigstore is published; split PR into sigstore module + CLI module parts for CI.
+replace ocm.software/open-component-model/bindings/go/sigstore => ../../bindings/go/sigstore
+
 require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
