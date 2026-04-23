@@ -120,6 +120,14 @@ includes:
     optional: true
     taskfile: ./cli/integration/Taskfile.yml
     dir: ./cli/integration
+  bindings/go/sigstore:
+    optional: true
+    taskfile: ./bindings/go/sigstore/Taskfile.yml
+    dir: ./bindings/go/sigstore
+  bindings/go/sigstore/integration:
+    optional: true
+    taskfile: ./bindings/go/sigstore/integration/Taskfile.yml
+    dir: ./bindings/go/sigstore/integration
   kubernetes/controller:
     optional: true
     taskfile: ./kubernetes/controller/Taskfile.yml

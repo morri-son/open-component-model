@@ -21,6 +21,8 @@ OCIGetComponentVersion
 Preact
 RGD's
 ResourceGraphDefinitions
+SigstoreSigningConfiguration
+SigstoreVerificationConfiguration
 Taskfiles
 Testcontainers
 Testcontainers
@@ -97,6 +99,8 @@ cel
 centos
 cest
 cet
+certificateIdentity
+certificateOIDCIssuer
 changelog
 changelogs
 checksums
