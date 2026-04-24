@@ -24,16 +24,16 @@ reference for the full YAML schema.
 
 Embeds a directory as a tar archive.
 
-| Field            | Type            | Required | Description                                                                                                                                                                                                     |
-|------------------|-----------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `path`           | string          | yes      | Path to the directory (relative to the constructor file).                                                                                                                                                       |
-| `mediaType`      | string          | no       | MediaType of the resource (defaults to application/x-tar). The Dir input always creates a tar. However, it does not add a +tar suffix as this might cause conflicts with MediaType's such as application/x-tar. |
-| `compress`       | boolean         | no       | Compress the tar archive (gzip). If set to true, adds a +gzip suffix to the MediaType.                                                                                                                          |
-| `reproducible`   | boolean         | no       | Normalize file attributes (timestamps, permissions) for reproducible digests. Recommended when signing.                                                                                                         |
-| `preserveDir`    | boolean         | no       | Include the directory itself in the archive.                                                                                                                                                                    |
-| `followSymlinks` | boolean         | no       | Include the content of symbolic links in the archive. Not yet implemented; accepted for compatibility with previous OCM versions.                                                                               |
-| `excludeFiles`   | array of string | no       | Glob patterns for files to exclude.                                                                                                                                                                             |
-| `includeFiles`   | array of string | no       | Glob patterns for files to include.                                                                                                                                                                             |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `path` | string | yes | Path to the directory (relative to the constructor file). |
+| `mediaType` | string | no | MediaType of the resource (defaults to application/x-tar). The Dir input always creates a tar. However, it does not add a +tar suffix as this might cause conflicts with MediaType's such as application/x-tar. |
+| `compress` | boolean | no | Compress the tar archive (gzip). If set to true, adds a +gzip suffix to the MediaType. |
+| `reproducible` | boolean | no | Normalize file attributes (timestamps, permissions) for reproducible digests. Recommended when signing. |
+| `preserveDir` | boolean | no | Include the directory itself in the archive. |
+| `followSymlinks` | boolean | no | Include the content of symbolic links in the archive. Not yet implemented; accepted for compatibility with previous OCM versions. |
+| `excludeFiles` | array of string | no | Glob patterns for files to exclude. |
+| `includeFiles` | array of string | no | Glob patterns for files to include. |
 
 ```yaml
 resources:
@@ -50,11 +50,11 @@ resources:
 
 Embeds a single file.
 
-| Field       | Type    | Required | Description                                          |
-|-------------|---------|----------|------------------------------------------------------|
-| `path`      | string  | yes      | Path to the file (relative to the constructor file). |
-| `mediaType` | string  | no       | Media type of the file.                              |
-| `compress`  | boolean | no       | Compress the content (gzip).                         |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `path` | string | yes | Path to the file (relative to the constructor file). |
+| `mediaType` | string | no | Media type of the file. |
+| `compress` | boolean | no | Compress the content (gzip). |
 
 ```yaml
 resources:
@@ -104,6 +104,7 @@ resources:
     helmRepository: oci://ghcr.io/stefanprodan/charts/podinfo:6.9.1
     repository: charts/podinfo:6.9.1
 ```
+
 
 ### `UTF8/v1`
 
