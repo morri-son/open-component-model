@@ -18,9 +18,6 @@ require_nonempty() {
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
 FULCIO_URL=$(kubectl -n fulcio-system get ksvc fulcio -ojsonpath='{.status.url}')
 REKOR_URL=$(kubectl -n rekor-system get ksvc rekor -ojsonpath='{.status.url}')
 TSA_URL=$(kubectl -n tsa-system get ksvc tsa -ojsonpath='{.status.url}')
@@ -44,25 +41,22 @@ require_nonempty "ctlog.pub" "$(cat "$WORK_DIR/ctlog.pub")"
 kubectl -n tsa-system get secret tsa-cert-chain -ojsonpath='{.data.cert-chain}' | base64 -d > "$WORK_DIR/tsa-chain.pem"
 require_nonempty "tsa-chain.pem" "$(cat "$WORK_DIR/tsa-chain.pem")"
 
+# Timestamp shared by trusted root and signing config entries.
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
 # Build trusted root containing only local cluster material.
-# We use a Go helper instead of "cosign trusted-root create" because:
-#   1. cosign's trusted-root create may not set publicKey.keyDetails correctly
-#      for all key types.
-#   2. The Go helper gives us full control over the trusted root structure,
-#      allowing us to produce exactly the fields and values we need.
-go run "${ROOT_DIR}/hack/build-trusted-root" \
-  --fulcio-cert="$WORK_DIR/fulcio-root.pem" \
-  --rekor-key="$WORK_DIR/rekor.pub" \
-  --rekor-url="$REKOR_URL" \
-  --ctlog-key="$WORK_DIR/ctlog.pub" \
-  --ctlog-url="$CTLOG_URL" \
-  --tsa-chain="$WORK_DIR/tsa-chain.pem" \
-  --tsa-url="$TSA_URL/api/v1/timestamp" \
-  --fulcio-url="$FULCIO_URL" \
+cosign trusted-root create \
+  --no-default-fulcio \
+  --no-default-rekor \
+  --no-default-ctfe \
+  --no-default-tsa \
+  --fulcio="url=${FULCIO_URL},certificate-chain=${WORK_DIR}/fulcio-root.pem,start-time=${NOW}" \
+  --rekor="url=${REKOR_URL},public-key=${WORK_DIR}/rekor.pub,start-time=${NOW}" \
+  --ctfe="url=${CTLOG_URL},public-key=${WORK_DIR}/ctlog.pub,start-time=${NOW}" \
+  --tsa="url=${TSA_URL}/api/v1/timestamp,certificate-chain=${WORK_DIR}/tsa-chain.pem,start-time=${NOW}" \
   --out "${WORK_DIR}/trusted_root.json"
 
 # Build signing config pointing at local cluster services
-NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 cosign signing-config create \
   --fulcio="url=${FULCIO_URL},api-version=1,start-time=${NOW},operator=scaffolding" \
   --rekor="url=${REKOR_URL},api-version=1,start-time=${NOW},operator=scaffolding" \
