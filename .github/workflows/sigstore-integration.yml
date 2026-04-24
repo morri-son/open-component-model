@@ -43,3 +43,36 @@ jobs:
           bash hack/extract-sigstore-env.sh > tmp/sigstore-env.sh
           source tmp/sigstore-env.sh
           go test -count=1 -run "Integration" -timeout 180s -v ./...
+
+  sigstore-e2e-containers:
+    name: "Sigstore E2E (containers)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: bindings/go/sigstore/integration_containers/go.mod
+          cache-dependency-path: bindings/go/sigstore/integration_containers/go.sum
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Setup Sigstore container environment
+        id: sigstore-env
+        uses: sigstore/scaffolding/actions/setup-sigstore-env@v0.7.31
+
+      - name: Run container-based integration tests
+        working-directory: bindings/go/sigstore/integration_containers
+        env:
+          SIGSTORE_TRUSTED_ROOT: ${{ steps.sigstore-env.outputs.trusted-root }}
+          SIGSTORE_SIGNING_CONFIG: ${{ steps.sigstore-env.outputs.signing-config }}
+          SIGSTORE_OIDC_ISSUER: ${{ steps.sigstore-env.outputs.issuer-url }}
+          SIGSTORE_OIDC_IDENTITY: "foo@bar.com"
+        run: |
+          # The oidc-token output is a file path; read its contents for the test.
+          export SIGSTORE_OIDC_TOKEN="$(cat "${{ steps.sigstore-env.outputs.oidc-token }}")"
+          go test -count=1 -run "Integration" -timeout 180s -v ./...
