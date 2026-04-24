@@ -1,12 +1,11 @@
 package integration_test
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"log"
 	"os"
 	"testing"
 
@@ -15,7 +14,6 @@ import (
 	descruntime "ocm.software/open-component-model/bindings/go/descriptor/runtime"
 	"ocm.software/open-component-model/bindings/go/runtime"
 
-	"ocm.software/open-component-model/bindings/go/sigstore/integration/internal"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/handler"
 	"ocm.software/open-component-model/bindings/go/sigstore/signing/v1alpha1"
 )
@@ -26,36 +24,50 @@ const (
 	credTrustedRootJSONFile = "trusted_root_json_file"
 )
 
-// stack is the shared sigstore infrastructure used by all tests.
-// It is started once in TestMain and destroyed after all tests complete.
+// sigstoreEnv holds the environment configuration for the sigstore integration
+// tests. All values are read from environment variables in TestMain, which are
+// expected to be set by the scaffolding setup (either via CI or locally via
+// hack/extract-sigstore-env.sh).
+//
+// Trust material can be provided in two ways:
+//  1. Via the local TUF cache (~/.sigstore/root/) initialized with the
+//     scaffolding's TUF mirror — used by tests that omit TrustedRoot.
+//  2. Via an explicit trusted root JSON file (SIGSTORE_TRUSTED_ROOT) — used
+//     by tests that pass TrustedRoot in SignConfig/VerifyConfig to exercise
+//     the enterprise/private-infra scenario.
+type sigstoreEnv struct {
+	OIDCToken         string
+	SigningConfigPath string
+	TrustedRootPath   string
+	OIDCIssuer        string
+	OIDCIdentity      string
+}
+
+// stack is the shared sigstore environment used by all tests.
 //
 // All tests share the same Rekor transparency log. Each test creates its own
 // unique digest (via uniqueDigest), so entries from different tests do not
 // interfere. Do not run sub-tests in parallel against the same signed value
 // without ensuring digest uniqueness.
-//
-// The OIDC token stored in stack.OIDCToken is also shared. Dex tokens have a
-// short TTL (~5–10 min). For the current suite this is fine; see
-// internal.StartSigstoreStack for guidance if the suite grows.
-var stack *internal.SigstoreStack
+var stack *sigstoreEnv
 
 func TestMain(m *testing.M) {
-	ctx := context.Background()
-
-	var err error
-	stack, err = internal.StartSigstoreStack(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to start sigstore stack: %v\n", err)
-		os.Exit(1)
+	stack = &sigstoreEnv{
+		OIDCToken:         requireEnv("SIGSTORE_OIDC_TOKEN"),
+		SigningConfigPath: requireEnv("SIGSTORE_SIGNING_CONFIG"),
+		TrustedRootPath:   requireEnv("SIGSTORE_TRUSTED_ROOT"),
+		OIDCIssuer:        requireEnv("SIGSTORE_OIDC_ISSUER"),
+		OIDCIdentity:      requireEnv("SIGSTORE_OIDC_IDENTITY"),
 	}
+	os.Exit(m.Run())
+}
 
-	code := m.Run()
-
-	if err := stack.Destroy(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to destroy sigstore stack: %v\n", err)
+func requireEnv(key string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		log.Fatalf("required env var %s is not set", key)
 	}
-
-	os.Exit(code)
+	return v
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +120,6 @@ func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
 
 	signCfg := &v1alpha1.SignConfig{
 		SigningConfig: stack.SigningConfigPath,
-		TrustedRoot:   stack.TrustedRootPath,
 	}
 	signCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
@@ -127,75 +138,61 @@ func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
 	t.Run("matching issuer succeeds", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:               stack.TrustedRootPath,
 			CertificateOIDCIssuer:     sigInfo.Issuer,
 			CertificateIdentityRegexp: ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
 		r.NoError(err)
 	})
 
 	t.Run("wrong issuer fails", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:               stack.TrustedRootPath,
 			CertificateOIDCIssuer:     "https://wrong-issuer.example.com",
 			CertificateIdentityRegexp: ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
 		r.Error(err)
+		r.ErrorContains(err, "issuer")
 	})
 
 	t.Run("issuer regex succeeds", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:                 stack.TrustedRootPath,
 			CertificateOIDCIssuerRegexp: ".*",
 			CertificateIdentityRegexp:   ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
 		r.NoError(err)
 	})
 
 	t.Run("matching identity succeeds", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:                 stack.TrustedRootPath,
 			CertificateOIDCIssuerRegexp: ".*",
 			CertificateIdentity:         stack.OIDCIdentity,
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
 		r.NoError(err)
 	})
 
 	t.Run("wrong identity fails", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:                 stack.TrustedRootPath,
 			CertificateOIDCIssuerRegexp: ".*",
 			CertificateIdentity:         "wrong@example.com",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
-		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
 		r.Error(err)
 	})
 }
@@ -212,7 +209,6 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 
 	signCfg := &v1alpha1.SignConfig{
 		SigningConfig: stack.SigningConfigPath,
-		TrustedRoot:   stack.TrustedRootPath,
 	}
 	signCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
 
@@ -222,13 +218,10 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 	r.NoError(err, "baseline signing must succeed")
 
 	verifyCfg := &v1alpha1.VerifyConfig{
-		TrustedRoot:           stack.TrustedRootPath,
 		CertificateOIDCIssuer: stack.OIDCIssuer,
 		CertificateIdentity:   stack.OIDCIdentity,
 	}
 	verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
-
-	creds := map[string]string{credTrustedRootJSONFile: stack.TrustedRootPath}
 
 	// Baseline: the unmodified bundle must verify cleanly.
 	signed := descruntime.Signature{
@@ -236,7 +229,7 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 		Digest:    digest,
 		Signature: sigInfo,
 	}
-	r.NoError(h.Verify(t.Context(), signed, verifyCfg, creds), "baseline verification must succeed")
+	r.NoError(h.Verify(t.Context(), signed, verifyCfg, nil), "baseline verification must succeed")
 
 	// mutateBundle decodes the bundle, applies f to the parsed JSON map, and
 	// re-encodes it as a base64 string so it can be placed back into a
@@ -255,16 +248,14 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 
 	t.Run("mutated signature bytes rejected", func(t *testing.T) {
 		r := require.New(t)
-		// Decode the real signature, flip the last byte, re-encode.
 		b := decodeBundle(t, sigInfo)
 		r.NotNil(b.MessageSignature, "bundle must have message signature")
 		sigBytes, err := base64.StdEncoding.DecodeString(b.MessageSignature.Signature)
 		r.NoError(err)
-		sigBytes[len(sigBytes)-1] ^= 0xFF // flip all bits in last byte
+		r.NotEmpty(sigBytes, "baseline signature must be non-empty")
+		sigBytes[len(sigBytes)-1] ^= 0xFF
 
 		tampered := mutateBundle(t, r, func(m map[string]any) {
-			vm := m["verificationMaterial"].(map[string]any)
-			_ = vm // not needed; mutate messageSignature directly
 			ms := m["messageSignature"].(map[string]any)
 			ms["signature"] = base64.StdEncoding.EncodeToString(sigBytes)
 		})
@@ -279,7 +270,7 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 				Issuer:    sigInfo.Issuer,
 			},
 		}
-		err = h.Verify(t.Context(), s, verifyCfg, creds)
+		err = h.Verify(t.Context(), s, verifyCfg, nil)
 		r.Error(err, "verification must fail when signature bytes are mutated")
 	})
 
@@ -300,7 +291,7 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 				Issuer:    sigInfo.Issuer,
 			},
 		}
-		err := h.Verify(t.Context(), s, verifyCfg, creds)
+		err := h.Verify(t.Context(), s, verifyCfg, nil)
 		r.Error(err, "verification must fail when certificate is stripped from bundle")
 	})
 
@@ -321,27 +312,25 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 				Issuer:    sigInfo.Issuer,
 			},
 		}
-		err := h.Verify(t.Context(), s, verifyCfg, creds)
+		err := h.Verify(t.Context(), s, verifyCfg, nil)
 		r.Error(err, "verification must fail when tlog entries are stripped from bundle")
 	})
 
 	t.Run("wrong digest rejected", func(t *testing.T) {
 		r := require.New(t)
-		// Use the genuine bundle but present a different digest for verification.
 		wrongDigest := uniqueDigest(t, "tamper-wrong-digest-other")
 		s := descruntime.Signature{
 			Name:      "tamper-wrong-digest",
-			Digest:    wrongDigest, // different from what was signed
+			Digest:    wrongDigest,
 			Signature: sigInfo,
 		}
-		err := h.Verify(t.Context(), s, verifyCfg, creds)
+		err := h.Verify(t.Context(), s, verifyCfg, nil)
 		r.Error(err, "verification must fail when digest does not match signed content")
+		r.ErrorContains(err, "verif")
 	})
 
 	t.Run("corrupted bundle rejected", func(t *testing.T) {
 		r := require.New(t)
-		// Replace the bundle value with garbage that is still valid base64 but
-		// not a valid Sigstore bundle JSON.
 		garbage := base64.StdEncoding.EncodeToString([]byte(`{"not":"a valid bundle"}`))
 		s := descruntime.Signature{
 			Name:   "tamper-corrupt-bundle",
@@ -353,23 +342,107 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 				Issuer:    sigInfo.Issuer,
 			},
 		}
-		err := h.Verify(t.Context(), s, verifyCfg, creds)
+		err := h.Verify(t.Context(), s, verifyCfg, nil)
 		r.Error(err, "verification must fail for a corrupted/garbage bundle")
 	})
 }
 
-// Test_Integration_OfflineVerification signs with the full sigstore stack
-// (Fulcio + TesseraCT + Rekor v2 + TSA), then verifies using only the bundle
-// and trusted root — no service URLs, no PrivateInfrastructure flag. This
-// exercises the air-gapped verification path where cosign validates tlog entries
-// and signed timestamps locally against the trusted root.
-func Test_Integration_OfflineVerification(t *testing.T) {
+// Test_Integration_SignAndVerify signs with the full sigstore stack
+// (Fulcio + Rekor + TSA), then verifies using the bundle and TUF-cached
+// trust material. This exercises the end-to-end sign+verify path and
+// validates that the bundle contains all required verification material.
+func Test_Integration_SignAndVerify(t *testing.T) {
 	r := require.New(t)
 	h, err := handler.New()
 	r.NoError(err)
-	digest := uniqueDigest(t, "offline-verify")
+	digest := uniqueDigest(t, "sign-and-verify")
 
-	// --- Sign with full stack (needs network to reach Fulcio + Rekor + TSA) ---
+	signCfg := &v1alpha1.SignConfig{
+		SigningConfig: stack.SigningConfigPath,
+	}
+	signCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+
+	sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
+		credOIDCToken: stack.OIDCToken,
+	})
+	r.NoError(err, "signing should succeed")
+
+	bundle := decodeBundle(t, sigInfo)
+
+	r.NotNil(bundle.VerificationMaterial.Certificate,
+		"bundle must contain a Fulcio certificate for identity verification")
+	r.NotEmpty(bundle.VerificationMaterial.Certificate.RawBytes)
+
+	r.NotEmpty(bundle.VerificationMaterial.TlogEntries,
+		"bundle must contain tlog entries for transparency verification")
+	for i, raw := range bundle.VerificationMaterial.TlogEntries {
+		var entry map[string]any
+		r.NoError(json.Unmarshal(raw, &entry), "tlog entry %d must be valid JSON", i)
+		r.Contains(entry, "inclusionProof", "tlog entry %d must have an inclusion proof", i)
+	}
+
+	r.NotNil(bundle.MessageSignature, "bundle must contain the message signature")
+	r.NotEmpty(bundle.MessageSignature.Signature)
+
+	r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
+	r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
+	r.NotEmpty(sigInfo.Issuer)
+
+	signed := descruntime.Signature{
+		Name:      "sign-and-verify-test",
+		Digest:    digest,
+		Signature: sigInfo,
+	}
+
+	verifyCfg := &v1alpha1.VerifyConfig{
+		CertificateOIDCIssuer: stack.OIDCIssuer,
+		CertificateIdentity:   stack.OIDCIdentity,
+	}
+	verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+	err = h.Verify(t.Context(), signed, verifyCfg, nil)
+	r.NoError(err, "verification should succeed")
+
+	t.Run("wrong issuer fails", func(t *testing.T) {
+		r := require.New(t)
+		badCfg := &v1alpha1.VerifyConfig{
+			CertificateOIDCIssuer: "https://wrong-issuer.example.com",
+			CertificateIdentity:   stack.OIDCIdentity,
+		}
+		badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, badCfg, nil)
+		r.Error(err, "verification with wrong issuer must fail")
+		r.ErrorContains(err, "issuer")
+	})
+
+	t.Run("wrong identity fails", func(t *testing.T) {
+		r := require.New(t)
+		badCfg := &v1alpha1.VerifyConfig{
+			CertificateOIDCIssuer: stack.OIDCIssuer,
+			CertificateIdentity:   "wrong@example.com",
+		}
+		badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, badCfg, nil)
+		r.Error(err, "verification with wrong identity must fail")
+	})
+}
+
+// Test_Integration_SignWithTrustedRoot exercises the enterprise/private-infra
+// signing scenario where the signing config AND a trusted root are both passed
+// to cosign. When signing against a privately deployed Sigstore infrastructure,
+// cosign uses --trusted-root to validate the Fulcio leaf certificate chain
+// locally rather than relying on the public-good TUF root.
+//
+// This test signs with both --signing-config and --trusted-root, then verifies
+// with TUF-cached trust material (to prove the bundle is valid) and also with
+// the explicit trusted root (to prove the trusted root is correct for verification).
+func Test_Integration_SignWithTrustedRoot(t *testing.T) {
+	r := require.New(t)
+	h, err := handler.New()
+	r.NoError(err)
+	digest := uniqueDigest(t, "sign-with-trusted-root")
 
 	signCfg := &v1alpha1.SignConfig{
 		SigningConfig: stack.SigningConfigPath,
@@ -380,80 +453,212 @@ func Test_Integration_OfflineVerification(t *testing.T) {
 	sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
 		credOIDCToken: stack.OIDCToken,
 	})
-	r.NoError(err, "signing should succeed")
-
-	// --- Assert the bundle contains all material for offline verification ---
+	r.NoError(err, "signing with --trusted-root should succeed")
 
 	bundle := decodeBundle(t, sigInfo)
-
 	r.NotNil(bundle.VerificationMaterial.Certificate,
-		"bundle must contain a Fulcio certificate for offline identity verification")
-	r.NotEmpty(bundle.VerificationMaterial.Certificate.RawBytes)
-
+		"bundle must contain a Fulcio certificate")
 	r.NotEmpty(bundle.VerificationMaterial.TlogEntries,
-		"bundle must contain tlog entries for offline transparency verification")
-	for i, raw := range bundle.VerificationMaterial.TlogEntries {
-		var entry map[string]any
-		r.NoError(json.Unmarshal(raw, &entry), "tlog entry %d must be valid JSON", i)
-		r.Contains(entry, "inclusionProof", "tlog entry %d must have an inclusion proof for offline verification", i)
-	}
-
-	r.NotNil(bundle.MessageSignature, "bundle must contain the message signature")
-	r.NotEmpty(bundle.MessageSignature.Signature)
+		"bundle must contain tlog entries")
+	r.NotNil(bundle.MessageSignature,
+		"bundle must contain the message signature")
 
 	r.Equal(v1alpha1.AlgorithmSigstore, sigInfo.Algorithm)
 	r.Equal(v1alpha1.MediaTypeSigstoreBundle, sigInfo.MediaType)
 	r.NotEmpty(sigInfo.Issuer)
 
-	// --- Verify offline: only bundle + trusted root, exact identity match ---
-
 	signed := descruntime.Signature{
-		Name:      "offline-verification-test",
+		Name:      "sign-with-trusted-root-test",
 		Digest:    digest,
 		Signature: sigInfo,
 	}
 
+	t.Run("verify with TUF-cached trust succeeds", func(t *testing.T) {
+		r := require.New(t)
+		verifyCfg := &v1alpha1.VerifyConfig{
+			CertificateOIDCIssuer:     stack.OIDCIssuer,
+			CertificateIdentityRegexp: ".*",
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
+		r.NoError(err, "bundle signed with --trusted-root must also verify via TUF")
+	})
+
+	t.Run("verify with explicit trusted root succeeds", func(t *testing.T) {
+		r := require.New(t)
+		verifyCfg := &v1alpha1.VerifyConfig{
+			TrustedRoot:               stack.TrustedRootPath,
+			CertificateOIDCIssuer:     stack.OIDCIssuer,
+			CertificateIdentityRegexp: ".*",
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+			credTrustedRootJSONFile: stack.TrustedRootPath,
+		})
+		r.NoError(err, "bundle signed with --trusted-root must verify with explicit trusted root")
+	})
+}
+
+// Test_Integration_VerifyWithExplicitTrustedRoot exercises offline/air-gapped
+// verification where the trusted root is passed explicitly via VerifyConfig
+// and/or credentials, rather than relying on TUF-cached trust.
+//
+// This is the enterprise scenario where a verifier has no network access to
+// TUF mirrors and must verify bundles using only a pre-distributed trusted root.
+func Test_Integration_VerifyWithExplicitTrustedRoot(t *testing.T) {
+	r := require.New(t)
+	h, err := handler.New()
+	r.NoError(err)
+	digest := uniqueDigest(t, "verify-explicit-trusted-root")
+
+	// Sign using the standard path (signing config, TUF-cached trust).
+	signCfg := &v1alpha1.SignConfig{
+		SigningConfig: stack.SigningConfigPath,
+	}
+	signCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+
+	sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
+		credOIDCToken: stack.OIDCToken,
+	})
+	r.NoError(err, "signing should succeed")
+
+	signed := descruntime.Signature{
+		Name:      "verify-explicit-trusted-root-test",
+		Digest:    digest,
+		Signature: sigInfo,
+	}
+
+	t.Run("trusted root via config field", func(t *testing.T) {
+		r := require.New(t)
+		verifyCfg := &v1alpha1.VerifyConfig{
+			TrustedRoot:               stack.TrustedRootPath,
+			CertificateOIDCIssuer:     stack.OIDCIssuer,
+			CertificateIdentityRegexp: ".*",
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, verifyCfg, nil)
+		r.NoError(err, "verification with trusted root via config field should succeed")
+	})
+
+	t.Run("trusted root via credential file path", func(t *testing.T) {
+		r := require.New(t)
+		verifyCfg := &v1alpha1.VerifyConfig{
+			CertificateOIDCIssuer:     stack.OIDCIssuer,
+			CertificateIdentityRegexp: ".*",
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+			credTrustedRootJSONFile: stack.TrustedRootPath,
+		})
+		r.NoError(err, "verification with trusted root via credential file should succeed")
+	})
+
+	t.Run("trusted root via inline credential JSON", func(t *testing.T) {
+		r := require.New(t)
+
+		trustedRootJSON, err := os.ReadFile(stack.TrustedRootPath)
+		r.NoError(err, "reading trusted root file should succeed")
+
+		verifyCfg := &v1alpha1.VerifyConfig{
+			CertificateOIDCIssuer:     stack.OIDCIssuer,
+			CertificateIdentityRegexp: ".*",
+		}
+		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
+			"trusted_root_json": string(trustedRootJSON),
+		})
+		r.NoError(err, "verification with trusted root via inline JSON credential should succeed")
+	})
+
+	t.Run("wrong issuer fails with explicit trusted root", func(t *testing.T) {
+		r := require.New(t)
+		badCfg := &v1alpha1.VerifyConfig{
+			TrustedRoot:               stack.TrustedRootPath,
+			CertificateOIDCIssuer:     "https://wrong-issuer.example.com",
+			CertificateIdentityRegexp: ".*",
+		}
+		badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
+
+		err := h.Verify(t.Context(), signed, badCfg, map[string]string{
+			credTrustedRootJSONFile: stack.TrustedRootPath,
+		})
+		r.Error(err, "verification with wrong issuer must fail even with valid trusted root")
+		r.ErrorContains(err, "issuer")
+	})
+}
+
+// Test_Integration_PrivateInfrastructure verifies that the
+// PrivateInfrastructure flag propagates correctly through cosign's
+// --private-infrastructure flag. The scaffolding cluster IS private
+// infrastructure, so signing normally and verifying with
+// PrivateInfrastructure: true (plus an explicit trusted root) should succeed.
+func Test_Integration_PrivateInfrastructure(t *testing.T) {
+	r := require.New(t)
+	h, err := handler.New()
+	r.NoError(err)
+	digest := uniqueDigest(t, "private-infrastructure")
+
+	// Sign using the standard path (signing config, TUF-cached trust).
+	signCfg := &v1alpha1.SignConfig{
+		SigningConfig: stack.SigningConfigPath,
+	}
+	signCfg.SetType(runtime.NewVersionedType(v1alpha1.SignConfigType, v1alpha1.Version))
+
+	sigInfo, err := h.Sign(t.Context(), digest, signCfg, map[string]string{
+		credOIDCToken: stack.OIDCToken,
+	})
+	r.NoError(err, "signing should succeed")
+
+	signed := descruntime.Signature{
+		Name:      "private-infrastructure-test",
+		Digest:    digest,
+		Signature: sigInfo,
+	}
+
+	// Verify with PrivateInfrastructure: true and an explicit trusted root.
+	// This exercises the --private-infrastructure flag path in cosign, which
+	// skips online transparency log verification.
 	verifyCfg := &v1alpha1.VerifyConfig{
-		TrustedRoot:           stack.TrustedRootPath,
-		CertificateOIDCIssuer: stack.OIDCIssuer,
-		CertificateIdentity:   stack.OIDCIdentity,
+		TrustedRoot:               stack.TrustedRootPath,
+		PrivateInfrastructure:     true,
+		CertificateOIDCIssuer:     stack.OIDCIssuer,
+		CertificateIdentityRegexp: ".*",
 	}
 	verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
 	err = h.Verify(t.Context(), signed, verifyCfg, map[string]string{
 		credTrustedRootJSONFile: stack.TrustedRootPath,
 	})
-	r.NoError(err, "offline verification using only bundle + trusted root should succeed")
-
-	// --- Negative: wrong identity must fail even with valid bundle ---
-
-	t.Run("wrong issuer fails offline", func(t *testing.T) {
-		r := require.New(t)
-		badCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:           stack.TrustedRootPath,
-			CertificateOIDCIssuer: "https://wrong-issuer.example.com",
-			CertificateIdentity:   stack.OIDCIdentity,
-		}
-		badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
-
-		err := h.Verify(t.Context(), signed, badCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
-		r.Error(err, "verification with wrong issuer must fail")
-	})
-
-	t.Run("wrong identity fails offline", func(t *testing.T) {
-		r := require.New(t)
-		badCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:           stack.TrustedRootPath,
-			CertificateOIDCIssuer: stack.OIDCIssuer,
-			CertificateIdentity:   "wrong@example.com",
-		}
-		badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
-
-		err := h.Verify(t.Context(), signed, badCfg, map[string]string{
-			credTrustedRootJSONFile: stack.TrustedRootPath,
-		})
-		r.Error(err, "verification with wrong identity must fail")
-	})
+	r.NoError(err, "verification with --private-infrastructure and explicit trusted root should succeed")
 }
+
+// ---------------------------------------------------------------------------
+// Future test scenarios (documented for reference)
+// ---------------------------------------------------------------------------
+//
+// Test_Integration_PublicGoodSigstore (NOT IMPLEMENTED)
+//
+// This test would exercise the "just works" path where cosign signs and
+// verifies using the public-good Sigstore infrastructure (public Fulcio,
+// public Rekor, embedded TUF root) with no custom signing config or trusted
+// root. This path cannot be tested against the scaffolding cluster because
+// scaffolding is private infrastructure.
+//
+// To test this scenario, run against the real public-good Sigstore:
+//   - No --signing-config, no --trusted-root for signing
+//   - No --trusted-root for verification
+//   - Requires a real OIDC token (e.g., from GitHub Actions OIDC provider)
+//
+// Test_Integration_GitHubOIDCFlow (NOT IMPLEMENTED)
+//
+// This test would exercise signing with a GitHub Actions OIDC token obtained
+// from ACTIONS_ID_TOKEN_REQUEST_TOKEN / ACTIONS_ID_TOKEN_REQUEST_URL. The
+// handler receives the token via the "token" credential key. This requires
+// running in a GitHub Actions environment with id-token: write permission.
+// The scaffolding's Kubernetes OIDC tokens work for now; the GitHub OIDC
+// flow is a future enhancement for testing the full CI/CD signing path.
