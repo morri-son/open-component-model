@@ -39,6 +39,13 @@ tasks:
         curl -fLo /tmp/Dockerfile.cosign \
           "https://raw.githubusercontent.com/sigstore/scaffolding/{{.SCAFFOLDING_VERSION}}/actions/setup-sigstore-env/Dockerfile.cosign"
       - |
+        # Download the fakeoidc directory (run-containers.sh does pushd ./fakeoidc).
+        mkdir -p /tmp/fakeoidc
+        for f in Dockerfile docker-compose.yml go.mod go.sum main.go; do
+          curl -fLo "/tmp/fakeoidc/$f" \
+            "https://raw.githubusercontent.com/sigstore/scaffolding/{{.SCAFFOLDING_VERSION}}/actions/setup-sigstore-env/fakeoidc/$f"
+        done
+      - |
         # Source the upstream script (it must be sourced, not executed, because
         # it exports env vars and uses "return" instead of "exit").
         export CLONE_DIR="{{.CLONE_DIR}}"

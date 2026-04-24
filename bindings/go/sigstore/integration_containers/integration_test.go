@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,14 +30,15 @@ const (
 // in TestMain, which are expected to be set by the container setup (either
 // via the CI action outputs or locally via the Taskfile env extraction).
 //
-// Unlike the scaffolding-based tests, the container-based approach does not
-// provide a TUF mirror. All tests must use explicit trusted root and signing
-// config paths.
+// The fakeoidc container serves plain HTTP, but the handler's HTTPS
+// validation rejects http:// URLs in CertificateOIDCIssuer. Tests use
+// CertificateOIDCIssuerRegexp instead for exact issuer matching.
 type sigstoreEnv struct {
 	OIDCToken        string
 	SigningConfigPath string
 	TrustedRootPath  string
 	OIDCIssuer       string
+	OIDCIssuerRegexp string
 	OIDCIdentity     string
 }
 
@@ -49,11 +51,13 @@ type sigstoreEnv struct {
 var stack *sigstoreEnv
 
 func TestMain(m *testing.M) {
+	issuer := requireEnv("SIGSTORE_OIDC_ISSUER")
 	stack = &sigstoreEnv{
 		OIDCToken:        requireEnv("SIGSTORE_OIDC_TOKEN"),
 		SigningConfigPath: requireEnv("SIGSTORE_SIGNING_CONFIG"),
 		TrustedRootPath:  requireEnv("SIGSTORE_TRUSTED_ROOT"),
-		OIDCIssuer:       requireEnv("SIGSTORE_OIDC_ISSUER"),
+		OIDCIssuer:       issuer,
+		OIDCIssuerRegexp: "^" + regexp.QuoteMeta(issuer) + "$",
 		OIDCIdentity:     requireEnv("SIGSTORE_OIDC_IDENTITY"),
 	}
 	os.Exit(m.Run())
@@ -136,9 +140,9 @@ func Test_Integration_Keyless_IdentityVerification(t *testing.T) {
 	t.Run("matching issuer succeeds", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:               stack.TrustedRootPath,
-			CertificateOIDCIssuer:     sigInfo.Issuer,
-			CertificateIdentityRegexp: ".*",
+			TrustedRoot:                 stack.TrustedRootPath,
+			CertificateOIDCIssuerRegexp: "^" + regexp.QuoteMeta(sigInfo.Issuer) + "$",
+			CertificateIdentityRegexp:   ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -222,9 +226,9 @@ func Test_Integration_TamperedBundle(t *testing.T) {
 	r.NoError(err, "baseline signing must succeed")
 
 	verifyCfg := &v1alpha1.VerifyConfig{
-		TrustedRoot:           stack.TrustedRootPath,
-		CertificateOIDCIssuer: stack.OIDCIssuer,
-		CertificateIdentity:   stack.OIDCIdentity,
+		TrustedRoot:                 stack.TrustedRootPath,
+		CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+		CertificateIdentity:         stack.OIDCIdentity,
 	}
 	verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -402,9 +406,9 @@ func Test_Integration_SignAndVerify(t *testing.T) {
 	}
 
 	verifyCfg := &v1alpha1.VerifyConfig{
-		TrustedRoot:           stack.TrustedRootPath,
-		CertificateOIDCIssuer: stack.OIDCIssuer,
-		CertificateIdentity:   stack.OIDCIdentity,
+		TrustedRoot:                 stack.TrustedRootPath,
+		CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+		CertificateIdentity:         stack.OIDCIdentity,
 	}
 	verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -428,9 +432,9 @@ func Test_Integration_SignAndVerify(t *testing.T) {
 	t.Run("wrong identity fails", func(t *testing.T) {
 		r := require.New(t)
 		badCfg := &v1alpha1.VerifyConfig{
-			TrustedRoot:          stack.TrustedRootPath,
-			CertificateOIDCIssuer: stack.OIDCIssuer,
-			CertificateIdentity:   "wrong@example.com",
+			TrustedRoot:                 stack.TrustedRootPath,
+			CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+			CertificateIdentity:         "wrong@example.com",
 		}
 		badCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -485,8 +489,8 @@ func Test_Integration_SignWithTrustedRoot(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
 			TrustedRoot:               stack.TrustedRootPath,
-			CertificateOIDCIssuer:     stack.OIDCIssuer,
-			CertificateIdentityRegexp: ".*",
+			CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+			CertificateIdentityRegexp:   ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -531,8 +535,8 @@ func Test_Integration_VerifyWithExplicitTrustedRoot(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
 			TrustedRoot:               stack.TrustedRootPath,
-			CertificateOIDCIssuer:     stack.OIDCIssuer,
-			CertificateIdentityRegexp: ".*",
+			CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+			CertificateIdentityRegexp:   ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -543,8 +547,8 @@ func Test_Integration_VerifyWithExplicitTrustedRoot(t *testing.T) {
 	t.Run("trusted root via credential file path", func(t *testing.T) {
 		r := require.New(t)
 		verifyCfg := &v1alpha1.VerifyConfig{
-			CertificateOIDCIssuer:     stack.OIDCIssuer,
-			CertificateIdentityRegexp: ".*",
+			CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+			CertificateIdentityRegexp:   ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -561,8 +565,8 @@ func Test_Integration_VerifyWithExplicitTrustedRoot(t *testing.T) {
 		r.NoError(err, "reading trusted root file should succeed")
 
 		verifyCfg := &v1alpha1.VerifyConfig{
-			CertificateOIDCIssuer:     stack.OIDCIssuer,
-			CertificateIdentityRegexp: ".*",
+			CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+			CertificateIdentityRegexp:   ".*",
 		}
 		verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
@@ -622,10 +626,10 @@ func Test_Integration_PrivateInfrastructure(t *testing.T) {
 	// This exercises the --private-infrastructure flag path in cosign, which
 	// skips online transparency log verification.
 	verifyCfg := &v1alpha1.VerifyConfig{
-		TrustedRoot:               stack.TrustedRootPath,
-		PrivateInfrastructure:     true,
-		CertificateOIDCIssuer:     stack.OIDCIssuer,
-		CertificateIdentityRegexp: ".*",
+		TrustedRoot:                 stack.TrustedRootPath,
+		PrivateInfrastructure:       true,
+		CertificateOIDCIssuerRegexp: stack.OIDCIssuerRegexp,
+		CertificateIdentityRegexp:   ".*",
 	}
 	verifyCfg.SetType(runtime.NewVersionedType(v1alpha1.VerifyConfigType, v1alpha1.Version))
 
