@@ -6,19 +6,6 @@ set -euo pipefail
 #
 # Prerequisites: kubectl, cosign, curl must be on PATH.
 # The current kubectl context must point to the scaffolding cluster.
-#
-# Flags:
-#   --local   Use localhost URLs from port-forwarded services instead of
-#             Knative URLs.  Requires hack/port-forward.sh to be running.
-#             This is needed on macOS (Colima / Docker Desktop) where the
-#             MetalLB IPs are not routable from the host.
-
-LOCAL_MODE=false
-for arg in "$@"; do
-  case "$arg" in
-    --local) LOCAL_MODE=true ;;
-  esac
-done
 
 require_nonempty() {
   local name="$1" val="$2"
@@ -34,28 +21,10 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-if $LOCAL_MODE; then
-  # In local mode, use localhost URLs from port-forward.sh.
-  PF_ENV="$ROOT_DIR/tmp/port-forward-env.sh"
-  if [[ ! -f "$PF_ENV" ]]; then
-    echo "extract-sigstore-env: --local requires port-forward.sh to be running" >&2
-    echo "  Run: bash hack/port-forward.sh --bg" >&2
-    exit 1
-  fi
-  # shellcheck disable=SC1090
-  . "$PF_ENV"
-
-  FULCIO_URL="${LOCAL_FULCIO_URL}"
-  REKOR_URL="${LOCAL_REKOR_URL}"
-  TSA_URL="${LOCAL_TSA_URL}"
-  CTLOG_URL="${LOCAL_CTLOG_URL}"
-else
-  # Standard mode: read URLs from Knative services.
-  FULCIO_URL=$(kubectl -n fulcio-system get ksvc fulcio -ojsonpath='{.status.url}')
-  REKOR_URL=$(kubectl -n rekor-system get ksvc rekor -ojsonpath='{.status.url}')
-  TSA_URL=$(kubectl -n tsa-system get ksvc tsa -ojsonpath='{.status.url}')
-  CTLOG_URL=$(kubectl -n ctlog-system get ksvc ctlog -ojsonpath='{.status.url}')
-fi
+FULCIO_URL=$(kubectl -n fulcio-system get ksvc fulcio -ojsonpath='{.status.url}')
+REKOR_URL=$(kubectl -n rekor-system get ksvc rekor -ojsonpath='{.status.url}')
+TSA_URL=$(kubectl -n tsa-system get ksvc tsa -ojsonpath='{.status.url}')
+CTLOG_URL=$(kubectl -n ctlog-system get ksvc ctlog -ojsonpath='{.status.url}')
 require_nonempty FULCIO_URL "$FULCIO_URL"
 require_nonempty REKOR_URL  "$REKOR_URL"
 require_nonempty TSA_URL    "$TSA_URL"
@@ -112,21 +81,13 @@ cp "$WORK_DIR/signing_config.json" "$OUTDIR/"
 # The signing handler builds a curated env for the cosign subprocess (only
 # PATH, HOME, proxy, and TLS vars), so SIGSTORE_*/TUF_* vars are not
 # forwarded.  Cosign must therefore find trust material in ~/.sigstore/root/.
-if $LOCAL_MODE; then
-  TUF_MIRROR="${LOCAL_TUF_URL}"
-else
-  TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
-fi
+TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
 require_nonempty TUF_MIRROR "$TUF_MIRROR"
 kubectl -n tuf-system get secrets tuf-root -ojsonpath='{.data.root}' | base64 -d > "$WORK_DIR/tuf-root.json"
 cosign initialize --mirror "$TUF_MIRROR" --root "$WORK_DIR/tuf-root.json" >&2
 
 # Fetch OIDC token
-if $LOCAL_MODE; then
-  ISSUER_URL="${LOCAL_GETTOKEN_URL}"
-else
-  ISSUER_URL=$(kubectl -n default get ksvc gettoken -ojsonpath='{.status.url}')
-fi
+ISSUER_URL=$(kubectl -n default get ksvc gettoken -ojsonpath='{.status.url}')
 require_nonempty ISSUER_URL "$ISSUER_URL"
 OIDC_TOKEN=$(curl -sSf "$ISSUER_URL")
 require_nonempty OIDC_TOKEN "$OIDC_TOKEN"

@@ -33,7 +33,7 @@ tasks:
         curl -fLo tmp/setup-scaffolding-from-release.sh \
           "https://github.com/sigstore/scaffolding/releases/download/{{.SCAFFOLDING_VERSION}}/setup-scaffolding-from-release.sh"
         chmod u+x tmp/setup-scaffolding-from-release.sh
-        tmp/setup-scaffolding-from-release.sh --release-version {{.SCAFFOLDING_VERSION}}
+        cd tmp && ./setup-scaffolding-from-release.sh --release-version {{.SCAFFOLDING_VERSION}}
       - |
         curl -fL "https://github.com/sigstore/scaffolding/releases/download/{{.SCAFFOLDING_VERSION}}/testrelease.yaml" \
           | kubectl create -f -
@@ -61,42 +61,3 @@ tasks:
       - kind delete cluster 2>/dev/null || true
       - rm -rf tmp
 
-  # ---------------------------------------------------------------------------
-  # Local (macOS) developer workflow
-  # ---------------------------------------------------------------------------
-  # On macOS with Colima or Docker Desktop the MetalLB IPs assigned by Kourier
-  # are not routable from the host.  These tasks use kubectl port-forward to
-  # expose the Knative services on localhost instead.
-
-  scaffolding:port-forward:
-    desc: "Port-forward scaffolding Knative services to localhost (macOS)"
-    deps: [scaffolding:setup]
-    cmds:
-      - bash hack/port-forward.sh
-
-  scaffolding:port-forward:start:
-    desc: "Start port-forwards in the background"
-    deps: [scaffolding:setup]
-    cmds:
-      - bash hack/port-forward.sh --bg
-
-  scaffolding:port-forward:stop:
-    desc: "Stop backgrounded port-forwards"
-    cmds:
-      - bash hack/port-forward.sh --stop
-
-  scaffolding:env:local:
-    desc: "Extract sigstore env vars using localhost URLs (requires scaffolding:port-forward:start)"
-    deps: [scaffolding:setup]
-    cmds:
-      - mkdir -p tmp
-      - bash hack/extract-sigstore-env.sh --local > {{.SIGSTORE_ENV_FILE}}
-
-  test/integration:local:
-    desc: "Run integration tests against port-forwarded scaffolding (macOS)"
-    deps: [scaffolding:env:local]
-    cmds:
-      - |
-        set -e
-        . {{.SIGSTORE_ENV_FILE}}
-        go test -count=1 -run "{{.INTEGRATION_TEST_IDENTIFIER}}" -timeout 180s ./...
