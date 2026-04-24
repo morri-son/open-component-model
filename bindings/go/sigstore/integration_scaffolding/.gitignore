@@ -1,6 +1,1 @@
 tmp/
-kind.yaml
-metallb-crds.yaml
-root.json
-hack/setup-colima.sh
-hack/port-forward.sh

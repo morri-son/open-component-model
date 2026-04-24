@@ -23,17 +23,16 @@ tasks:
       - kubectl -n tsa-system get ksvc tsa -ojsonpath='{.status.url}' 2>/dev/null | grep -q .
       - kubectl -n default get ksvc gettoken -ojsonpath='{.status.url}' 2>/dev/null | grep -q .
     cmds:
-      - mkdir -p tmp
       - |
-        curl -fLo tmp/setup-kind.sh \
+        curl -fLo /tmp/setup-kind.sh \
           "https://github.com/sigstore/scaffolding/releases/download/{{.SCAFFOLDING_VERSION}}/setup-kind.sh"
-        chmod u+x tmp/setup-kind.sh
-        cd tmp && ./setup-kind.sh
+        chmod u+x /tmp/setup-kind.sh
+        cd /tmp && ./setup-kind.sh
       - |
-        curl -fLo tmp/setup-scaffolding-from-release.sh \
+        curl -fLo /tmp/setup-scaffolding-from-release.sh \
           "https://github.com/sigstore/scaffolding/releases/download/{{.SCAFFOLDING_VERSION}}/setup-scaffolding-from-release.sh"
-        chmod u+x tmp/setup-scaffolding-from-release.sh
-        cd tmp && ./setup-scaffolding-from-release.sh --release-version {{.SCAFFOLDING_VERSION}}
+        chmod u+x /tmp/setup-scaffolding-from-release.sh
+        cd /tmp && ./setup-scaffolding-from-release.sh --release-version {{.SCAFFOLDING_VERSION}}
       - |
         curl -fL "https://github.com/sigstore/scaffolding/releases/download/{{.SCAFFOLDING_VERSION}}/testrelease.yaml" \
           | kubectl create -f -
