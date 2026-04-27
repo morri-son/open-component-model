@@ -65,7 +65,7 @@ Versions
 This version tracks the latest commit and may be unstable.
 For the current release, see the
 <a class=version-warning-link href=/>latest version (latest)</a>.</div><h1>ocm sign component-version</h1><nav class="toc-mobile d-xl-none" aria-label="Quaternary navigation"><details><summary>On this page</summary><div class=page-links><nav id=TableOfContents><ul><li><a href=#ocm-sign-component-version>ocm sign component-version</a><ul><li><a href=#synopsis>Synopsis</a></li></ul></li><li><a href=#reference-format>Reference Format</a></li><li><a href=#ocm-signing-explained-in-simple-steps>OCM Signing explained in simple steps</a></li><li><a href=#behavior>Behavior</a><ul><li><a href=#examples>Examples</a></li><li><a href=#options>Options</a></li><li><a href=#options-inherited-from-parent-commands>Options inherited from parent commands</a></li><li><a href=#see-also>SEE ALSO</a></li></ul></li></ul></nav></div></details></nav><div style=margin-bottom:2rem></div><h2 id=ocm-sign-component-version>ocm sign component-version<a href=#ocm-sign-component-version class=anchor aria-hidden=true>#</a></h2><p>Sign component version(s) inside an OCM repository</p><h3 id=synopsis>Synopsis<a href=#synopsis class=anchor aria-hidden=true>#</a></h3><p>Creates or update cryptographic signatures on component descriptors.</p><h2 id=reference-format>Reference Format<a href=#reference-format class=anchor aria-hidden=true>#</a></h2><pre><code>[type::]{repository}/[valid-prefix]/{component}[:version]
-</code></pre><ul><li>Prefixes: {component-descriptors|none} (default: &ldquo;component-descriptors&rdquo;)</li><li>Repo types: {OCIRepository|CommonTransportFormat} (short: {OCI|oci|CTF|ctf})</li></ul><h2 id=ocm-signing-explained-in-simple-steps>OCM Signing explained in simple steps<a href=#ocm-signing-explained-in-simple-steps class=anchor aria-hidden=true>#</a></h2><ul><li>Resolve OCM repository</li><li>Fetch component version</li><li>Verify digests (&ndash;verify-digest-consistency)</li><li>Normalise descriptor (&ndash;normalisation)</li><li>Hash normalised descriptor (&ndash;hash)</li><li>Sign hash (&ndash;signer-spec)</li></ul><h2 id=behavior>Behavior<a href=#behavior class=anchor aria-hidden=true>#</a></h2><ul><li>Conflicting signatures cause failure unless &ndash;force is set (then overwrite)</li><li>&ndash;dry-run: compute only, do not persist signature</li><li>Default signature name: default</li><li>Default signer: RSASSA-PSS plugin (needs private key)</li></ul><p>Use this command to establish provenance of component versions.</p><div class=expressive-code><figure class="frame not-content"><figcaption class=header><span class=title></span></figcaption><pre tabindex=0><code>ocm sign component-version {reference} [flags]</code></pre></figure></div><h3 id=examples>Examples<a href=#examples class=anchor aria-hidden=true>#</a></h3><div class=expressive-code><figure class="frame not-content"><figcaption class=header><span class=title></span></figcaption><pre tabindex=0><code># Sign a component version with default algorithms
+</code></pre><ul><li>Prefixes: {component-descriptors|none} (default: &ldquo;component-descriptors&rdquo;)</li><li>Repo types: {OCIRepository|CommonTransportFormat} (short: {OCI|oci|CTF|ctf})</li></ul><h2 id=ocm-signing-explained-in-simple-steps>OCM Signing explained in simple steps<a href=#ocm-signing-explained-in-simple-steps class=anchor aria-hidden=true>#</a></h2><ul><li>Resolve OCM repository</li><li>Fetch component version</li><li>Verify digests (&ndash;verify-digest-consistency)</li><li>Normalise descriptor (&ndash;normalisation)</li><li>Hash normalised descriptor (&ndash;hash)</li><li>Sign hash (&ndash;signer-spec)</li></ul><h2 id=behavior>Behavior<a href=#behavior class=anchor aria-hidden=true>#</a></h2><ul><li>Conflicting signatures cause failure unless &ndash;force is set (then overwrite)</li><li>&ndash;dry-run: compute only, do not persist signature</li><li>Default signature name: default</li><li>Default signer: RSASSA-PSS plugin (needs private key)</li><li>For Sigstore keyless signing (no keys needed), pass &ndash;signer-spec with a SigstoreSigningConfiguration/v1alpha1 config</li></ul><p>Use this command to establish provenance of component versions.</p><div class=expressive-code><figure class="frame not-content"><figcaption class=header><span class=title></span></figcaption><pre tabindex=0><code>ocm sign component-version {reference} [flags]</code></pre></figure></div><h3 id=examples>Examples<a href=#examples class=anchor aria-hidden=true>#</a></h3><div class=expressive-code><figure class="frame not-content"><figcaption class=header><span class=title></span></figcaption><pre tabindex=0><code># Sign a component version with default algorithms
 sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0
 
 ## Example Credential Config (.ocmconfig) — Plain encoding (default)
@@ -133,6 +133,46 @@ sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.2
     type: RSASigningConfiguration/v1alpha1
     signatureAlgorithm: RSASSA-PSS
     signatureEncodingPolicy: PEM
+
+## Example Signer Spec File — Sigstore keyless (SigstoreSigningConfiguration/v1alpha1)
+#
+# Use when signing without private keys via Sigstore/Fulcio OIDC.
+# Endpoint discovery precedence:
+#   1. signingConfig — local signing_config.json (--signing-config)
+#   2. fulcioURL / rekorURL / timestampServerURL — explicit endpoint URLs
+#   3. Neither set — public-good Sigstore TUF (default)
+
+    type: SigstoreSigningConfiguration/v1alpha1
+
+# With explicit endpoints (private infrastructure):
+
+    type: SigstoreSigningConfiguration/v1alpha1
+    fulcioURL: https://fulcio.example.com
+    rekorURL: https://rekor.example.com
+    timestampServerURL: https://tsa.example.com
+
+# With a local signing config file (private infrastructure, endpoint discovery):
+
+    type: SigstoreSigningConfiguration/v1alpha1
+    signingConfig: /path/to/signing_config.json
+
+## Example Credential Config (.ocmconfig) — Sigstore OIDC token
+#
+# The OIDCProvider plugin checks SIGSTORE_ID_TOKEN env var first (CI/automation),
+# then falls back to an interactive browser-based OIDC flow.
+
+    type: generic.config.ocm.software/v1
+    configurations:
+    - type: credentials.config.ocm.software
+      consumers:
+      - identity:
+          type: OIDCIdentityToken/v1alpha1
+          name: sigstore
+        credentials:
+        - type: OIDCProvider/v1alpha1
+
+# Sign with Sigstore (requires sigstore signer spec):
+sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signer-spec ./sigstore-sign.yaml
 
 # Sign with custom signature name
 sign component-version ghcr.io/open-component-model/ocm//ocm.software/ocmcli:0.23.0 --signature my-signature
