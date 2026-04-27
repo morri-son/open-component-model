@@ -1,11 +1,21 @@
 version: '3'
 
+# Prerequisites (must be on PATH):
+#   - kubectl: https://kubernetes.io/docs/tasks/tools/
+#   - cosign:  https://github.com/sigstore/cosign (see signing/handler/cosign_version.go for tested version)
+#   - curl
+#   - kind:    https://kind.sigs.k8s.io/docs/user/quick-start/#installation
+
 includes:
   reuse: ../../../../reuse.Taskfile.yml
 
 vars:
+  PROJECT_ROOT:
+    sh: 'git rev-parse --show-toplevel'
+  SCAFFOLDING_VERSION:
+    sh: 'source {{.PROJECT_ROOT}}/.env 2>/dev/null; [ -f .env ] && source .env; echo "$SCAFFOLDING_VERSION"'
+
   INTEGRATION_TEST_IDENTIFIER: 'Integration'
-  SCAFFOLDING_VERSION: 'v0.7.31'
   SIGSTORE_ENV_FILE: 'tmp/sigstore-env.sh'
 
 tasks:
@@ -59,4 +69,3 @@ tasks:
     cmds:
       - kind delete cluster 2>/dev/null || true
       - rm -rf tmp
-

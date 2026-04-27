@@ -109,7 +109,9 @@
       groupName: 'Sigstore Repositories',
       groupSlug: 'sigstore',
       matchPackageNames: [
-        'github.com/sigstore/{/,}**'
+        'github.com/sigstore/{/,}**',
+        'sigstore/cosign',        // github-releases in cosign_version.go
+        'sigstore/scaffolding',   // github-releases in integration/.env
       ],
       schedule: [
         '* * * * 0' // At every minute on Sunday it is allowed to create branches

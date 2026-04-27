@@ -11,6 +11,7 @@ import (
 func TestCosignDownloadURL(t *testing.T) {
 	t.Parallel()
 
+	base := "https://github.com/sigstore/cosign/releases/download/" + CosignVersion + "/"
 	tests := []struct {
 		name    string
 		version string
@@ -20,38 +21,38 @@ func TestCosignDownloadURL(t *testing.T) {
 	}{
 		{
 			name:    "linux amd64",
-			version: "v3.0.6",
+			version: CosignVersion,
 			goos:    "linux",
 			goarch:  "amd64",
-			want:    "https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign-linux-amd64",
+			want:    base + "cosign-linux-amd64",
 		},
 		{
 			name:    "linux arm64",
-			version: "v3.0.6",
+			version: CosignVersion,
 			goos:    "linux",
 			goarch:  "arm64",
-			want:    "https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign-linux-arm64",
+			want:    base + "cosign-linux-arm64",
 		},
 		{
 			name:    "darwin amd64",
-			version: "v3.0.6",
+			version: CosignVersion,
 			goos:    "darwin",
 			goarch:  "amd64",
-			want:    "https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign-darwin-amd64",
+			want:    base + "cosign-darwin-amd64",
 		},
 		{
 			name:    "darwin arm64",
-			version: "v3.0.6",
+			version: CosignVersion,
 			goos:    "darwin",
 			goarch:  "arm64",
-			want:    "https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign-darwin-arm64",
+			want:    base + "cosign-darwin-arm64",
 		},
 		{
 			name:    "windows amd64",
-			version: "v3.0.6",
+			version: CosignVersion,
 			goos:    "windows",
 			goarch:  "amd64",
-			want:    "https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign-windows-amd64.exe",
+			want:    base + "cosign-windows-amd64.exe",
 		},
 	}
 
@@ -68,8 +69,8 @@ func TestCosignChecksumsURL(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 	r.Equal(
-		"https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign_checksums.txt",
-		cosignChecksumsURL("v3.0.6"),
+		"https://github.com/sigstore/cosign/releases/download/"+CosignVersion+"/cosign_checksums.txt",
+		cosignChecksumsURL(CosignVersion),
 	)
 }
 
@@ -97,11 +98,11 @@ func TestCosignCachePath(t *testing.T) {
 	t.Parallel()
 	r := require.New(t)
 
-	path, err := cosignCachePath("v3.0.6")
+	path, err := cosignCachePath(CosignVersion)
 	r.NoError(err)
 	r.Contains(path, "ocm")
 	r.Contains(path, "cosign")
-	r.Contains(path, "v3.0.6")
+	r.Contains(path, CosignVersion)
 }
 
 func TestParseChecksum(t *testing.T) {
