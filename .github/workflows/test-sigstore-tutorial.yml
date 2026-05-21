@@ -130,10 +130,28 @@ jobs:
           set -euo pipefail
           set -o pipefail
 
-          # Inspect via yq (verbatim from tutorial)
+          # Dump the full descriptor for diagnostics regardless of structure.
           ocm get cv ./transport-archive//github.com/acme.org/helloworld:1.0.0 -o yaml \
-            | yq '.[0].component.signatures[] | select(.signature.algorithm == "sigstore")' \
-            | tee signature.yaml
+            > full-descriptor.yaml
+          echo "::group::Full descriptor (head)"
+          head -80 full-descriptor.yaml
+          echo "::endgroup::"
+
+          # Try the tutorial's selector first; if empty, fall back to a
+          # recursive descent across the descriptor structure.
+          # NB: yq's "..|select(...)" finds the signature object regardless
+          # of whether the top-level is a list, a single component, or
+          # nested under a different key.
+          yq '.[0].component.signatures[] | select(.signature.algorithm == "sigstore")' \
+            full-descriptor.yaml > signature.yaml || true
+          if [[ ! -s signature.yaml ]] || [[ "$(yq -r '.signature.algorithm' signature.yaml 2>/dev/null)" == "null" ]]; then
+            echo "tutorial selector returned empty, using recursive fallback"
+            yq '.. | select(has("signature") and (.signature.algorithm == "sigstore"))' \
+              full-descriptor.yaml > signature.yaml
+          fi
+          echo "::group::Extracted signature.yaml"
+          cat signature.yaml
+          echo "::endgroup::"
 
           echo "::group::Assertions"
 
@@ -231,6 +249,7 @@ jobs:
             ${{ runner.temp }}/ocm-sigstore-tutorial/sigstore-verify.yaml
             ${{ runner.temp }}/ocm-sigstore-tutorial/sigstore-verify-wrong.yaml
             ${{ runner.temp }}/ocm-sigstore-tutorial/sign-output.txt
+            ${{ runner.temp }}/ocm-sigstore-tutorial/full-descriptor.yaml
             ${{ runner.temp }}/ocm-sigstore-tutorial/signature.yaml
             ${{ runner.temp }}/ocm-sigstore-tutorial/bundle.json
             ${{ runner.temp }}/ocm-sigstore-tutorial/verify-output.txt
