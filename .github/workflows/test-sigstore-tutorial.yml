@@ -1,0 +1,241 @@
+name: Test Sigstore Tutorial (E2E)
+
+# End-to-end test for the Sigstore (Keyless) tutorial at
+# website/content/docs/tutorials/signing/sigstore.md.
+#
+# This workflow exists ONLY on branch test/sigstore-tutorial-e2e — it is a
+# test-only artifact, never merged. It runs the tutorial steps verbatim
+# (with two documented deviations) and verifies that signing + verification
+# work end-to-end against public Fulcio/Rekor.
+#
+# Deviations from the tutorial (justified):
+#   1. .ocmconfig has empty `configurations: []` because GitHub Actions has
+#      ambient OIDC via $ACTIONS_ID_TOKEN_REQUEST_TOKEN; the handler at
+#      bindings/go/sigstore/signing/handler/handler.go:99-108 detects this
+#      env var and skips the OIDCIdentityTokenProvider credential lookup.
+#   2. Verifier identity uses GitHub Actions OIDC values:
+#        certificateOIDCIssuer:    https://token.actions.githubusercontent.com
+#        certificateIdentityRegexp: workflow ref pinned to this branch+file
+#      instead of the tutorial's Google/email example.
+
+on:
+  push:
+    branches:
+      - test/sigstore-tutorial-e2e
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # Required for ambient OIDC token from the runner
+
+jobs:
+  e2e:
+    name: Run tutorial end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+
+      - name: Build OCM CLI from source
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          go mod download
+          mkdir -p "$HOME/.local/bin"
+          go build -o "$HOME/.local/bin/ocm" ./cmd/ocm
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/ocm" version || true
+
+      - name: Install pinned cosign
+        run: |
+          set -euo pipefail
+          # Read cosign version from the project's pinned .env (renovate-tracked)
+          COSIGN_VERSION="$(grep -E '^COSIGN_VERSION=' \
+            bindings/go/sigstore/signing/handler/internal/.env | cut -d= -f2)"
+          echo "Using COSIGN_VERSION=${COSIGN_VERSION}"
+          # Strip leading "v" if present for the asset filename, but keep tag for URL
+          TAG="${COSIGN_VERSION}"
+          [[ "${TAG}" != v* ]] && TAG="v${TAG}"
+          URL="https://github.com/sigstore/cosign/releases/download/${TAG}/cosign-linux-amd64"
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL --fail -o "$HOME/.local/bin/cosign" "$URL"
+          chmod +x "$HOME/.local/bin/cosign"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/cosign" version
+
+      - name: Step 1 — Create sample component (CTF)
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          mkdir -p ocm-sigstore-tutorial
+          cd ocm-sigstore-tutorial
+          cat > component-constructor.yaml << 'EOF'
+          components:
+          - name: github.com/acme.org/helloworld
+            version: 1.0.0
+            provider:
+              name: acme.org
+          EOF
+          ocm add cv
+
+      - name: Step 2 — Configure signing credential (.ocmconfig)
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          # DEVIATION: empty configurations list. The handler detects ambient
+          # OIDC via ACTIONS_ID_TOKEN_REQUEST_TOKEN (handler.go:99-108) and
+          # skips the OIDCIdentityTokenProvider lookup. The credential graph
+          # returns ErrNotFound, which cmd.go:330 logs at debug level and
+          # signing proceeds.
+          cat > .ocmconfig << 'EOF'
+          type: generic.config.ocm.software/v1
+          configurations: []
+          EOF
+          cat .ocmconfig
+
+      - name: Step 3 — Create signer spec (verbatim from tutorial)
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          cat > sigstore-sign.yaml << 'EOF'
+          type: SigstoreSigningConfiguration/v1alpha1
+          EOF
+          cat sigstore-sign.yaml
+
+      - name: Step 4 — Sign component version (verbatim from tutorial)
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          # Capture sign output for diagnostics; ambient OIDC kicks in
+          # automatically because ACTIONS_ID_TOKEN_REQUEST_TOKEN is set.
+          ocm sign cv \
+            --config ./.ocmconfig \
+            --signer-spec ./sigstore-sign.yaml \
+            ./transport-archive//github.com/acme.org/helloworld:1.0.0 \
+            2>&1 | tee sign-output.txt
+
+      - name: Step 5 — Inspect signature & assert fields
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          set -o pipefail
+
+          # Inspect via yq (verbatim from tutorial)
+          ocm get cv ./transport-archive//github.com/acme.org/helloworld:1.0.0 -o yaml \
+            | yq '.[0].component.signatures[] | select(.signature.algorithm == "sigstore")' \
+            | tee signature.yaml
+
+          echo "::group::Assertions"
+
+          # Assertion 1: algorithm is sigstore
+          ALG="$(yq -r '.signature.algorithm' signature.yaml)"
+          echo "algorithm=${ALG}"
+          [[ "${ALG}" == "sigstore" ]] || { echo "FAIL: algorithm != sigstore"; exit 1; }
+
+          # Assertion 2: issuer is the GitHub Actions OIDC issuer
+          ISSUER="$(yq -r '.signature.issuer' signature.yaml)"
+          echo "issuer=${ISSUER}"
+          [[ "${ISSUER}" == "https://token.actions.githubusercontent.com" ]] \
+            || { echo "FAIL: unexpected issuer ${ISSUER}"; exit 1; }
+
+          # Assertion 3: mediaType is the Sigstore bundle JSON v0.3
+          MT="$(yq -r '.signature.mediaType' signature.yaml)"
+          echo "mediaType=${MT}"
+          [[ "${MT}" == "application/vnd.dev.sigstore.bundle.v0.3+json" ]] \
+            || { echo "FAIL: unexpected mediaType ${MT}"; exit 1; }
+
+          # Assertion 4: value is non-empty
+          VAL="$(yq -r '.signature.value' signature.yaml)"
+          [[ -n "${VAL}" && "${VAL}" != "null" ]] \
+            || { echo "FAIL: empty signature value"; exit 1; }
+
+          # Assertion 5: value is base64-decodable to JSON containing
+          # "mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"
+          echo "${VAL}" | base64 -d > bundle.json
+          jq -e '.mediaType == "application/vnd.dev.sigstore.bundle.v0.3+json"' bundle.json > /dev/null \
+            || { echo "FAIL: decoded bundle missing mediaType"; jq . bundle.json | head; exit 1; }
+
+          echo "All 5 assertions passed."
+          echo "::endgroup::"
+
+      - name: Step 6 — Configure verifier identity
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          # DEVIATION (identity values only): in CI we sign with the GitHub
+          # Actions OIDC identity, not a human Google account. Use the
+          # workflow-ref regex to pin the expected signer.
+          REPO_RE="$(printf '%s' "${GITHUB_REPOSITORY}" | sed 's/[\/.]/\\&/g')"
+          IDENTITY_RE="^https://github\\.com/${REPO_RE}/\\.github/workflows/test-sigstore-tutorial\\.yml@refs/heads/test/sigstore-tutorial-e2e\$"
+          echo "Using verifier identity regex: ${IDENTITY_RE}"
+          cat > sigstore-verify.yaml << EOF
+          type: SigstoreVerificationConfiguration/v1alpha1
+          certificateOIDCIssuer: https://token.actions.githubusercontent.com
+          certificateIdentityRegexp: ${IDENTITY_RE}
+          EOF
+          cat sigstore-verify.yaml
+
+      - name: Step 7 — Verify signature (verbatim from tutorial)
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          ocm verify cv \
+            --verifier-spec ./sigstore-verify.yaml \
+            ./transport-archive//github.com/acme.org/helloworld:1.0.0 \
+            2>&1 | tee verify-output.txt
+          grep -F "SIGNATURE VERIFICATION SUCCESSFUL" verify-output.txt \
+            || { echo "FAIL: success log line not found"; exit 1; }
+
+      - name: Negative control — verify with WRONG identity must fail
+        working-directory: ${{ runner.temp }}/ocm-sigstore-tutorial
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          cat > sigstore-verify-wrong.yaml << 'EOF'
+          type: SigstoreVerificationConfiguration/v1alpha1
+          certificateOIDCIssuer: https://token.actions.githubusercontent.com
+          certificateIdentity: nobody@example.invalid
+          EOF
+          # We expect this to FAIL (non-zero exit); invert the exit code.
+          if ocm verify cv \
+              --verifier-spec ./sigstore-verify-wrong.yaml \
+              ./transport-archive//github.com/acme.org/helloworld:1.0.0 \
+              2>&1 | tee verify-wrong-output.txt; then
+            echo "FAIL: verify with wrong identity unexpectedly succeeded"
+            exit 1
+          else
+            echo "OK: verify with wrong identity rejected (as expected)"
+          fi
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: sigstore-tutorial-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/ocm-sigstore-tutorial/.ocmconfig
+            ${{ runner.temp }}/ocm-sigstore-tutorial/sigstore-sign.yaml
+            ${{ runner.temp }}/ocm-sigstore-tutorial/sigstore-verify.yaml
+            ${{ runner.temp }}/ocm-sigstore-tutorial/sigstore-verify-wrong.yaml
+            ${{ runner.temp }}/ocm-sigstore-tutorial/sign-output.txt
+            ${{ runner.temp }}/ocm-sigstore-tutorial/signature.yaml
+            ${{ runner.temp }}/ocm-sigstore-tutorial/bundle.json
+            ${{ runner.temp }}/ocm-sigstore-tutorial/verify-output.txt
+            ${{ runner.temp }}/ocm-sigstore-tutorial/verify-wrong-output.txt
+
+      - name: Cleanup (tutorial Cleanup section)
+        if: always()
+        run: |
+          rm -rf "${{ runner.temp }}/ocm-sigstore-tutorial" || true
