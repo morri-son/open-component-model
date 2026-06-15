@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="OCM: Pack, Sign, Transport, Deploy">
+  <defs>
+    <linearGradient id="brandFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5cd6ff"/>
+      <stop offset="100%" stop-color="#0f6bff"/>
+    </linearGradient>
+    <linearGradient id="pillarFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f3f4f6"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Tabler Icons (MIT-licensed) — real paths, 24x24 viewBox.   -->
+    <symbol id="ico-package" viewBox="0 0 24 24">
+      <g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/>
+        <path d="M12 12l8 -4.5"/>
+        <path d="M12 12l0 9"/>
+        <path d="M12 12l-8 -4.5"/>
+        <path d="M16 5.25l-8 4.5"/>
+      </g>
+    </symbol>
+    <symbol id="ico-lock" viewBox="0 0 24 24">
+      <g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/>
+        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/>
+        <path d="M8 11v-4a4 4 0 1 1 8 0v4"/>
+      </g>
+    </symbol>
+    <symbol id="ico-truck" viewBox="0 0 24 24">
+      <g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+        <path d="M15 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+        <path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5"/>
+      </g>
+    </symbol>
+    <symbol id="ico-rocket" viewBox="0 0 24 24">
+      <g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"/>
+        <path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"/>
+        <path d="M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
+      </g>
+    </symbol>
+  </defs>
+
+  <!-- Cards row (drawn first so the connecting line, drawn after, sits between them) -->
+  <g font-family="Aptos, Inter, sans-serif">
+
+    <g transform="translate(120,180)">
+      <rect width="220" height="260" rx="14" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2" filter="url(#softShadow)"/>
+      <use href="#ico-package" x="78" y="40" width="64" height="64"/>
+      <text x="110" y="148" text-anchor="middle" font-size="32" font-weight="700" fill="#0a3a99">Pack</text>
+      <text x="110" y="190" text-anchor="middle" font-size="17" fill="#6b7280">Describe and pack</text>
+      <text x="110" y="212" text-anchor="middle" font-size="17" fill="#6b7280">as one component.</text>
+    </g>
+
+    <g transform="translate(400,180)">
+      <rect width="220" height="260" rx="14" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2" filter="url(#softShadow)"/>
+      <use href="#ico-lock" x="78" y="40" width="64" height="64"/>
+      <text x="110" y="148" text-anchor="middle" font-size="32" font-weight="700" fill="#0a3a99">Sign</text>
+      <text x="110" y="190" text-anchor="middle" font-size="17" fill="#6b7280">One signature</text>
+      <text x="110" y="212" text-anchor="middle" font-size="17" fill="#6b7280">covers everything.</text>
+    </g>
+
+    <g transform="translate(680,180)">
+      <rect width="220" height="260" rx="14" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2" filter="url(#softShadow)"/>
+      <use href="#ico-truck" x="78" y="40" width="64" height="64"/>
+      <text x="110" y="148" text-anchor="middle" font-size="32" font-weight="700" fill="#0a3a99">Transport</text>
+      <text x="110" y="190" text-anchor="middle" font-size="17" fill="#6b7280">Across clouds</text>
+      <text x="110" y="212" text-anchor="middle" font-size="17" fill="#6b7280">and air gaps.</text>
+    </g>
+
+    <g transform="translate(960,180)">
+      <rect width="220" height="260" rx="14" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2" filter="url(#softShadow)"/>
+      <use href="#ico-rocket" x="78" y="40" width="64" height="64"/>
+      <text x="110" y="148" text-anchor="middle" font-size="32" font-weight="700" fill="#0a3a99">Deploy</text>
+      <text x="110" y="190" text-anchor="middle" font-size="17" fill="#6b7280">GitOps with</text>
+      <text x="110" y="212" text-anchor="middle" font-size="17" fill="#6b7280">OCM controllers.</text>
+    </g>
+  </g>
+
+  <!-- Connectors between cards (drawn after so they overlay clean) -->
+  <g stroke="#0f6bff" stroke-width="2.5" fill="none">
+    <line x1="340" y1="310" x2="400" y2="310"/>
+    <line x1="620" y1="310" x2="680" y2="310"/>
+    <line x1="900" y1="310" x2="960" y2="310"/>
+    <line x1="1180" y1="310" x2="1280" y2="310"/>
+  </g>
+  <polygon points="1280,310 1264,302 1264,318" fill="#0f6bff"/>
+
+  <!-- Air-gap target zone on the right -->
+  <g transform="translate(1300,180)" font-family="Aptos, Inter, sans-serif">
+    <rect x="0" y="0" width="240" height="260" rx="14"
+          fill="none" stroke="#0f6bff" stroke-width="2.5" stroke-dasharray="8 6"/>
+    <text x="120" y="38" text-anchor="middle"
+          font-size="16" font-weight="700" fill="#0a3a99" letter-spacing="2">SOVEREIGN CLOUD</text>
+    <text x="120" y="60" text-anchor="middle"
+          font-size="13" fill="#6b7280" letter-spacing="1.5">AIR-GAPPED TARGET</text>
+    <g transform="translate(60,90)">
+      <rect width="120" height="120" rx="10" fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+      <circle cx="60" cy="50" r="20" fill="#0f6bff"/>
+      <path d="M50 50 L58 58 L72 44" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="60" y="98" text-anchor="middle"
+            font-size="14" font-weight="600" fill="#0a3a99">Verified</text>
+    </g>
+  </g>
+</svg>

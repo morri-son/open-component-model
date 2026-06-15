@@ -1,0 +1,7 @@
+themeSet:
+  - ./theme/_with-banner.css
+allowLocalFiles: true
+html: true
+options:
+  pptx: true
+  html: true

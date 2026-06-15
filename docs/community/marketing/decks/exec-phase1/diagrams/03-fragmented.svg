@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="Software delivery is fragmented">
+  <defs>
+    <linearGradient id="pillarFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f3f4f6"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Per-source Tabler icons -->
+    <symbol id="src-team" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></g></symbol>
+    <symbol id="src-vendor" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M3 7l18 0"/><path d="M5 7v14"/><path d="M19 7v14"/><path d="M9 21v-7h6v7"/><path d="M9 11v.01"/><path d="M9 7v-3h6v3"/></g></symbol>
+    <symbol id="src-oss" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 1 0 18"/></g></symbol>
+
+    <!-- Artifact icons -->
+    <symbol id="art-image" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5 -5l-9 9"/></g></symbol>
+    <symbol id="art-helm" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/></g></symbol>
+    <symbol id="art-binary" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 3h9l5 5v11a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2"/><path d="M9 12h2v4"/><path d="M14 12h2v4"/></g></symbol>
+    <symbol id="art-config" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 3h9l5 5v11a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2"/><path d="M9 13h6"/><path d="M9 17h6"/></g></symbol>
+    <symbol id="art-sbom" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"/><path d="M9 17h6"/><path d="M9 13h2"/></g></symbol>
+    <symbol id="ico-q" viewBox="0 0 24 24"><g fill="none" stroke="#0f6bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 9a3 3 0 0 1 6 0c0 2 -3 3 -3 5"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></g></symbol>
+  </defs>
+
+  <g font-family="Aptos, Inter, sans-serif">
+
+    <!-- Three source pipelines on the left -->
+    <g transform="translate(60,120)" stroke="#9ca3af" color="#6b7280">
+      <use href="#src-team" x="0" y="0" width="48" height="48" />
+    </g>
+    <text x="120" y="150" font-size="22" font-weight="700" fill="#0a3a99">Team A</text>
+    <text x="120" y="174" font-size="15" fill="#6b7280">Container images, Helm charts</text>
+
+    <g transform="translate(60,290)" stroke="#9ca3af" color="#6b7280">
+      <use href="#src-vendor" x="0" y="0" width="48" height="48" />
+    </g>
+    <text x="120" y="320" font-size="22" font-weight="700" fill="#0a3a99">Vendor</text>
+    <text x="120" y="344" font-size="15" fill="#6b7280">Binaries, configs, drivers</text>
+
+    <g transform="translate(60,460)" stroke="#9ca3af" color="#6b7280">
+      <use href="#src-oss" x="0" y="0" width="48" height="48" />
+    </g>
+    <text x="120" y="490" font-size="22" font-weight="700" fill="#0a3a99">Open source</text>
+    <text x="120" y="514" font-size="15" fill="#6b7280">Mixed artifact types</text>
+
+    <!-- Pipeline lines (broken / dashed) heading right -->
+    <g stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" fill="none">
+      <path d="M380 144 C 600 144, 700 200, 920 200"/>
+      <path d="M380 314 C 600 314, 700 314, 920 314"/>
+      <path d="M380 484 C 600 484, 700 430, 920 430"/>
+    </g>
+
+    <!-- Pile-up of mismatched artifacts on the right -->
+    <g transform="translate(940,80)">
+      <rect width="540" height="500" rx="20" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" stroke-dasharray="8 6" opacity="0.55"/>
+      <text x="270" y="36" text-anchor="middle" font-size="15" font-weight="700" fill="#92400e" letter-spacing="2">DEPLOYMENT TARGET</text>
+
+      <!-- Artifact tiles, randomly placed -->
+      <g stroke="#0a3a99" color="#0a3a99">
+        <g transform="translate(40,80)">
+          <rect width="120" height="100" rx="10" fill="#ffffff" stroke="#e8f0ff" stroke-width="2"/>
+          <use href="#art-image" x="44" y="18" width="32" height="32"/>
+          <text x="60" y="74" text-anchor="middle" font-size="13" font-weight="600" fill="#0a3a99">Image</text>
+        </g>
+        <g transform="translate(200,140)">
+          <rect width="120" height="100" rx="10" fill="#ffffff" stroke="#e8f0ff" stroke-width="2"/>
+          <use href="#art-helm" x="44" y="18" width="32" height="32"/>
+          <text x="60" y="74" text-anchor="middle" font-size="13" font-weight="600" fill="#0a3a99">Helm chart</text>
+        </g>
+        <g transform="translate(360,90)">
+          <rect width="120" height="100" rx="10" fill="#ffffff" stroke="#e8f0ff" stroke-width="2"/>
+          <use href="#art-binary" x="44" y="18" width="32" height="32"/>
+          <text x="60" y="74" text-anchor="middle" font-size="13" font-weight="600" fill="#0a3a99">Binary</text>
+        </g>
+        <g transform="translate(60,250)">
+          <rect width="120" height="100" rx="10" fill="#ffffff" stroke="#e8f0ff" stroke-width="2"/>
+          <use href="#art-config" x="44" y="18" width="32" height="32"/>
+          <text x="60" y="74" text-anchor="middle" font-size="13" font-weight="600" fill="#0a3a99">Config</text>
+        </g>
+        <g transform="translate(380,260)">
+          <rect width="120" height="100" rx="10" fill="#ffffff" stroke="#e8f0ff" stroke-width="2"/>
+          <use href="#art-sbom" x="44" y="18" width="32" height="32"/>
+          <text x="60" y="74" text-anchor="middle" font-size="13" font-weight="600" fill="#0a3a99">SBOM</text>
+        </g>
+      </g>
+
+      <!-- Big question marks scattered between -->
+      <g color="#dc2626">
+        <use href="#ico-q" x="200" y="80" width="40" height="40" stroke="#dc2626"/>
+        <use href="#ico-q" x="320" y="240" width="40" height="40" stroke="#dc2626"/>
+        <use href="#ico-q" x="20" y="200" width="36" height="36" stroke="#dc2626"/>
+      </g>
+      <text x="270" y="450" text-anchor="middle" font-size="20" font-weight="600" fill="#92400e">No single source of truth</text>
+      <text x="270" y="478" text-anchor="middle" font-size="16" fill="#a16207">Signatures break in transit · provenance unclear · drift</text>
+    </g>
+  </g>
+</svg>
