@@ -195,6 +195,7 @@ Three column variants. **Build one canonical, then duplicate-and-edit for V2 and
 - Eyebrow: `THE PAIN`
 - Title: `Software delivery is fragmented. Compliance retrofits don't scale.`
 - Body / diagram: insert `decks/exec-phase1/diagrams/03-fragmented.svg` if using Layout 4. If using Layout 3 with text, write the body as: `Many teams, many stacks. Signatures break in transit. SBOMs were never built for delivery — they were built for inventory. Each compliance regime adds its own bolt-on. None of it composes.`
+- Proof point (mixed cut): `OCM gives every component a globally unique, technology- and location-agnostic identity — its OCM Coordinates. One identity, one signature, one audit trail.`
 
 ### Slide 4 — The shift, SBoD (Layout 4 OR Layout 8 with custom illustration)
 
@@ -207,18 +208,28 @@ Three column variants. **Build one canonical, then duplicate-and-edit for V2 and
 
 - Eyebrow: `OCM IN ONE PICTURE`
 - Title: `Pack · Sign · Transport · Deploy`
+- Body bullets (one per step, paired with the four-card diagram):
+  - `Pack — your software into a component descriptor. One operational source of truth for an entire landscape.`
+  - `Sign — one signature covers every artifact, by digest. Supports RSA-based signing (your existing PKI), GPG/OpenPGP, and Sigstore keyless signing.`
+  - `Transport — across any boundary. Registry to registry, or registry to archive.`
+  - `Deploy — bring your own GitOps (Argo, Flux, KRO) or use OCM's Kubernetes controllers.`
+- Proof point (mixed cut): `Works with what you already ship — OCI, Helm, npm, GitHub, S3. OCM doesn't replace your registries; it gives them one signed envelope. No lock-in: your existing tooling reads the artifacts as-is.`
 - Diagram: `decks/exec-phase1/diagrams/05-pack-sign-transport-deploy.svg` (provisional; renders small in Marp due to internal SVG layout. In PowerPoint, the SVG imports as editable shapes — you can rebuild this as four-card row using the tile pattern from Layout 5, with the Pack/Sign/Transport/Deploy/Sovereign Cloud cards as native PowerPoint shapes. ~10 min in PowerPoint, gives you a full-width clean diagram.)
 
 ### Slide 6 — Sovereign-ready (Layout 4)
 
 - Eyebrow: `SOVEREIGN-READY`
 - Title: `Trust, but verify.`
-- Body: `Identity is location-independent. Signatures are location-independent. Day-2 ops happen inside the boundary. On transfer into a sovereign environment, a component can carry every artifact it needs along with it.`
+- Body:
+  - `Identity is location-independent. A component carries its name regardless of which registry it lives in.`
+  - `Signatures are location-independent. Sign once at source; verify at the destination, or at any hop in between, with no callback upstream.`
+  - `Day-2 ops happen inside the boundary. Subscribe to the component and pull upgrades on your schedule, scale across regions, all without reaching back upstream.`
+  - `On transfer into a sovereign environment, a component can carry every artifact it needs along with it. The destination needs nothing more.`
 - Diagram: `decks/exec-phase1/diagrams/06-sovereign-airgap.svg`
 
-### Slide 7 — Compliance-native (Layout 3 OR Layout 8)
+### Slide 7 — Scan: Compliance-native with Open Delivery Gear (Layout 3 OR Layout 8)
 
-- Eyebrow: `COMPLIANCE-NATIVE — OPEN DELIVERY GEAR`
+- Eyebrow: `SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR`
 - Title: `Compliance as a system property — not a quarterly project.`
 - Body bullets:
   - `Open Delivery Gear (ODG) is OCM's compliance automation engine.`
@@ -233,6 +244,8 @@ Three column variants. **Build one canonical, then duplicate-and-edit for V2 and
 
 - Eyebrow: `WHAT OCM UNLOCKS`
 - Title: `One model unlocks all of this.`
+- Header strip (above the tile grid, below the title): `The full lifecycle: Pack · Scan · Ship · Deploy · Scale Out — one model, end to end.`
+  - Style: 14 pt Aptos Semibold, Brand Blue Deep, centered, with a 3-px Brand Blue rule below at full content width. Use the same eyebrow letter-spacing (+8%) for the five-step phrase to make the steps read as a sequence. 24 px gap below the rule before the tiles begin.
 - Six tiles (icon, label, body):
 
 | # | Icon (SVG) | Label | Body |
@@ -241,10 +254,12 @@ Three column variants. **Build one canonical, then duplicate-and-edit for V2 and
 | 2 | `diagrams/icons/cloud-upload.svg` | Air-gapped delivery | Walk a complete component across an air gap; verify at destination. |
 | 3 | `diagrams/icons/rocket.svg` | Kubernetes-native deployment | OCM controllers deploy components directly into clusters. |
 | 4 | `diagrams/icons/radar.svg` | Asynchronous security scans | Continuous scanning, even after release; findings tied to component identity. |
-| 5 | `diagrams/icons/adjustments-horizontal.svg` | Contextual CVE rescoring | Patch what matters in your context, not what a generic feed says. |
+| 5 | `diagrams/icons/source-of-truth.svg` | One source of truth | Rebuild any landscape from a single signed descriptor. |
 | 6 | `diagrams/icons/report-analytics.svg` | Automated compliance reporting | Reports composed from SBoD metadata — no spreadsheet drift. |
 
 Icons are Tabler outline SVGs. PowerPoint imports them as editable line shapes. Apply Brand Blue stroke colour after pasting.
+
+**Note on tile 5:** the previous "Contextual CVE rescoring" tile was dropped (CVE rescoring is implied by tile 4's async scans). The replacement tile elevates "one source of truth" — a stronger exec-resonant outcome that pairs with the 5-step header strip above.
 
 ### Slide 9 — Open and governed (Layout 6, two-column)
 
@@ -288,7 +303,7 @@ All assets live in `docs/community/marketing/assets/` and `docs/community/market
 - `decks/exec-phase1/diagrams/icons/cloud-upload.svg`
 - `decks/exec-phase1/diagrams/icons/rocket.svg`
 - `decks/exec-phase1/diagrams/icons/radar.svg`
-- `decks/exec-phase1/diagrams/icons/adjustments-horizontal.svg`
+- `decks/exec-phase1/diagrams/icons/source-of-truth.svg`
 - `decks/exec-phase1/diagrams/icons/report-analytics.svg`
 - `signature.svg` is committed but unused.
 

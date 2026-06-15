@@ -34,6 +34,17 @@ Sovereignty is **not** the slide-1 lead. It lands as the *proof beat* on slide 6
 
 ---
 
+## Step-count framing — 4-step core, 5-step lifecycle
+
+The OCM project uses **two** step-counts depending on context, and this deck uses both, in different registers:
+
+- **4-step (core mechanics) — Pack · Sign · Transport · Deploy.** What every OCM user does on day 1. Lives on slide 5 as the canonical OCM diagram. This is what OCM *is*.
+- **5-step (full lifecycle) — Pack · Scan · Ship · Deploy · Scale Out.** What OCM *enables* as you mature: scanning via Open Delivery Gear (slide 7), and scale-out through subscription-based, multi-region delivery (slide 6 day-2 bullet). Lives on slide 8 as a header strip above the outcome tiles, framing the tiles as the harvest of the full lifecycle.
+
+The 4-step is the mechanic; the 5-step is the lifecycle picture. Slide 7 is renamed *"Scan — Compliance-native with Open Delivery Gear"* to invoke the 5-step's second step explicitly. *Scale Out* is not given its own beat — its semantics (multi-region, subscription-based, continuous ops) are absorbed into slide 6's day-2 bullet, where they strengthen the sovereignty story.
+
+---
+
 ## Three opener variants for slides 1–2 (A/B testing)
 
 Same beats 3–10. Variants change only the voice of slides 1 and 2.
@@ -79,7 +90,7 @@ Each beat below carries:
 
 **Body:** Many teams, many stacks. Signatures break in transit. SBOMs were never built for delivery — they were built for inventory. Each compliance regime adds its own bolt-on. None of it composes.
 
-**Proof point (mixed cut):** OCM gives every component a globally unique, technology-agnostic, location-agnostic identity. One identity, one signature, one audit trail.
+**Proof point (mixed cut):** OCM gives every component a globally unique, technology- and location-agnostic identity — its **OCM Coordinates**. One identity, one signature, one audit trail.
 
 ---
 
@@ -101,12 +112,12 @@ Each beat below carries:
 **Punchline:** *One model. One flow. Any artifact, any registry, any boundary.*
 
 **Body:** OCM gives you a single, standard way to handle the whole journey:
-- **Pack** your software into a component descriptor.
-- **Sign** the descriptor (one signature covers every artifact, by digest).
+- **Pack** your software into a component descriptor — one operational source of truth for an entire landscape.
+- **Sign** the descriptor (one signature covers every artifact, by digest). Supports RSA-based signing (your existing PKI), GPG/OpenPGP, and Sigstore keyless signing.
 - **Transport** across any boundary — registry to registry, or registry to archive.
-- **Deploy** at the target — OCM's Kubernetes controllers walk the component and apply it.
+- **Deploy** at the target — bring your own GitOps (Argo, Flux, KRO) or use OCM's Kubernetes controllers. OCM walks the component and applies it.
 
-**Proof point (mixed cut):** OCM stores component versions in standard OCI registries — and the artifacts inside (container images, Helm charts) remain native OCI artifacts. No lock-in: your existing OCI tooling reads them as-is.
+**Proof point (mixed cut):** Works with what you already ship — OCI, Helm, npm, GitHub, S3. OCM doesn't replace your registries; it gives them one signed envelope. No lock-in: your existing tooling reads the artifacts as-is.
 
 ---
 
@@ -116,15 +127,15 @@ Each beat below carries:
 
 **Body:**
 - Identity is location-independent. A component carries its name regardless of which registry it lives in.
-- Signatures are location-independent. Sign once at the source; verify at the destination, with no callback upstream.
-- Day-2 ops happen inside the boundary. Upgrades, config changes, migrations — all without reaching back upstream.
+- Signatures are location-independent. Sign once at the source; verify at the destination, or at any hop in between, with no callback upstream.
+- Day-2 ops happen inside the boundary. Subscribe to the component and pull upgrades on your schedule, scale across regions, all without reaching back upstream.
 - On transfer into a sovereign environment, a component can carry every artifact it needs along with it. The destination needs nothing more.
 
 **Proof point (mixed cut):** Sign once at the source, transport across the boundary, verify at the destination — same signature, same public key, no callback upstream. Validated end-to-end in the project's conformance scenario.
 
 ---
 
-## 7. Compliance-native — Open Delivery Gear (NEW BEAT)
+## 7. Scan — Compliance-native with Open Delivery Gear (NEW BEAT)
 
 **Punchline:** *Compliance as a system property — not a quarterly project.*
 
@@ -143,6 +154,8 @@ Each beat below carries:
 
 **Punchline:** *One model unlocks all of this.*
 
+**Header strip (above the tiles):** *The full lifecycle: **Pack · Scan · Ship · Deploy · Scale Out** — one model, end to end.*
+
 3×2 grid, one line each:
 
 | Tile | Outcome |
@@ -151,7 +164,7 @@ Each beat below carries:
 | **Air-gapped delivery** | Walk a complete component across an air gap; verify at destination. |
 | **Kubernetes-native deployment** | OCM controllers deploy components directly into clusters. |
 | **Asynchronous security scans** | Continuous scanning, even after release; findings tied to component identity. |
-| **Contextual CVE rescoring** | Patch what matters in your context, not what a generic feed says. |
+| **One source of truth** | Rebuild any landscape from a single signed descriptor. |
 | **Automated compliance reporting** | Reports composed from SBoD metadata — no spreadsheet drift. |
 
 ---

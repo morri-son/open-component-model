@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 720" font-family="Aptos, Inter, system-ui, sans-serif">
+  <defs>
+    <style>
+      .sbod-stroke { fill: #FFFFFF; stroke: #0F6BFF; stroke-width: 4; }
+      .sbom-fill { fill: #F3F4F6; stroke: #6B7280; stroke-width: 1.5; }
+      .sat-fill { fill: #FFFFFF; stroke: #0A3A99; stroke-width: 1.5; }
+      .label-sbod { fill: #0F6BFF; font-size: 28px; font-weight: 700; letter-spacing: 1.2px; }
+      .label-sbom { fill: #0A3A99; font-size: 26px; font-weight: 700; }
+      .label-sat { fill: #0A3A99; font-size: 16px; font-weight: 600; }
+      .desc { fill: #6B7280; font-size: 16px; font-weight: 400; }
+      .caption { fill: #333333; font-size: 24px; font-weight: 600; }
+      .arrow { stroke: #6B7280; stroke-width: 1.5; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Outer SBoD container -->
+  <rect x="80" y="80" width="1440" height="500" rx="24" ry="24" class="sbod-stroke"/>
+  <text x="120" y="135" class="label-sbod">SOFTWARE BILL OF DELIVERY (SBoD)</text>
+  <text x="120" y="165" class="desc">What you delivered · how to verify it · how to transport it · how to operate it</text>
+
+  <!-- Inner SBOM box -->
+  <rect x="140" y="220" width="520" height="280" rx="14" ry="14" class="sbom-fill"/>
+  <text x="170" y="270" class="label-sbom">SBOM</text>
+  <text x="170" y="305" class="desc">What's in the software</text>
+  <text x="170" y="335" class="desc">(inventory)</text>
+  <!-- decorative bullet rows for SBOM contents -->
+  <circle cx="178" cy="385" r="3" fill="#6B7280"/>
+  <text x="194" y="391" class="desc" font-size="14">container images</text>
+  <circle cx="178" cy="415" r="3" fill="#6B7280"/>
+  <text x="194" y="421" class="desc" font-size="14">helm charts</text>
+  <circle cx="178" cy="445" r="3" fill="#6B7280"/>
+  <text x="194" y="451" class="desc" font-size="14">libraries · binaries · configs</text>
+
+  <!-- Plus sign between SBOM and the trio -->
+  <text x="710" y="370" fill="#0F6BFF" font-size="56" font-weight="300">+</text>
+
+  <!-- Right-side trio: what SBoD adds on top -->
+  <rect x="800" y="220" width="660" height="80" rx="10" ry="10" class="sat-fill"/>
+  <text x="830" y="252" class="label-sat">Signatures</text>
+  <text x="830" y="278" class="desc" font-size="14">Cryptographic proof of integrity and origin — covers every artifact by digest.</text>
+
+  <rect x="800" y="320" width="660" height="80" rx="10" ry="10" class="sat-fill"/>
+  <text x="830" y="352" class="label-sat">Access information</text>
+  <text x="830" y="378" class="desc" font-size="14">Where each artifact lives, in any registry — location-independent identity.</text>
+
+  <rect x="800" y="420" width="660" height="80" rx="10" ry="10" class="sat-fill"/>
+  <text x="830" y="452" class="label-sat">Lifecycle metadata</text>
+  <text x="830" y="478" class="desc" font-size="14">Transport, deployment, day-2 operations — everything the destination needs.</text>
+
+  <!-- Caption -->
+  <text x="800" y="650" text-anchor="middle" class="caption">SBOM lists. SBoD delivers.</text>
+</svg>
