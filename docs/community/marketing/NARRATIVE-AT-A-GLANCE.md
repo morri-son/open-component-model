@@ -1,6 +1,6 @@
 # OCM Marketing Deck — At a Glance
 
-*A 60-second walkthrough of the Phase 1 executive deck. Derived from `NARRATIVE.md`; details, source citations, and proof points live there.*
+*Summary of the executive deck. Derived from `NARRATIVE.md`*
 
 ---
 
