@@ -169,7 +169,7 @@ Each beat below carries:
 - Findings get rescored against contextual risk, so your team patches what actually matters.
 - Every compliance signal correlates by component identity. Auditors get evidence, not spreadsheets.
 
-**Proof point (mixed cut):** ODG is open source, lives in `open-component-model/open-delivery-gear`, and reads OCM SBoD metadata directly. Compliance is a system output of the model, not bolted on.
+**Proof point (mixed cut):** ODG is open source and reads OCM SBoD metadata directly. Compliance is a system output of the model, not bolted on.
 
 **Source:**
 - ODG README: *"Open Delivery Gear (ODG) is a production-ready compliance automation engine built for software components modelled with the Open Component Model… ODG implements a trust-but-verify solution for public and sovereign clouds."*
@@ -180,7 +180,7 @@ Each beat below carries:
 
 ## 8. What OCM unlocks — six tiles
 
-**Punchline:** *One model. Six business outcomes.*
+**Punchline:** *One model unlocks all of this.*
 
 3×2 grid, one line each:
 
@@ -215,7 +215,7 @@ OCM is stewarded as open building blocks for sovereign delivery — interoperabl
 >
 > Gardener &nbsp; · &nbsp; Konfidence &nbsp; · &nbsp; Platform Mesh
 
-**Proof point (mixed cut):** OCM launched a SIG Spec under a Community Specification License — moving the standard toward truly community-governed neutrality.
+**Proof point (mixed cut):** An open standard, neutrally governed — your stack stays portable, your dependencies stay yours.
 
 **Source:**
 - OCM v2 announcement: lists Gardener, Konfidence, Platform Mesh as production users.
