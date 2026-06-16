@@ -12,9 +12,11 @@ Layouts (ordered as they'll appear in the Slide Master):
     5. Content / Tiles    — eyebrow + title + 3x2 grid of grey tiles
     6. Content / 2-Column — eyebrow + title + two-column body
     7. Section Divider    — solid blue background + centered large title
-    8. Plain              — eyebrow + title + free body
+    8. Plain              — eyebrow + title + free body (body y=580, for 2-line titles)
+    9. Plain / Compact    — like Plain, but body y=520 (for 1-line titles)
 
-Theme colors (OCM canonical, from website/assets/scss/common/_variables-custom.scss):
+Theme colors (OCM canonical, deck-spec palette confirmed against the Marp
+reference render):
 
     accent1   #0F6BFF (--brand-blue-dark)   — primary brand accent
     accent2   #0A3A99 (--brand-blue-mid)    — secondary deeper blue
@@ -154,7 +156,7 @@ def make_textbox(name, idx, x, y, w, h, *, placeholder_type=None,
                  placeholder_idx=None, default_text="",
                  size_pt=18, bold=False, color_hex="000000", font="Aptos",
                  all_caps=False, letter_spacing_pt=None,
-                 anchor="t", algn=None):
+                 anchor="t", algn=None, line_spacing_pct=None):
     """Build a <p:sp> shape that's a placeholder (provide placeholder_type
     like 'title', 'body', 'ctrTitle'…) or a static textbox (placeholder_type=None).
 
@@ -210,6 +212,12 @@ def make_textbox(name, idx, x, y, w, h, *, placeholder_type=None,
     # titleStyle inherits as centered for title placeholders, so without an
     # explicit algn here every title would render centered.
     lvl1.set("algn", algn or "l")
+    # Tighter line spacing (titles wrapping to 2 lines) — must come BEFORE
+    # buNone per OOXML schema ordering. line_spacing_pct is a ratio: 0.9 = 90%.
+    if line_spacing_pct is not None:
+        lnSpc = etree.SubElement(lvl1, qa("lnSpc"))
+        spcPct = etree.SubElement(lnSpc, qa("spcPct"))
+        spcPct.set("val", str(int(line_spacing_pct * 100000)))
     # No bullet — critical, otherwise master body style adds one.
     etree.SubElement(lvl1, qa("buNone"))
     defRPr = etree.SubElement(lvl1, qa("defRPr"))
@@ -416,30 +424,30 @@ def layout_hero() -> bytes:
     """
     shapes = []
     shapes.append(make_textbox(
-        "Hero Title Line 1", 10, 96, 167, 1500, 185,
+        "Hero Title Line 1", 10, 96, 167, 1700, 200,
         placeholder_type="title", placeholder_idx=1,
         default_text="Secure Delivery for",
-        size_pt=72, bold=True, color_hex="FFFFFF", algn="l",
+        size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
         font="Aptos Display",
     ))
     shapes.append(make_textbox(
-        "Hero Title Line 2", 11, 96, 302, 1500, 185,
+        "Hero Title Line 2", 11, 96, 322, 1700, 200,
         placeholder_type="body", placeholder_idx=2,
         default_text="Sovereign Clouds",
-        size_pt=72, bold=True, color_hex="5CD6FF", algn="l",
+        size_pt=115, bold=True, color_hex="5CD6FF", algn="l",
         font="Aptos Display",
     ))
     shapes.append(make_textbox(
-        "Hero Subtitle", 12, 96, 539, 1584, 71,
+        "Hero Subtitle", 12, 96, 552, 1700, 60,
         placeholder_type="body", placeholder_idx=3,
         default_text="Subtitle — one sentence describing the deck.",
-        size_pt=28, color_hex="5CD6FF", algn="l",
+        size_pt=36, color_hex="5CD6FF", algn="l",
     ))
     shapes.append(make_textbox(
-        "Hero Org Line", 13, 96, 652, 1500, 58,
+        "Hero Org Line", 13, 96, 637, 1700, 50,
         placeholder_type="body", placeholder_idx=4,
         default_text="Open Component Model — open source, NeoNephos Foundation.",
-        size_pt=20, color_hex="FFFFFF", algn="l",
+        size_pt=28, color_hex="FFFFFF", algn="l",
     ))
     return wrap_layout("title", "Hero", shapes_xml(*shapes), bg_hex="0A1530")
 
@@ -470,26 +478,26 @@ def layout_three_column() -> bytes:
     shapes = []
     # Eyebrow
     shapes.append(make_textbox(
-        "Eyebrow", 10, 80, 180, 1760, 28,
+        "Eyebrow", 10, 120, 255, 1680, 48,
         placeholder_type="body", placeholder_idx=1,
         default_text="EYEBROW",
-        size_pt=14, bold=True, color_hex="0F6BFF",
-        all_caps=True, letter_spacing_pt=1.1,
+        size_pt=28, bold=True, color_hex="0F6BFF",
+        all_caps=True, letter_spacing_pt=1.4,
     ))
     # Title
     shapes.append(make_textbox(
-        "Title", 11, 80, 216, 1760, 110,
+        "Title", 11, 120, 308, 1680, 200,
         placeholder_type="title", placeholder_idx=2,
         default_text="Section title goes here.",
         size_pt=64, bold=True, color_hex="000000",
-        font="Aptos Display",
+        font="Aptos Display", line_spacing_pct=0.9,
     ))
     # Three columns
-    margin_x = 80
-    gutter = 32
+    margin_x = 120
+    gutter = 56
     inner_w = SLIDE_W_PX - 2 * margin_x
     col_w = (inner_w - 2 * gutter) // 3
-    col_y = 400
+    col_y = 520
     next_id = 12
     for i in range(3):
         cx = margin_x + i * (col_w + gutter)
@@ -499,19 +507,19 @@ def layout_three_column() -> bytes:
         next_id += 1
         # Header
         shapes.append(make_textbox(
-            f"Col{i+1} Header", next_id, cx, col_y + 28, col_w, 36,
+            f"Col{i+1} Header", next_id, cx, col_y + 16, col_w, 36,
             placeholder_type="body", placeholder_idx=10 + i * 2,
             default_text=f"COLUMN {i+1} HEADER",
-            size_pt=16, bold=True, color_hex="0F6BFF",
+            size_pt=20, bold=True, color_hex="0F6BFF",
             all_caps=True, letter_spacing_pt=1.3,
         ))
         next_id += 1
         # Body
         shapes.append(make_textbox(
-            f"Col{i+1} Body", next_id, cx, col_y + 76, col_w, 480,
+            f"Col{i+1} Body", next_id, cx, col_y + 60, col_w, 480,
             placeholder_type="body", placeholder_idx=11 + i * 2,
             default_text=f"Column {i+1} body. Replace with one or two short sentences.",
-            size_pt=18, color_hex="000000",
+            size_pt=22, color_hex="000000",
         ))
         next_id += 1
     # Footer
@@ -523,17 +531,17 @@ def layout_three_column() -> bytes:
 
 def layout_diagram() -> bytes:
     shapes = [
-        make_textbox("Eyebrow", 10, 80, 180, 1760, 28,
+        make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=18, bold=True,
+                     default_text="EYEBROW", size_pt=28, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
-        make_textbox("Title", 11, 80, 216, 1760, 110,
+        make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display"),
+                     font="Aptos Display", line_spacing_pct=0.9),
         # Diagram area as a picture placeholder
-        _picture_placeholder("Diagram", 12, 80, 440, 1760, 540, ph_idx=10),
+        _picture_placeholder("Diagram", 12, 120, 520, 1680, 460, ph_idx=10),
         _footer_shape(13),
     ]
     return wrap_layout("obj", "Content / Diagram", shapes_xml(*shapes))
@@ -543,19 +551,19 @@ def layout_diagram() -> bytes:
 
 def layout_tiles() -> bytes:
     shapes = [
-        make_textbox("Eyebrow", 10, 80, 180, 1760, 28,
+        make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=18, bold=True,
+                     default_text="EYEBROW", size_pt=28, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
-        make_textbox("Title", 11, 80, 216, 1760, 110,
+        make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display"),
+                     font="Aptos Display", line_spacing_pct=0.9),
     ]
     # 3x2 grid
-    x0, y0 = 80, 400
-    tile_w, tile_h = 570, 270
+    x0, y0 = 120, 520
+    tile_w, tile_h = 544, 230
     gutter = 24
     next_id = 12
     for i in range(6):
@@ -582,7 +590,7 @@ def layout_tiles() -> bytes:
             f"Tile{i+1} Body", next_id, x + 24, y + 124, tile_w - 48, tile_h - 140,
             placeholder_type="body", placeholder_idx=21 + i * 2,
             default_text="One short sentence describing this tile.",
-            size_pt=12, color_hex="000000",
+            size_pt=18, color_hex="000000",
         ))
         next_id += 1
     shapes.append(_footer_shape(next_id))
@@ -593,23 +601,23 @@ def layout_tiles() -> bytes:
 
 def layout_two_column() -> bytes:
     shapes = [
-        make_textbox("Eyebrow", 10, 80, 180, 1760, 28,
+        make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=18, bold=True,
+                     default_text="EYEBROW", size_pt=28, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
-        make_textbox("Title", 11, 80, 216, 1760, 110,
+        make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display"),
-        make_textbox("Left Body", 12, 80, 400, 880, 580,
+                     font="Aptos Display", line_spacing_pct=0.9),
+        make_textbox("Left Body", 12, 120, 520, 820, 460,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Left column body.",
-                     size_pt=18, color_hex="000000"),
-        make_textbox("Right Body", 13, 980, 400, 880, 580,
+                     size_pt=22, color_hex="000000"),
+        make_textbox("Right Body", 13, 980, 520, 820, 460,
                      placeholder_type="body", placeholder_idx=11,
                      default_text="Right column body.",
-                     size_pt=18, color_hex="000000"),
+                     size_pt=22, color_hex="000000"),
         _footer_shape(14),
     ]
     return wrap_layout("twoObj", "Content / 2-Column", shapes_xml(*shapes))
@@ -633,17 +641,19 @@ def layout_section() -> bytes:
 # -- Layout 8: Plain ----------------------------------------------------------
 
 def layout_plain() -> bytes:
+    """Plain body, generous gap between title and body — for slides whose
+    title wraps to 2 lines (e.g. SCAN — Compliance-native)."""
     shapes = [
-        make_textbox("Eyebrow", 10, 80, 180, 1760, 28,
+        make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=18, bold=True,
+                     default_text="EYEBROW", size_pt=28, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
-        make_textbox("Title", 11, 80, 216, 1760, 110,
+        make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display"),
-        make_textbox("Body", 12, 80, 400, 1760, 600,
+                     font="Aptos Display", line_spacing_pct=0.9),
+        make_textbox("Body", 12, 120, 580, 1680, 400,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Body text.",
                      size_pt=22, color_hex="000000"),
@@ -652,11 +662,34 @@ def layout_plain() -> bytes:
     return wrap_layout("obj", "Plain", shapes_xml(*shapes))
 
 
+def layout_plain_compact() -> bytes:
+    """Plain body sitting close under the title — for slides with 1-line
+    titles (e.g. THE SHIFT, SOVEREIGN-READY) where the y=580 layout leaves
+    too much air between title and content."""
+    shapes = [
+        make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
+                     placeholder_type="body", placeholder_idx=1,
+                     default_text="EYEBROW", size_pt=28, bold=True,
+                     color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
+        make_textbox("Title", 11, 120, 308, 1680, 200,
+                     placeholder_type="title", placeholder_idx=2,
+                     default_text="Section title goes here.",
+                     size_pt=64, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
+        make_textbox("Body", 12, 120, 520, 1680, 460,
+                     placeholder_type="body", placeholder_idx=10,
+                     default_text="Body text.",
+                     size_pt=22, color_hex="000000"),
+        _footer_shape(13),
+    ]
+    return wrap_layout("obj", "Plain / Compact", shapes_xml(*shapes))
+
+
 # Helpers shared across layouts
 def _footer_shape(idx):
     """Footer text — locked, ALL-CAPS, Grey Mid."""
     return make_textbox(
-        "Footer", idx, 80, SLIDE_H_PX - 32, SLIDE_W_PX - 160, 24,
+        "Footer", idx, 120, SLIDE_H_PX - 32, SLIDE_W_PX - 240, 24,
         default_text="OPEN COMPONENT MODEL · OCM.SOFTWARE",
         size_pt=9, color_hex="6B7280", all_caps=True, letter_spacing_pt=0.5,
     )
@@ -709,6 +742,7 @@ LAYOUTS = [
     ("Content / 2-Column",  "twoObj",  layout_two_column),
     ("Section Divider",     "secHead", layout_section),
     ("Plain",               "obj",     layout_plain),
+    ("Plain / Compact",     "obj",     layout_plain_compact),
 ]
 
 

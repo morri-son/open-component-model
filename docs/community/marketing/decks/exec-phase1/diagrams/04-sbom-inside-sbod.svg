@@ -16,8 +16,8 @@
 
   <!-- Outer SBoD container -->
   <rect x="80" y="80" width="1440" height="500" rx="24" ry="24" class="sbod-stroke"/>
-  <text x="120" y="135" class="label-sbod">SOFTWARE BILL OF DELIVERY (SBoD)</text>
-  <text x="120" y="165" class="desc">What you delivered · how to verify it · how to transport it · how to operate it</text>
+  <text x="140" y="135" class="label-sbod">SOFTWARE BILL OF DELIVERY (SBoD)</text>
+  <text x="140" y="165" class="desc">What you delivered · how to verify it · how to transport it · how to operate it</text>
 
   <!-- Inner SBOM box -->
   <rect x="140" y="220" width="520" height="280" rx="14" ry="14" class="sbom-fill"/>

@@ -148,6 +148,15 @@ def find_placeholder(slide, idx: int):
                    f"layout {slide.slide_layout.name!r}")
 
 
+def delete_placeholder(slide, idx: int):
+    """Remove a placeholder shape entirely from the slide. Use when a layout
+    supplies a placeholder you don't want on this particular slide (e.g. the
+    body box on the Plain layout for slides that draw their own content)."""
+    ph = find_placeholder(slide, idx)
+    sp = ph._element
+    sp.getparent().remove(sp)
+
+
 def set_text(slide, idx: int, text: str, *, color: RGBColor | None = None,
              align_left: bool = False):
     """Set a placeholder's text. Layout's lstStyle supplies size/font/case;
@@ -208,6 +217,77 @@ def set_split_gradient_title(slide, idx: int, prefix: str, noun: str,
     rPr.insert(0, etree.fromstring(grad_xml))
 
 
+def set_gradient_title(slide, idx: int, text: str, *, align_left: bool = False):
+    """Set a title with the OCM gradient applied to the entire run."""
+    from pptx.enum.text import PP_ALIGN
+    ph = find_placeholder(slide, idx)
+    tf = ph.text_frame
+    tf.clear()
+    p = tf.paragraphs[0]
+    if align_left:
+        p.alignment = PP_ALIGN.LEFT
+    r = p.add_run()
+    r.text = text
+    rPr = r._r.get_or_add_rPr()
+    for tag in ("solidFill", "gradFill", "noFill"):
+        existing = rPr.find(f"{{{A_NS}}}{tag}")
+        if existing is not None:
+            rPr.remove(existing)
+    grad_xml = (
+        f'<a:gradFill xmlns:a="{A_NS}" flip="none" rotWithShape="1">'
+        '<a:gsLst>'
+        '<a:gs pos="0"><a:srgbClr val="FFFFFF"/></a:gs>'
+        '<a:gs pos="35000"><a:srgbClr val="5CD6FF"/></a:gs>'
+        '<a:gs pos="75000"><a:srgbClr val="0F6BFF"/></a:gs>'
+        '</a:gsLst>'
+        '<a:lin ang="0" scaled="1"/>'
+        '</a:gradFill>'
+    )
+    rPr.insert(0, etree.fromstring(grad_xml))
+
+
+def set_action_path_lines(slide, idx: int, lines: list[tuple[str, str]],
+                            sep: str = " — "):
+    """Render a body placeholder where each line is split into ACTION (blue)
+    and PATH (white) by `sep`. Used for the CTA slide."""
+    ph = find_placeholder(slide, idx)
+    tf = ph.text_frame
+    tf.clear()
+    for i, (action, path) in enumerate(lines):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        r1 = p.add_run()
+        r1.text = action
+        r1.font.color.rgb = C.CYAN
+        r1.font.bold = True
+        r2 = p.add_run()
+        r2.text = sep + path
+        r2.font.color.rgb = C.WHITE
+
+
+def set_blue_box_bullets(slide, idx: int, items: list[str]):
+    """Render a body placeholder as a list with blue square bullets.
+
+    Each item gets a small filled square (▪) prefix in OCM brand blue, then
+    the body text in black. We don't use PowerPoint's <a:buChar> machinery —
+    Aptos doesn't render the small filled square consistently — so we put a
+    blue-coloured glyph as the first run of each paragraph.
+    """
+    ph = find_placeholder(slide, idx)
+    tf = ph.text_frame
+    tf.clear()
+    for i, body in enumerate(items):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_before = Pt(8)
+        p.space_after = Pt(8)
+        bullet = p.add_run()
+        bullet.text = "▪  "
+        bullet.font.color.rgb = C.BLUE
+        bullet.font.bold = True
+        text_run = p.add_run()
+        text_run.text = body
+        text_run.font.color.rgb = C.BLACK
+
+
 # -----------------------------------------------------------------------------
 # Static decoration helpers (banner, brand row, diagram embeds)
 # -----------------------------------------------------------------------------
@@ -250,9 +330,18 @@ def add_brand_row(slide):
 def add_diagram(slide, svg_path: Path | None,
                  x_px: int, y_px: int,
                  max_w_px: int, max_h_px: int):
-    """Rasterize a diagram SVG and place it. Caller controls the bounding box."""
+    """Rasterize a diagram SVG and place it. Caller controls the bounding box.
+
+    Also drops the layout's empty picture placeholder (idx=10 on the Diagram
+    layout) — otherwise PowerPoint shows a dotted outline + 'Insert picture'
+    prompt next to our embedded picture.
+    """
     if svg_path is None or not svg_path.exists():
         return
+    try:
+        delete_placeholder(slide, 10)
+    except KeyError:
+        pass
     png = rasterize_svg(svg_path, target_w_px=max_w_px)
     pic = slide.shapes.add_picture(str(png), px(x_px), px(y_px),
                                     width=px(max_w_px))
@@ -278,8 +367,10 @@ def add_tile_icon(slide, tile_x_px: int, tile_y_px: int, icon_name: str):
 
 def add_logo_row(slide, logos: list[Path], y_px: int,
                   row_h_px: int = 120,
-                  max_logo_w_px: int = 320, max_logo_h_px: int = 100):
-    """Three logos centred in a row. Used on slide 9 (adopters)."""
+                  max_logo_w_px: int = 320, max_logo_h_px: int = 80):
+    """Three logos centred in a row. Each logo is sized to a uniform height
+    (max_logo_h_px) so the row reads as visually consistent — wider logos
+    take more horizontal slot, but all share the same optical weight."""
     margin_x = 160
     inner_w = SLIDE_W_PX - 2 * margin_x
     n = len(logos)
@@ -292,12 +383,17 @@ def add_logo_row(slide, logos: list[Path], y_px: int,
         else:
             img = path
         slot_x = margin_x + i * slot_w
-        pic = slide.shapes.add_picture(str(img), px(slot_x), px(y_px),
-                                        width=px(max_logo_w_px))
-        if pic.height > px(max_logo_h_px):
+        # Add at native size, then scale to fit the height constraint first.
+        pic = slide.shapes.add_picture(str(img), px(slot_x), px(y_px))
+        if pic.height != px(max_logo_h_px):
             ratio = px(max_logo_h_px) / pic.height
             pic.height = px(max_logo_h_px)
             pic.width = int(pic.width * ratio)
+        # Then enforce width cap (rare — only triggers for very wide logos).
+        if pic.width > px(max_logo_w_px):
+            ratio = px(max_logo_w_px) / pic.width
+            pic.width = px(max_logo_w_px)
+            pic.height = int(pic.height * ratio)
         pic.left = px(slot_x) + (px(slot_w) - pic.width) // 2
         pic.top = px(y_px) + (px(row_h_px) - pic.height) // 2
 
@@ -310,10 +406,10 @@ def add_logo_row(slide, logos: list[Path], y_px: int,
 # tile icons) is placed. They MUST match the corresponding layout positions
 # in build_potx.py — if you change one place, change the other.
 
-TILE_X0_PX = 80
-TILE_Y0_PX = 400
-TILE_W_PX = 570
-TILE_H_PX = 270
+TILE_X0_PX = 120
+TILE_Y0_PX = 520
+TILE_W_PX = 544
+TILE_H_PX = 230
 TILE_GUTTER_PX = 24
 
 
@@ -341,7 +437,8 @@ def build():
     layouts = layouts_by_name(prs)
 
     expected = {"Hero", "CTA", "Content / 3-Column", "Content / Diagram",
-                "Content / Tiles", "Content / 2-Column", "Section Divider", "Plain"}
+                "Content / Tiles", "Content / 2-Column", "Section Divider",
+                "Plain", "Plain / Compact"}
     missing = expected - set(layouts)
     if missing:
         sys.exit(f"template missing expected layouts: {missing}")
@@ -350,7 +447,7 @@ def build():
     s = prs.slides.add_slide(layouts["Hero"])
     add_banner_full_bleed(s, THEME_DIR / "OCM-Banner.png")
     set_text(s, 1, "Secure Delivery for", color=C.WHITE)
-    set_split_gradient_title(s, 2, prefix="Sovereign ", noun="Clouds")
+    set_split_gradient_title(s, 2, prefix="", noun="Sovereign Clouds")
     set_text(s, 3,
              "Deliver and deploy your software securely. Anywhere, at any scale.",
              color=C.CYAN)
@@ -361,7 +458,7 @@ def build():
 
     # ---- SLIDE 2 — WHY NOW (V1, sovereignty-led) ----------------------------
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
-    set_text(s, 1, "WHY NOW — V1 · SOVEREIGNTY-LED")
+    set_text(s, 1, "WHY NOW")
     set_text(s, 2, "Sovereignty is no longer optional")
     set_text(s, 10, "SOVEREIGNTY PRESSURE")
     set_text(s, 11, "Wherever the law puts the boundary — by jurisdiction, "
@@ -380,27 +477,32 @@ def build():
     set_text(s, 2, "Software delivery is fragmented.\n"
                     "Compliance retrofits don't scale.")
     add_diagram(s, DIAGRAMS_DIR / "03-fragmented.svg",
-                 x_px=80, y_px=440, max_w_px=1760, max_h_px=540)
+                 x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
 
-    # ---- SLIDE 4 — THE SHIFT, SBoD ------------------------------------------
-    s = prs.slides.add_slide(layouts["Content / 2-Column"])
+    # ---- SLIDE 4a — THE SHIFT, SBoD (text-only) -----------------------------
+    s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "THE SHIFT")
     set_text(s, 2, "SBOM lists. SBoD delivers.")
-    set_text(s, 10,
-             "An SBOM tells you what's in your software. It was built for inventory.\n"
-             "A Software Bill of Delivery (SBoD) tells you what you delivered, "
-             "how to verify it, how to transport it, and how to operate it. "
-             "It was built for delivery.\n"
-             "The SBoD contains the SBOM. OCM doesn't replace your SBOM tooling — "
-             "it gives the SBOM an envelope that's compliance-native, signed once, "
-             "and travels intact across any boundary.")
+    set_blue_box_bullets(s, 10, [
+        "An SBOM tells you what's in your software. It was built for inventory.",
+        "A Software Bill of Delivery (SBoD) tells you what you delivered, "
+        "how to verify it, how to transport it, and how to operate it. "
+        "It was built for delivery.",
+        "The SBoD contains the SBOM. OCM doesn't replace your SBOM tooling — "
+        "it gives the SBOM an envelope that's compliance-native, signed once, "
+        "and travels intact across any boundary.",
+    ])
+
+    # ---- SLIDE 4b — THE SHIFT (diagram only) --------------------------------
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBoD")
+    set_text(s, 2, "An envelope, not a list.")
     diagram = first_existing(
         DIAGRAMS_DIR / "04-sbom-inside-sbod.svg",
         DIAGRAMS_DIR / "04-sbom-vs-sbod.svg",
     )
     if diagram:
-        add_diagram(s, diagram, x_px=980, y_px=400, max_w_px=860, max_h_px=540)
-    # Right column placeholder is empty (diagram replaces it).
+        add_diagram(s, diagram, x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
 
     # ---- SLIDE 5 — OCM IN ONE PICTURE ---------------------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
@@ -410,40 +512,45 @@ def build():
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy-v2.svg",
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy.svg",
     )
-    add_diagram(s, diagram5, x_px=80, y_px=440, max_w_px=1760, max_h_px=540)
+    add_diagram(s, diagram5, x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
 
-    # ---- SLIDE 6 — SOVEREIGN-READY ------------------------------------------
-    s = prs.slides.add_slide(layouts["Content / 2-Column"])
+    # ---- SLIDE 6a — SOVEREIGN-READY (text-only) -----------------------------
+    s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "SOVEREIGN-READY")
     set_text(s, 2, "Trust, but verify.")
-    set_text(s, 10,
-             "• Identity is location-independent. A component carries its "
-             "name regardless of which registry it lives in.\n"
-             "• Signatures are location-independent. Sign once at source; "
-             "verify at the destination, or at any hop in between, with no "
-             "callback upstream.\n"
-             "• Day-2 ops happen inside the boundary. Subscribe to the "
-             "component and pull upgrades on your schedule, scale across "
-             "regions, all without reaching back upstream.\n"
-             "• On transfer into a sovereign environment, a component can "
-             "carry every artifact it needs along with it. The destination "
-             "needs nothing more.")
+    set_blue_box_bullets(s, 10, [
+        "Identity is location-independent. A component carries its name "
+        "regardless of which registry it lives in.",
+        "Signatures are location-independent. Sign once at source; verify at "
+        "the destination, or at any hop in between, with no callback upstream.",
+        "Day-2 ops happen inside the boundary. Subscribe to the component and "
+        "pull upgrades on your schedule, scale across regions, all without "
+        "reaching back upstream.",
+        "On transfer into a sovereign environment, a component can carry every "
+        "artifact it needs along with it. The destination needs nothing more.",
+    ])
+
+    # ---- SLIDE 6b — SOVEREIGN-READY (diagram only) --------------------------
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
+    set_text(s, 2, "Trust travels with the component.")
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
-                 x_px=980, y_px=400, max_w_px=860, max_h_px=540)
+                 x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
 
     # ---- SLIDE 7 — SCAN / Compliance-native ---------------------------------
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR")
     set_text(s, 2, "Compliance as a system property —\nnot a quarterly project.")
-    set_text(s, 10,
-             "• Open Delivery Gear (ODG) is OCM's compliance automation engine.\n"
-             "• The Compliance Dashboard is your entry point: every component, "
-             "every finding, every signature in one view.\n"
-             "• Continuous scans run asynchronously — even after release.\n"
-             "• Findings get rescored against contextual risk, so your team "
-             "patches what actually matters.\n"
-             "• Every compliance signal correlates by component identity. "
-             "Auditors get evidence, not spreadsheets.")
+    set_blue_box_bullets(s, 10, [
+        "Open Delivery Gear (ODG) is OCM's compliance automation engine.",
+        "The Compliance Dashboard is your entry point: every component, "
+        "every finding, every signature in one view.",
+        "Continuous scans run asynchronously — even after release.",
+        "Findings get rescored against contextual risk, so your team patches "
+        "what actually matters.",
+        "Every compliance signal correlates by component identity. Auditors "
+        "get evidence, not spreadsheets.",
+    ])
 
     # ---- SLIDE 8 — WHAT OCM UNLOCKS (tiles) ---------------------------------
     s = prs.slides.add_slide(layouts["Content / Tiles"])
@@ -476,34 +583,34 @@ def build():
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "TRUSTED IN PRODUCTION")
     set_text(s, 2, "Aligned with NeoNephos.")
-    # Hide the body placeholder by setting it to a single space — placeholders
-    # don't render if empty, but adding an empty paragraph keeps layout tidy.
-    set_text(s, 10, "")
+    # Plain layout has a body placeholder at idx=10. We want neither text nor
+    # an empty container; the ALL-CAPS labels and logo rows below replace it.
+    delete_placeholder(s, 10)
     # Top section label + logos
-    add_label_at(s, 380, "ADOPTED BY ENTERPRISES SHIPPING INTO REGULATED ENVIRONMENTS")
+    add_label_at(s, 510, "ADOPTED BY ENTERPRISES SHIPPING INTO REGULATED ENVIRONMENTS")
     add_logo_row(s, [
         ASSETS_DIR / "adopters" / "sap" / "sap-horizontal-color.svg",
         ASSETS_DIR / "adopters" / "bwi" / "bwi-horizontal-color.svg",
         ASSETS_DIR / "adopters" / "sap-ns2" / "sap-ns2-getlogovector.png",
-    ], y_px=420)
-    add_label_at(s, 620, "BUILT INTO THE OPEN-SOURCE ECOSYSTEM")
+    ], y_px=580)
+    add_label_at(s, 740, "BUILT INTO THE OPEN-SOURCE ECOSYSTEM")
     add_logo_row(s, [
         ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
         ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
         ASSETS_DIR / "adopters" / "platform-mesh" / "platform-mesh-horizontal-color.svg",
-    ], y_px=660)
-    add_centred_proof(s, 860,
+    ], y_px=810)
+    add_centred_proof(s, 970,
                        "An open standard, neutrally governed — your stack "
                        "stays portable, your dependencies stay yours.")
 
     # ---- SLIDE 10 — CTA ------------------------------------------------------
     s = prs.slides.add_slide(layouts["CTA"])
     set_text(s, 1, "Start delivering with confidence.", color=C.WHITE)
-    set_text(s, 2,
-             "Try it — ocm.software\n"
-             "Build with us — github.com/open-component-model\n"
-             "Talk to us — community channels on the website",
-             color=C.WHITE)
+    set_action_path_lines(s, 2, [
+        ("Try it",        "ocm.software"),
+        ("Build with us", "github.com/open-component-model"),
+        ("Talk to us",    "community channels on the website"),
+    ])
     add_brand_row(s)
 
     prs.save(str(OUTPUT_PPTX))
@@ -517,8 +624,8 @@ def build():
 def add_label_at(slide, y_px: int, text: str):
     """Brand-blue ALL-CAPS section label — slide 9 logo wall headers."""
     from pptx.enum.text import PP_ALIGN
-    tb = slide.shapes.add_textbox(px(80), px(y_px),
-                                   px(SLIDE_W_PX - 160), px(28))
+    tb = slide.shapes.add_textbox(px(120), px(y_px),
+                                   px(SLIDE_W_PX - 240), px(36))
     tf = tb.text_frame
     tf.margin_left = tf.margin_right = 0
     tf.margin_top = tf.margin_bottom = 0
@@ -527,7 +634,7 @@ def add_label_at(slide, y_px: int, text: str):
     r.text = text
     f = r.font
     f.name = "Aptos"
-    f.size = Pt(14)
+    f.size = Pt(18)
     f.bold = True
     f.color.rgb = C.BLUE
     rPr = r._r.get_or_add_rPr()
@@ -537,8 +644,8 @@ def add_label_at(slide, y_px: int, text: str):
 
 def add_centred_proof(slide, y_px: int, text: str):
     from pptx.enum.text import PP_ALIGN
-    tb = slide.shapes.add_textbox(px(80), px(y_px),
-                                   px(SLIDE_W_PX - 160), px(80))
+    tb = slide.shapes.add_textbox(px(120), px(y_px),
+                                   px(SLIDE_W_PX - 240), px(80))
     tf = tb.text_frame
     tf.margin_left = tf.margin_right = 0
     tf.margin_top = tf.margin_bottom = 0

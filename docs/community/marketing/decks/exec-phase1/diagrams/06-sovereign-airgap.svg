@@ -62,7 +62,7 @@
         <circle cx="50" cy="36" r="18" fill="#0f6bff"/>
         <use href="#ico-lock" x="34" y="20" width="32" height="32" color="#ffffff"/>
       </g>
-      <text x="270" y="-12" text-anchor="middle" font-size="15" font-weight="600" fill="#0a3a99">Identity stays · signature stays</text>
+      <text x="270" y="100" text-anchor="middle" font-size="15" font-weight="600" fill="#0a3a99">Identity stays · signature stays</text>
     </g>
 
     <!-- Target side (right) — sovereign / air-gapped -->

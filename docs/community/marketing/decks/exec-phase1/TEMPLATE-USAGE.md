@@ -1,16 +1,16 @@
 # OCM PowerPoint Template — Usage Guide
 
-`OCM-Master-Template.potx` is a reusable PowerPoint template with the OCM brand theme (canonical website palette) and 8 named slide layouts. Open it once, "Save as" your new deck, and author from there.
+`OCM-Master.potx` is a reusable PowerPoint template with the OCM brand theme (canonical website palette) and 9 named slide layouts. Open it once, "Save as" your new deck, and author from there.
 
 ## Where it lives
 
-`docs/community/marketing/decks/exec-phase1/OCM-Master-Template.potx`
+`docs/community/marketing/decks/exec-phase1/OCM-Master.potx`
 
 Building / regenerating: `cd build-pptx && .venv/bin/python build_potx.py`.
 
 ## How to author a new deck
 
-1. **Double-click `OCM-Master-Template.potx`** in Finder. PowerPoint opens it as a new untitled deck (it does NOT modify the .potx file itself).
+1. **Double-click `OCM-Master.potx`** in Finder. PowerPoint opens it as a new untitled deck (it does NOT modify the .potx file itself).
 2. **File → Save As…** → pick a name and location. Now you have your own .pptx based on the template.
 3. **Insert → New Slide → pick layout** from the dropdown:
    - **Hero** — full-bleed dark backdrop, title + subtitle + org line. Use for slide 1 of any deck.
