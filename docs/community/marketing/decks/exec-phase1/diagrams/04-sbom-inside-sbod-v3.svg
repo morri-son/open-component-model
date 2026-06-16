@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 04-sbom-inside-sbod-v3.svg — Variant 3: Russian-doll / matryoshka.
+     Three concentric layers, labelled by purpose:
+       outermost: SBoD (delivery, signed)
+       middle:    payload (artifacts)
+       innermost: SBOM (inventory)
+     Each layer's stroke gets thicker/darker as you go in, so the eye
+     reads the nesting at a glance.
+     Caption to the right uses the v2 announcement verb chain. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <!-- Concentric layers -->
+  <g transform="translate(120,40)">
+    <!-- Layer 1: SBoD (outer) -->
+    <rect x="0" y="0" width="900" height="460" rx="20" fill="white" stroke="#257DDC" stroke-width="2.5"/>
+    <text x="32" y="36" font-size="14" font-weight="700" letter-spacing="1.2" fill="#257DDC">SBoD — SOFTWARE BILL OF DELIVERY</text>
+    <text x="32" y="56" font-size="13" fill="#6B7280">signed envelope · location-independent · one identity</text>
+    <!-- Seal -->
+    <g transform="translate(840,40)">
+      <circle cx="0" cy="0" r="22" fill="#257DDC"/>
+      <path d="M-7,2 l5,5 l9,-10" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Layer 2: Payload -->
+    <g transform="translate(40,80)">
+      <rect x="0" y="0" width="820" height="340" rx="16" fill="#F3F4F6" stroke="#1D65B4" stroke-width="2"/>
+      <text x="20" y="28" font-size="13" font-weight="700" letter-spacing="1.2" fill="#1D65B4">PAYLOAD</text>
+      <text x="20" y="46" font-size="12" fill="#6B7280">all artifacts, by digest</text>
+
+      <!-- Artifact pills sprinkled inside payload -->
+      <g transform="translate(20,68)">
+        <rect x="0" y="0" width="90" height="32" rx="16" fill="white" stroke="#257DDC" stroke-width="1"/>
+        <text x="45" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">OCI</text>
+        <rect x="100" y="0" width="90" height="32" rx="16" fill="white" stroke="#257DDC" stroke-width="1"/>
+        <text x="145" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">Helm</text>
+        <rect x="200" y="0" width="90" height="32" rx="16" fill="white" stroke="#257DDC" stroke-width="1"/>
+        <text x="245" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">npm</text>
+        <rect x="300" y="0" width="90" height="32" rx="16" fill="white" stroke="#257DDC" stroke-width="1"/>
+        <text x="345" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">Binary</text>
+        <rect x="400" y="0" width="90" height="32" rx="16" fill="white" stroke="#257DDC" stroke-width="1"/>
+        <text x="445" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">Config</text>
+        <rect x="500" y="0" width="90" height="32" rx="16" fill="white" stroke="#257DDC" stroke-width="1"/>
+        <text x="545" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">⋯</text>
+      </g>
+
+      <!-- Layer 3: SBOM (innermost) -->
+      <g transform="translate(20,124)">
+        <rect x="0" y="0" width="780" height="200" rx="12" fill="white" stroke="#0A1530" stroke-width="2"/>
+        <text x="20" y="32" font-size="13" font-weight="700" letter-spacing="1.2" fill="#0A1530">SBOM</text>
+        <text x="20" y="50" font-size="12" fill="#6B7280">inventory of what's inside</text>
+
+        <text x="20" y="80" font-size="14" fill="#000">CycloneDX</text>
+        <text x="160" y="80" font-size="14" fill="#000">SPDX</text>
+        <text x="280" y="80" font-size="14" fill="#000">SWID</text>
+
+        <text x="20" y="118" font-size="13" fill="#6B7280" font-style="italic">"What ingredients are in this thing?"</text>
+        <text x="20" y="140" font-size="13" fill="#6B7280">Existing tooling — unchanged.</text>
+        <text x="20" y="160" font-size="13" fill="#6B7280">Becomes one payload item in the SBoD.</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Right column: verb chain caption -->
+  <g transform="translate(1080,80)">
+    <text x="0" y="20" font-size="14" font-weight="700" letter-spacing="1.2" fill="#257DDC">SBoD CONTAINS THE SBOM</text>
+    <text x="0" y="62" font-size="20" font-weight="700" fill="#000">Built.</text>
+    <text x="0" y="96" font-size="20" font-weight="700" fill="#000">Signed.</text>
+    <text x="0" y="130" font-size="20" font-weight="700" fill="#000">Transported.</text>
+    <text x="0" y="164" font-size="20" font-weight="700" fill="#000">Deployed.</text>
+
+    <line x1="0" y1="200" x2="320" y2="200" stroke="#E5E7EB" stroke-width="1"/>
+
+    <text x="0" y="232" font-size="14" fill="#6B7280">SBOM = inventory.</text>
+    <text x="0" y="252" font-size="14" fill="#6B7280">SBoD = the delivery.</text>
+    <text x="0" y="272" font-size="14" fill="#6B7280">OCM gives your SBOM the</text>
+    <text x="0" y="290" font-size="14" fill="#6B7280">envelope that travels intact.</text>
+
+    <text x="0" y="340" font-size="13" font-weight="700" fill="#1D65B4">Your SBOM tooling is unchanged.</text>
+  </g>
+</svg>

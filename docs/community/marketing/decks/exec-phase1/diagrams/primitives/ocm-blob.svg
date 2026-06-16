@@ -1,0 +1,15 @@
+<!-- ocm-blob: stylized OCM hex anchor mark for diagrams (NOT the official logo). 80x80 hexagon, blue fill, white pack-cube glyph. viewBox 0 0 80 80. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <!-- hexagon -->
+  <polygon points="40,4 72,22 72,58 40,76 8,58 8,22"
+           fill="#257DDC" stroke="#1D65B4" stroke-width="1.5"/>
+  <!-- pack-cube glyph (isometric cube outline) -->
+  <g stroke="#FFFFFF" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <!-- top face -->
+    <polygon points="40,24 54,32 40,40 26,32" fill="#FFFFFF" fill-opacity="0.18"/>
+    <!-- left face -->
+    <polygon points="26,32 40,40 40,56 26,48"/>
+    <!-- right face -->
+    <polygon points="54,32 40,40 40,56 54,48"/>
+  </g>
+</svg>

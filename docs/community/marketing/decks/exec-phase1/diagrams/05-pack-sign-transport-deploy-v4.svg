@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 05-pack-sign-transport-deploy-v4.svg — Variant: minimalist horizontal flow.
+     Just numbers + verbs + thin connectors. No card chrome.
+     For a clean, slow-read exec slide.
+     viewBox: 0 0 1760 540 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <!-- Horizontal axis line -->
+  <line x1="120" y1="240" x2="1640" y2="240" stroke="#257DDC" stroke-width="2"/>
+
+  <!-- Step circles + labels -->
+  <g>
+    <!-- Step 1 -->
+    <g transform="translate(220,240)">
+      <circle r="32" fill="#257DDC"/>
+      <text y="6" text-anchor="middle" font-size="20" font-weight="700" fill="white">1</text>
+      <text x="0" y="-60" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.2" fill="#6B7280">PACK</text>
+      <text x="0" y="80" text-anchor="middle" font-size="32" font-weight="700" fill="#000">Pack</text>
+      <text x="0" y="118" text-anchor="middle" font-size="14" fill="#6B7280">artifacts → component descriptor</text>
+    </g>
+
+    <!-- Step 2 -->
+    <g transform="translate(580,240)">
+      <circle r="32" fill="#257DDC"/>
+      <text y="6" text-anchor="middle" font-size="20" font-weight="700" fill="white">2</text>
+      <text x="0" y="-60" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.2" fill="#6B7280">SIGN</text>
+      <text x="0" y="80" text-anchor="middle" font-size="32" font-weight="700" fill="#000">Sign</text>
+      <text x="0" y="118" text-anchor="middle" font-size="14" fill="#6B7280">one signature, every artifact, by digest</text>
+    </g>
+
+    <!-- Step 3 -->
+    <g transform="translate(940,240)">
+      <circle r="32" fill="#257DDC"/>
+      <text y="6" text-anchor="middle" font-size="20" font-weight="700" fill="white">3</text>
+      <text x="0" y="-60" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.2" fill="#6B7280">TRANSPORT</text>
+      <text x="0" y="80" text-anchor="middle" font-size="32" font-weight="700" fill="#000">Transport</text>
+      <text x="0" y="118" text-anchor="middle" font-size="14" fill="#6B7280">across any boundary, intact</text>
+    </g>
+
+    <!-- Step 4 -->
+    <g transform="translate(1300,240)">
+      <circle r="32" fill="#257DDC"/>
+      <text y="6" text-anchor="middle" font-size="20" font-weight="700" fill="white">4</text>
+      <text x="0" y="-60" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.2" fill="#6B7280">DEPLOY</text>
+      <text x="0" y="80" text-anchor="middle" font-size="32" font-weight="700" fill="#000">Deploy</text>
+      <text x="0" y="118" text-anchor="middle" font-size="14" fill="#6B7280">GitOps you have, or OCM controllers</text>
+    </g>
+
+    <!-- Optional 5th destination (faded, dashed) -->
+    <g transform="translate(1580,240)">
+      <circle r="22" fill="white" stroke="#1D65B4" stroke-width="2" stroke-dasharray="4,3"/>
+      <path d="M-7,0 l5,5 l9,-9" stroke="#1D65B4" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="0" y="-44" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="1.2" fill="#1D65B4">VERIFIED</text>
+      <text x="0" y="50" text-anchor="middle" font-size="13" fill="#1D65B4">in the sovereign cloud</text>
+    </g>
+  </g>
+
+  <!-- Caption / proof at bottom -->
+  <g transform="translate(0,420)">
+    <text x="880" y="20" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1.5" fill="#257DDC">
+      NO LOCK-IN
+    </text>
+    <text x="880" y="50" text-anchor="middle" font-size="18" fill="#000">
+      Native OCI · native Helm · native npm. Use the tools you already use.
+    </text>
+    <text x="880" y="78" text-anchor="middle" font-size="14" fill="#6B7280">
+      OCM gives them one signed envelope without forcing a parallel stack.
+    </text>
+  </g>
+</svg>

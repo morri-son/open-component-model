@@ -1,0 +1,7 @@
+<!-- identity-chip: 180x40 OCM coordinates / identity tag. 10% blue fill, 1px blue stroke, mono-feel text. viewBox 0 0 180 40. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40" width="180" height="40">
+  <rect x="0.5" y="0.5" width="179" height="39" rx="4" ry="4"
+        fill="#257DDC1A" stroke="#257DDC" stroke-width="1"/>
+  <text id="label" x="90" y="25" text-anchor="middle"
+        font-family="Aptos Mono, Aptos, Inter, monospace" font-size="12" fill="#257DDC">name : v1.2.3</text>
+</svg>

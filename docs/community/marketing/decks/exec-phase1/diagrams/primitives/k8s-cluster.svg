@@ -1,0 +1,16 @@
+<!-- k8s-cluster: generic cluster glyph (NOT the official K8s logo). Three rounded squares in triangular formation inside a frame. 100x100. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- frame -->
+  <rect x="2" y="2" width="96" height="96" rx="10" ry="10"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <!-- node tiles in triangular formation -->
+  <rect x="36" y="20" width="28" height="28" rx="4" ry="4"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <rect x="14" y="56" width="28" height="28" rx="4" ry="4"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <rect x="58" y="56" width="28" height="28" rx="4" ry="4"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <!-- thin connectors hinting at scheduling -->
+  <line x1="50" y1="48" x2="28" y2="56" stroke="#257DDC" stroke-width="1" stroke-dasharray="2 2"/>
+  <line x1="50" y1="48" x2="72" y2="56" stroke="#257DDC" stroke-width="1" stroke-dasharray="2 2"/>
+</svg>

@@ -48,20 +48,16 @@ usage is consistent with each owner's brand and trademark policies.
 
 ### SAP NS2 (SAP National Security Services)
 
-- **File:** `sap-ns2/sap-corporate-fallback.svg` (copy of the SAP corporate
-  wordmark — see SAP entry above)
-- **Source URL:** Wikipedia's SAP NS2 article uses the SAP corporate logo as
-  the company mark — <https://en.wikipedia.org/wiki/SAP_NS2>.
-- **Licence / Trademark:** Same as SAP entry above. SAP NS2 is a wholly-owned
-  SAP subsidiary; it does not appear to publish a distinct, freely-available
-  "NS2" wordmark.
-- **⚠ NEEDS USER DECISION:** No standalone "SAP NS2" logo SVG/PNG was found on
-  Wikimedia Commons, seeklogo, the public sapns2.com site (returns HTTP 403 to
-  scrapers), or as a recognisable mark in the `sap-ns2` GitHub org avatar (the
-  avatar is a default GitHub identicon, not a real logo). Options:
-  1. Use the SAP corporate wordmark with a "NS2" caption underneath.
-  2. Reach out to SAP NS2 directly for an official asset.
-  3. Render a simple typeset "SAP NS2" lockup inline in the slide.
+- **File:** `sap-ns2/sap-ns2-getlogovector.png` (preferred — distinct SAP NS2
+  lockup, 900×500 PNG with transparency)
+- **Fallback:** `sap-ns2/sap-corporate-fallback.svg` (copy of the SAP corporate
+  wordmark, retained as a backup)
+- **Source URL:** <https://getlogovector.com/wp-content/uploads/2023/04/sap-ns2-logo-vector.png>
+- **Licence / Trademark:** "SAP NS2" is a trademark of SAP National Security
+  Services, Inc., a wholly-owned SAP subsidiary. The getlogovector source
+  redistributes brand marks for editorial/reference use; treat as
+  **TRADEMARK: editorial use only — do not imply endorsement.** Verify usage
+  with SAP NS2 brand owners before external publication.
 
 ---
 
@@ -82,22 +78,17 @@ usage is consistent with each owner's brand and trademark policies.
 
 ### Konfidence
 
-- **File:** `konfidence/konfidence-avatar.png` (icon only, 460×460)
-- **Source URL:** <https://avatars.githubusercontent.com/u/219007561?v=4&s=512>
-  (GitHub avatar of the `konfidence-project` org —
-  <https://github.com/konfidence-project>)
-- **Licence:** Unclear. The org's `repository-template` README identifies
-  Konfidence as an SAP open source project ("Default templates of SAP's
-  repositories. Provides template files including LICENSE…"). The icon itself
-  has no published licence file; treat as **TRADEMARK: not redistributable
-  outside the deck — fetched for evaluation only.**
-- **⚠ NEEDS USER DECISION:** This is *icon-only* (a stylised orange "C"
-  sphere), not a horizontal lockup. The org has no other artwork, no
-  neonephos/artwork entry, and no website. Options:
-  1. Use the icon at ~80×80 inside a tile that contains the wordmark
-     "Konfidence" set in the deck typeface.
-  2. Pad the icon onto a 250×80 canvas with the wordmark beside it.
-  3. Drop Konfidence from the wall if no horizontal mark exists.
+- **Files:**
+  - `konfidence/konfidence-horizontal-light.svg` (preferred — horizontal
+    lockup, light-mode variant suitable for white slide backgrounds)
+  - `konfidence/konfidence-horizontal-dark.svg` (alternate — dark-mode variant)
+  - `konfidence/konfidence-avatar.png` (legacy icon, 460×460, kept as backup)
+- **Source URL:** <https://konfidence.cloud/assets/logo/full/SVG/400_konfidence_logo_light.svg>
+  and `…_dark.svg` from the konfidence.cloud project site.
+- **Licence:** Konfidence is an SAP-supported project distributed via
+  konfidence.cloud. No explicit logo licence is published; treat as
+  **TRADEMARK: editorial use only — do not imply endorsement.** Verify with
+  the Konfidence project before external publication.
 
 ### Platform Mesh
 
@@ -111,10 +102,11 @@ usage is consistent with each owner's brand and trademark policies.
 
 ---
 
-## Summary of items needing user decision before slide 9 is authored
+## Decisions taken (slide 9 authoring)
 
-1. **SAP NS2** has no public horizontal wordmark; pick one of the three options
-   in that section.
-2. **Konfidence** has only an icon mark; pick one of the three options in that
-   section.
-3. **BwI** has two valid horizontal variants — confirm which one to use.
+1. **SAP NS2** — using `sap-ns2-getlogovector.png` (distinct SAP NS2 lockup
+   from getlogovector.com).
+2. **Konfidence** — using `konfidence-horizontal-light.svg` (horizontal lockup
+   from konfidence.cloud).
+3. **BwI** — using `bwi-horizontal-color.svg` (Wikimedia "IT für Deutschland"
+   lockup).

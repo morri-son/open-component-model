@@ -1,0 +1,14 @@
+<!-- badge-sigstore: 120x32 pill, "Sigstore" text + stylized padlock icon on the left. viewBox 0 0 120 32. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" width="120" height="32">
+  <rect x="0.75" y="0.75" width="118.5" height="30.5" rx="16" ry="16"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <!-- padlock glyph on the left -->
+  <g transform="translate(14,16)">
+    <rect x="-5" y="-2" width="10" height="9" rx="1.5" ry="1.5"
+          fill="#257DDC"/>
+    <path d="M -3 -2 V -5 a 3 3 0 0 1 6 0 V -2"
+          fill="none" stroke="#257DDC" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+  <text x="68" y="21" text-anchor="middle"
+        font-family="Aptos, Inter, sans-serif" font-size="14" font-weight="700" fill="#257DDC">Sigstore</text>
+</svg>

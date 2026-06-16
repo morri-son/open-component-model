@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 06-sovereign-airgap-v3.svg — Variant 3: pure conceptual.
+     Two big concentric rings; outer = open world, inner = sovereign zone.
+     A signed envelope crosses inward through one explicit gate ("verify").
+     Inside the inner ring, a closed-loop arrow shows day-2 stays inside.
+     Strongest conceptual statement, weakest on operational detail.
+     viewBox: 0 0 1760 540 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <!-- Outer ring (open world) -->
+  <circle cx="880" cy="270" r="240" fill="none" stroke="#6B7280" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="880" y="40" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.5" fill="#6B7280">OPEN WORLD</text>
+
+  <!-- Inner ring (sovereign) -->
+  <circle cx="880" cy="270" r="160" fill="#0A1530"/>
+  <circle cx="880" cy="270" r="160" fill="none" stroke="#257DDC" stroke-width="3"/>
+  <text x="880" y="240" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.5" fill="#4CC9F0">SOVEREIGN ZONE</text>
+  <text x="880" y="276" text-anchor="middle" font-size="20" font-weight="700" fill="white">closed-loop</text>
+  <text x="880" y="304" text-anchor="middle" font-size="14" fill="#4CC9F0">day-2 stays inside</text>
+
+  <!-- Closed-loop arrow inside the sovereign zone -->
+  <g transform="translate(880,360)">
+    <circle cx="0" cy="0" r="34" fill="none" stroke="#4CC9F0" stroke-width="2"/>
+    <path d="M-34,0 L-28,-8 L-22,0 Z" fill="#4CC9F0" transform="rotate(90)"/>
+  </g>
+
+  <!-- Signed envelope traveling inward -->
+  <g transform="translate(440,250)">
+    <rect width="200" height="60" rx="8" fill="white" stroke="#257DDC" stroke-width="2"/>
+    <rect x="6" y="6" width="188" height="48" rx="4" fill="none" stroke="#4CC9F0" stroke-width="0.5"/>
+    <circle cx="180" cy="20" r="14" fill="#257DDC"/>
+    <path d="M175,22 l4,4 l7,-8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="92" y="38" text-anchor="middle" font-size="13" font-weight="700" fill="#1D65B4">signed component</text>
+  </g>
+
+  <!-- Arrow from envelope through verify gate into sovereign -->
+  <line x1="640" y1="280" x2="710" y2="280" stroke="#257DDC" stroke-width="2.5"/>
+  <g transform="translate(710,260)">
+    <rect width="60" height="40" rx="6" fill="#257DDC"/>
+    <text x="30" y="26" text-anchor="middle" font-size="12" font-weight="700" fill="white">verify</text>
+  </g>
+  <line x1="770" y1="280" x2="820" y2="280" stroke="#257DDC" stroke-width="2.5"/>
+  <g transform="translate(820,272)">
+    <path d="M0,8 L10,0 L0,-8 Z" fill="#257DDC"/>
+  </g>
+
+  <!-- "no callback" arrow blocked at the boundary -->
+  <g transform="translate(950,200)">
+    <line x1="0" y1="0" x2="200" y2="-40" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,4"/>
+    <line x1="80" y1="-22" x2="120" y2="-12" stroke="#DC2626" stroke-width="3"/>
+    <line x1="80" y1="-12" x2="120" y2="-22" stroke="#DC2626" stroke-width="3"/>
+    <text x="220" y="-44" font-size="12" fill="#DC2626">no callback</text>
+    <text x="220" y="-26" font-size="12" fill="#DC2626">to upstream</text>
+  </g>
+
+  <!-- Caption -->
+  <text x="880" y="510" text-anchor="middle" font-size="20" font-weight="700" fill="#000">
+    Sign once at source. Verify at the boundary. Operate inside.
+  </text>
+  <text x="880" y="540" text-anchor="middle" font-size="14" fill="#6B7280">
+    Validated end-to-end in OCM's sovereign conformance scenario.
+  </text>
+</svg>

@@ -1,0 +1,7 @@
+<!-- box-rounded: rounded rectangle container with centered "Label" placeholder. viewBox 0 0 240 80. Swap text in <text id="label">. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" width="240" height="80">
+  <rect x="0.75" y="0.75" width="238.5" height="78.5" rx="12" ry="12"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <text id="label" x="120" y="45" text-anchor="middle"
+        font-family="Aptos, Inter, sans-serif" font-size="16" fill="#000000">Label</text>
+</svg>

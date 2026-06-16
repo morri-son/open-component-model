@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 03-fragmented-v3.svg — Variant 3: "before / after" split.
+     Left half = the scattered mess (artifacts in different stacks, tangled signatures).
+     Vertical divider = "OCM" wedge.
+     Right half = one clean OCM blob with one signed envelope and one identity tag.
+     Most exec-friendly: shows the answer right next to the problem. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <!-- LEFT HALF: chaos -->
+  <g transform="translate(40,40)">
+    <text x="0" y="20" font-size="14" font-weight="700" letter-spacing="1.2" fill="#6B7280">BEFORE</text>
+    <text x="0" y="56" font-size="22" font-weight="700" fill="#000">Many stacks. Many signatures. Many bolt-ons.</text>
+
+    <!-- Cluster of pills with tangled connectors -->
+    <g transform="translate(0,90)">
+      <rect x="0" y="0" width="100" height="36" rx="18" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="50" y="24" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">OCI</text>
+      <rect x="140" y="40" width="100" height="36" rx="18" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="190" y="64" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Helm</text>
+      <rect x="60" y="100" width="100" height="36" rx="18" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="110" y="124" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">npm</text>
+      <rect x="220" y="120" width="100" height="36" rx="18" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="270" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Binary</text>
+      <rect x="380" y="60" width="100" height="36" rx="18" fill="white" stroke="#4CC9F0" stroke-width="1.5"/>
+      <text x="430" y="84" text-anchor="middle" font-size="14" font-weight="700" fill="#1D65B4">SBOM</text>
+      <rect x="320" y="160" width="100" height="36" rx="18" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="370" y="184" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Config</text>
+
+      <!-- Tangled connector lines (broken / dashed) -->
+      <path d="M50 36 Q 95 60 110 100" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
+      <path d="M190 76 Q 220 110 270 120" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
+      <path d="M270 156 Q 350 160 430 96" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
+      <path d="M110 136 Q 200 180 320 178" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
+
+      <!-- Big red X at the centre, suggesting the chain is broken -->
+      <g transform="translate(220,80)">
+        <line x1="-12" y1="-12" x2="12" y2="12" stroke="#DC2626" stroke-width="3"/>
+        <line x1="-12" y1="12" x2="12" y2="-12" stroke="#DC2626" stroke-width="3"/>
+      </g>
+    </g>
+
+    <text x="0" y="340" font-size="14" fill="#6B7280">— signatures don't compose</text>
+    <text x="0" y="362" font-size="14" fill="#6B7280">— SBOMs don't travel with the artifact</text>
+    <text x="0" y="384" font-size="14" fill="#6B7280">— each compliance regime adds its own bolt-on</text>
+    <text x="0" y="406" font-size="14" fill="#6B7280">— audit-time fire drills</text>
+  </g>
+
+  <!-- DIVIDER -->
+  <g transform="translate(880,30)">
+    <line x1="0" y1="0" x2="0" y2="480" stroke="#E5E7EB" stroke-width="2"/>
+    <rect x="-30" y="220" width="60" height="40" rx="20" fill="#257DDC"/>
+    <text x="0" y="246" text-anchor="middle" font-size="14" font-weight="700" fill="white">OCM</text>
+  </g>
+
+  <!-- RIGHT HALF: order -->
+  <g transform="translate(960,40)">
+    <text x="0" y="20" font-size="14" font-weight="700" letter-spacing="1.2" fill="#257DDC">AFTER — WITH OCM</text>
+    <text x="0" y="56" font-size="22" font-weight="700" fill="#000">One identity. One signature. One audit trail.</text>
+
+    <!-- One big signed envelope containing all artifacts -->
+    <g transform="translate(0,100)">
+      <rect x="0" y="0" width="640" height="240" rx="12" fill="white" stroke="#257DDC" stroke-width="2"/>
+      <rect x="6" y="6" width="628" height="228" rx="8" fill="none" stroke="#4CC9F0" stroke-width="1"/>
+      <!-- Seal -->
+      <circle cx="600" cy="40" r="22" fill="#257DDC"/>
+      <path d="M591,42 l6,6 l11,-12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <text x="20" y="36" font-size="16" font-weight="700" fill="#1D65B4">component-descriptor</text>
+      <!-- Pills inside -->
+      <g transform="translate(20,60)">
+        <rect x="0" y="0" width="80" height="28" rx="14" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+        <text x="40" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">OCI</text>
+        <rect x="100" y="0" width="80" height="28" rx="14" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+        <text x="140" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">Helm</text>
+        <rect x="200" y="0" width="80" height="28" rx="14" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+        <text x="240" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">npm</text>
+        <rect x="300" y="0" width="80" height="28" rx="14" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+        <text x="340" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">Binary</text>
+        <rect x="400" y="0" width="80" height="28" rx="14" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+        <text x="440" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#257DDC">Config</text>
+        <rect x="500" y="0" width="80" height="28" rx="14" fill="#F3F4F6" stroke="#4CC9F0" stroke-width="1"/>
+        <text x="540" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#1D65B4">SBOM</text>
+      </g>
+      <!-- Identity chip -->
+      <g transform="translate(20,108)">
+        <rect x="0" y="0" width="280" height="36" rx="6" fill="#257DDC" fill-opacity="0.1" stroke="#257DDC" stroke-width="1"/>
+        <text x="14" y="24" font-size="13" font-family="Aptos Mono, Menlo, Consolas, monospace" fill="#1D65B4">github.com/ocm/example : v1.2.3</text>
+      </g>
+      <text x="20" y="180" font-size="13" fill="#6B7280">— one signed envelope, every artifact by digest</text>
+      <text x="20" y="200" font-size="13" fill="#6B7280">— one OCM Coordinates identity, location-independent</text>
+      <text x="20" y="220" font-size="13" fill="#6B7280">— one audit trail across every compliance regime</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 05-pack-sign-transport-deploy-v3.svg — Variant: 4 cards in a row,
+     each with a number, verb, and one-line subtitle. The arrows between them
+     are explicit "→" glyphs. The fifth target (Sovereign Cloud) is a separate
+     box on the right, dashed border to indicate "destination".
+     Designed to be unambiguous about the 4-step framing.
+     viewBox: 0 0 1760 540 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#257DDC"/>
+    </marker>
+  </defs>
+
+  <!-- Step cards: 4 in a row, each 280×280 -->
+  <g transform="translate(40,80)">
+    <!-- Card 1: Pack -->
+    <rect width="280" height="280" rx="14" fill="white" stroke="#257DDC" stroke-width="2"/>
+    <rect width="280" height="6" rx="3" fill="#257DDC"/>
+    <text x="32" y="56" font-size="14" font-weight="700" letter-spacing="1.5" fill="#6B7280">01</text>
+    <text x="32" y="100" font-size="32" font-weight="700" fill="#000">Pack</text>
+    <text x="32" y="140" font-size="14" fill="#6B7280">your software into a</text>
+    <text x="32" y="160" font-size="14" fill="#6B7280">component descriptor</text>
+    <!-- Mini visual: artifacts converging into envelope -->
+    <g transform="translate(32,184)">
+      <rect x="0" y="0" width="44" height="20" rx="10" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+      <text x="22" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#257DDC">OCI</text>
+      <rect x="56" y="0" width="44" height="20" rx="10" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+      <text x="78" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#257DDC">Helm</text>
+      <rect x="0" y="28" width="44" height="20" rx="10" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+      <text x="22" y="42" text-anchor="middle" font-size="10" font-weight="700" fill="#257DDC">Bin</text>
+      <rect x="56" y="28" width="44" height="20" rx="10" fill="#F3F4F6" stroke="#257DDC" stroke-width="1"/>
+      <text x="78" y="42" text-anchor="middle" font-size="10" font-weight="700" fill="#257DDC">SBOM</text>
+      <text x="120" y="32" font-size="20" fill="#257DDC">→</text>
+      <rect x="148" y="6" width="64" height="36" rx="6" fill="#257DDC" fill-opacity="0.1" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="180" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#1D65B4">descriptor</text>
+    </g>
+  </g>
+
+  <!-- Step 2: Sign -->
+  <g transform="translate(360,80)">
+    <rect width="280" height="280" rx="14" fill="white" stroke="#257DDC" stroke-width="2"/>
+    <rect width="280" height="6" rx="3" fill="#257DDC"/>
+    <text x="32" y="56" font-size="14" font-weight="700" letter-spacing="1.5" fill="#6B7280">02</text>
+    <text x="32" y="100" font-size="32" font-weight="700" fill="#000">Sign</text>
+    <text x="32" y="140" font-size="14" fill="#6B7280">one signature covers</text>
+    <text x="32" y="160" font-size="14" fill="#6B7280">every artifact, by digest</text>
+    <!-- Visual: envelope with seal -->
+    <g transform="translate(70,200)">
+      <rect x="0" y="0" width="140" height="56" rx="6" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <rect x="6" y="6" width="128" height="44" rx="4" fill="none" stroke="#4CC9F0" stroke-width="0.5"/>
+      <circle cx="120" cy="14" r="14" fill="#257DDC"/>
+      <path d="M115,16 l4,4 l7,-8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="60" y="34" text-anchor="middle" font-size="11" fill="#1D65B4">component</text>
+    </g>
+    <text x="140" y="270" text-anchor="middle" font-size="11" fill="#6B7280">RSA · GPG · Sigstore</text>
+  </g>
+
+  <!-- Step 3: Transport -->
+  <g transform="translate(680,80)">
+    <rect width="280" height="280" rx="14" fill="white" stroke="#257DDC" stroke-width="2"/>
+    <rect width="280" height="6" rx="3" fill="#257DDC"/>
+    <text x="32" y="56" font-size="14" font-weight="700" letter-spacing="1.5" fill="#6B7280">03</text>
+    <text x="32" y="100" font-size="32" font-weight="700" fill="#000">Transport</text>
+    <text x="32" y="140" font-size="14" fill="#6B7280">across any boundary —</text>
+    <text x="32" y="160" font-size="14" fill="#6B7280">registry, archive, air gap</text>
+    <!-- Visual: registry → arrow → registry -->
+    <g transform="translate(40,194)">
+      <ellipse cx="32" cy="14" rx="32" ry="8" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <line x1="0" y1="14" x2="0" y2="44" stroke="#257DDC" stroke-width="1.5"/>
+      <line x1="64" y1="14" x2="64" y2="44" stroke="#257DDC" stroke-width="1.5"/>
+      <ellipse cx="32" cy="44" rx="32" ry="8" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="32" y="76" text-anchor="middle" font-size="11" fill="#6B7280">source</text>
+
+      <line x1="80" y1="28" x2="120" y2="28" stroke="#257DDC" stroke-width="2" marker-end="url(#arr)"/>
+
+      <ellipse cx="168" cy="14" rx="32" ry="8" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <line x1="136" y1="14" x2="136" y2="44" stroke="#257DDC" stroke-width="1.5"/>
+      <line x1="200" y1="14" x2="200" y2="44" stroke="#257DDC" stroke-width="1.5"/>
+      <ellipse cx="168" cy="44" rx="32" ry="8" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="168" y="76" text-anchor="middle" font-size="11" fill="#6B7280">destination</text>
+    </g>
+  </g>
+
+  <!-- Step 4: Deploy -->
+  <g transform="translate(1000,80)">
+    <rect width="280" height="280" rx="14" fill="white" stroke="#257DDC" stroke-width="2"/>
+    <rect width="280" height="6" rx="3" fill="#257DDC"/>
+    <text x="32" y="56" font-size="14" font-weight="700" letter-spacing="1.5" fill="#6B7280">04</text>
+    <text x="32" y="100" font-size="32" font-weight="700" fill="#000">Deploy</text>
+    <text x="32" y="140" font-size="14" fill="#6B7280">your GitOps stack —</text>
+    <text x="32" y="160" font-size="14" fill="#6B7280">or OCM controllers</text>
+    <!-- Visual: simple K8s cluster glyph -->
+    <g transform="translate(96,196)">
+      <rect x="0" y="0" width="88" height="64" rx="8" fill="white" stroke="#257DDC" stroke-width="2"/>
+      <rect x="14" y="12" width="20" height="20" rx="3" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <rect x="54" y="12" width="20" height="20" rx="3" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+      <rect x="34" y="32" width="20" height="20" rx="3" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+    </g>
+    <text x="140" y="276" text-anchor="middle" font-size="11" fill="#6B7280">Argo · Flux · KRO</text>
+  </g>
+
+  <!-- Step 5: Sovereign cloud target (dashed = destination) -->
+  <g transform="translate(1320,80)">
+    <rect width="400" height="280" rx="14" fill="#0A1530" stroke="#257DDC" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="32" y="56" font-size="14" font-weight="700" letter-spacing="1.5" fill="#4CC9F0">DESTINATION</text>
+    <text x="32" y="104" font-size="32" font-weight="700" fill="white">Sovereign</text>
+    <text x="32" y="142" font-size="32" font-weight="700" fill="white">Cloud</text>
+    <text x="32" y="178" font-size="14" fill="#4CC9F0">verified · operating · day-2 ready</text>
+    <!-- Mini "verified" badge -->
+    <g transform="translate(32,210)">
+      <rect x="0" y="0" width="120" height="36" rx="18" fill="#257DDC"/>
+      <path d="M14,18 l8,8 l16,-16" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="68" y="24" font-size="13" font-weight="700" fill="white">VERIFIED</text>
+    </g>
+  </g>
+
+  <!-- Connecting arrows between steps 1→2→3→4→5 -->
+  <line x1="320" y1="220" x2="360" y2="220" stroke="#257DDC" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="640" y1="220" x2="680" y2="220" stroke="#257DDC" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="960" y1="220" x2="1000" y2="220" stroke="#257DDC" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="1280" y1="220" x2="1320" y2="220" stroke="#257DDC" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Footer: "no lock-in" line -->
+  <text x="880" y="430" text-anchor="middle" font-size="14" font-weight="700" fill="#1D65B4">
+    Bring your own registries · bring your own tools · bring your own keys.
+  </text>
+  <text x="880" y="454" text-anchor="middle" font-size="13" fill="#6B7280">
+    OCM gives every component a single signed envelope; everything else stays as it is.
+  </text>
+</svg>

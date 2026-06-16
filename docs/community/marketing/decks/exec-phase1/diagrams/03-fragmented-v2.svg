@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 03-fragmented-v2.svg — Variant 2: scattered registries with broken signature chain.
+     Five disjoint stacks sit isolated. Each has its own signing/scanning widget.
+     Crossed-out arrows between them show signatures don't survive the journey.
+     Caption space at bottom for a punchline.
+     viewBox: 0 0 1760 540 — fits slide layout's diagram region. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+  <!-- Five disjoint stacks across the row -->
+  <!-- Stack 1: OCI -->
+  <g transform="translate(60,80)">
+    <rect width="280" height="280" rx="12" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+    <text x="140" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#000">Container team</text>
+    <rect x="40" y="56" width="200" height="48" rx="24" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+    <text x="140" y="86" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">OCI registry</text>
+    <text x="140" y="140" text-anchor="middle" font-size="13" fill="#6B7280">cosign · trivy</text>
+    <text x="140" y="160" text-anchor="middle" font-size="13" fill="#6B7280">helm-OCI charts</text>
+    <circle cx="220" cy="220" r="22" fill="#DC2626" opacity="0.85"/>
+    <text x="220" y="226" text-anchor="middle" font-size="14" fill="white" font-weight="700">!</text>
+    <text x="140" y="260" text-anchor="middle" font-size="11" fill="#6B7280">own signing tooling</text>
+  </g>
+
+  <!-- Stack 2: Helm -->
+  <g transform="translate(380,80)">
+    <rect width="280" height="280" rx="12" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+    <text x="140" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#000">Platform team</text>
+    <rect x="40" y="56" width="200" height="48" rx="24" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+    <text x="140" y="86" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Helm chart repo</text>
+    <text x="140" y="140" text-anchor="middle" font-size="13" fill="#6B7280">prov files</text>
+    <text x="140" y="160" text-anchor="middle" font-size="13" fill="#6B7280">GPG sigs</text>
+    <circle cx="220" cy="220" r="22" fill="#DC2626" opacity="0.85"/>
+    <text x="220" y="226" text-anchor="middle" font-size="14" fill="white" font-weight="700">!</text>
+    <text x="140" y="260" text-anchor="middle" font-size="11" fill="#6B7280">own signing tooling</text>
+  </g>
+
+  <!-- Stack 3: NPM -->
+  <g transform="translate(700,80)">
+    <rect width="280" height="280" rx="12" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+    <text x="140" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#000">App team</text>
+    <rect x="40" y="56" width="200" height="48" rx="24" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+    <text x="140" y="86" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">npm registry</text>
+    <text x="140" y="140" text-anchor="middle" font-size="13" fill="#6B7280">npm-audit</text>
+    <text x="140" y="160" text-anchor="middle" font-size="13" fill="#6B7280">provenance attestations</text>
+    <circle cx="220" cy="220" r="22" fill="#DC2626" opacity="0.85"/>
+    <text x="220" y="226" text-anchor="middle" font-size="14" fill="white" font-weight="700">!</text>
+    <text x="140" y="260" text-anchor="middle" font-size="11" fill="#6B7280">own signing tooling</text>
+  </g>
+
+  <!-- Stack 4: Binary / S3 -->
+  <g transform="translate(1020,80)">
+    <rect width="280" height="280" rx="12" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+    <text x="140" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#000">Release team</text>
+    <rect x="40" y="56" width="200" height="48" rx="24" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+    <text x="140" y="86" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">S3 / artifact bucket</text>
+    <text x="140" y="140" text-anchor="middle" font-size="13" fill="#6B7280">RPM/Deb sigs</text>
+    <text x="140" y="160" text-anchor="middle" font-size="13" fill="#6B7280">SHA256 manifests</text>
+    <circle cx="220" cy="220" r="22" fill="#DC2626" opacity="0.85"/>
+    <text x="220" y="226" text-anchor="middle" font-size="14" fill="white" font-weight="700">!</text>
+    <text x="140" y="260" text-anchor="middle" font-size="11" fill="#6B7280">own signing tooling</text>
+  </g>
+
+  <!-- Stack 5: GitHub / source -->
+  <g transform="translate(1340,80)">
+    <rect width="280" height="280" rx="12" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+    <text x="140" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#000">SecOps</text>
+    <rect x="40" y="56" width="200" height="48" rx="24" fill="white" stroke="#257DDC" stroke-width="1.5"/>
+    <text x="140" y="86" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">SBOM tooling</text>
+    <text x="140" y="140" text-anchor="middle" font-size="13" fill="#6B7280">syft · cyclonedx</text>
+    <text x="140" y="160" text-anchor="middle" font-size="13" fill="#6B7280">spdx feeds</text>
+    <circle cx="220" cy="220" r="22" fill="#DC2626" opacity="0.85"/>
+    <text x="220" y="226" text-anchor="middle" font-size="14" fill="white" font-weight="700">!</text>
+    <text x="140" y="260" text-anchor="middle" font-size="11" fill="#6B7280">no delivery view</text>
+  </g>
+
+  <!-- Caption band -->
+  <g transform="translate(0,400)">
+    <text x="880" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#000">
+      Five teams. Five signing schemes. Five compliance bolt-ons.
+    </text>
+    <text x="880" y="74" text-anchor="middle" font-size="18" fill="#6B7280">
+      None of it composes. Every transit breaks the chain.
+    </text>
+    <text x="880" y="116" text-anchor="middle" font-size="16" font-weight="700" fill="#257DDC">
+      OCM gives them one identity, one signature, one audit trail.
+    </text>
+  </g>
+</svg>

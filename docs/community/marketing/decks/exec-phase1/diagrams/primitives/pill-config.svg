@@ -1,0 +1,7 @@
+<!-- pill-config: typed artifact pill, 100x32, Brand Blue Dark stroke, label "Config". viewBox 0 0 100 32. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 32" width="100" height="32">
+  <rect x="0.75" y="0.75" width="98.5" height="30.5" rx="16" ry="16"
+        fill="#FFFFFF" stroke="#257DDC" stroke-width="1.5"/>
+  <text x="50" y="21" text-anchor="middle"
+        font-family="Aptos, Inter, sans-serif" font-size="14" font-weight="700" fill="#257DDC">Config</text>
+</svg>

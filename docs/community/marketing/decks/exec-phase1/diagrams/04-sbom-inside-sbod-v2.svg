@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 04-sbom-inside-sbod-v2.svg — Variant 2: nested concentric envelopes.
+     Outer rounded rectangle = SBoD (signed envelope).
+     Inside it: artifact pills (OCI, Helm, npm, Binary, Config) + a smaller
+     SBOM rectangle nested as ONE payload item among many.
+     Caption: "The SBoD contains the SBOM."
+     viewBox: 0 0 1760 540 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
+  <!-- Outer SBoD envelope -->
+  <g transform="translate(80,40)">
+    <rect x="0" y="0" width="1100" height="460" rx="14" fill="white" stroke="#257DDC" stroke-width="2.5"/>
+    <!-- Inner accent border -->
+    <rect x="8" y="8" width="1084" height="444" rx="10" fill="none" stroke="#4CC9F0" stroke-width="1"/>
+
+    <!-- Seal in top-right -->
+    <g transform="translate(1040,30)">
+      <circle cx="0" cy="0" r="26" fill="#257DDC"/>
+      <path d="M-9,2 l6,6 l11,-12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Title -->
+    <text x="32" y="48" font-size="22" font-weight="700" fill="#1D65B4">SBoD — Software Bill of Delivery</text>
+    <text x="32" y="74" font-size="14" fill="#6B7280">signed once · travels intact · compliance-native</text>
+
+    <!-- Identity chip -->
+    <g transform="translate(32,96)">
+      <rect x="0" y="0" width="380" height="40" rx="6" fill="#257DDC" fill-opacity="0.1" stroke="#257DDC" stroke-width="1"/>
+      <text x="14" y="26" font-size="14" font-family="Aptos Mono, Menlo, Consolas, monospace" fill="#1D65B4">github.com/ocm/example : v1.2.3</text>
+    </g>
+
+    <!-- Payload items label -->
+    <text x="32" y="166" font-size="13" font-weight="700" letter-spacing="1" fill="#6B7280">PAYLOAD</text>
+
+    <!-- Payload pills row 1 -->
+    <g transform="translate(32,180)">
+      <rect x="0" y="0" width="100" height="40" rx="20" fill="#F3F4F6" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="50" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">OCI</text>
+
+      <rect x="120" y="0" width="100" height="40" rx="20" fill="#F3F4F6" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="170" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Helm</text>
+
+      <rect x="240" y="0" width="100" height="40" rx="20" fill="#F3F4F6" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="290" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">npm</text>
+
+      <rect x="360" y="0" width="100" height="40" rx="20" fill="#F3F4F6" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="410" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Binary</text>
+
+      <rect x="480" y="0" width="100" height="40" rx="20" fill="#F3F4F6" stroke="#257DDC" stroke-width="1.5"/>
+      <text x="530" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#257DDC">Config</text>
+    </g>
+
+    <!-- Inner SBOM box — nested as just one payload item -->
+    <g transform="translate(32,260)">
+      <rect x="0" y="0" width="640" height="120" rx="10" fill="white" stroke="#1D65B4" stroke-width="1.5" stroke-dasharray="0"/>
+      <text x="20" y="32" font-size="16" font-weight="700" fill="#1D65B4">SBOM</text>
+      <text x="20" y="56" font-size="13" fill="#6B7280">CycloneDX · SPDX · whatever your tooling produces</text>
+      <text x="20" y="80" font-size="13" fill="#6B7280">nested as one payload item among many</text>
+      <text x="20" y="104" font-size="12" fill="#6B7280" font-style="italic">"the inventory inside the delivery record"</text>
+    </g>
+  </g>
+
+  <!-- RIGHT SIDE: caption + verb chain -->
+  <g transform="translate(1240,80)">
+    <text x="0" y="20" font-size="14" font-weight="700" letter-spacing="1.2" fill="#257DDC">SBOM ⊂ SBoD</text>
+    <text x="0" y="60" font-size="22" font-weight="700" fill="#000">Built.</text>
+    <text x="0" y="98" font-size="22" font-weight="700" fill="#000">Signed.</text>
+    <text x="0" y="136" font-size="22" font-weight="700" fill="#000">Transported.</text>
+    <text x="0" y="174" font-size="22" font-weight="700" fill="#000">Deployed.</text>
+    <text x="0" y="220" font-size="14" fill="#6B7280">One verb chain.</text>
+    <text x="0" y="240" font-size="14" fill="#6B7280">One signed envelope.</text>
+    <text x="0" y="260" font-size="14" fill="#6B7280">One audit trail.</text>
+
+    <line x1="0" y1="290" x2="380" y2="290" stroke="#E5E7EB" stroke-width="1"/>
+    <text x="0" y="320" font-size="13" fill="#6B7280">SBOM = inventory.</text>
+    <text x="0" y="340" font-size="13" fill="#6B7280">SBoD = the delivery.</text>
+  </g>
+</svg>

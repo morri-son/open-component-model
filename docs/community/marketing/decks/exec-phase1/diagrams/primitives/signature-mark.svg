@@ -1,0 +1,11 @@
+<!-- signature-mark: small "this is signed" overlay badge. ⌀ 36 circle with white padlock glyph. viewBox 0 0 36 36. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36">
+  <circle cx="18" cy="18" r="17.25" fill="#257DDC" stroke="#1D65B4" stroke-width="1.5"/>
+  <!-- padlock body -->
+  <rect x="11" y="17" width="14" height="11" rx="2" ry="2" fill="#FFFFFF"/>
+  <!-- shackle -->
+  <path d="M 13 17 V 13 a 5 5 0 0 1 10 0 V 17"
+        fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- keyhole -->
+  <circle cx="18" cy="22" r="1.4" fill="#257DDC"/>
+</svg>

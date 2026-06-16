@@ -1,0 +1,13 @@
+<!-- boundary-airgap: thick dark line with gap break + rotated "AIR GAP" label. 80x600 (label needs width); core line at x=40. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 600" width="80" height="600">
+  <!-- top segment -->
+  <line x1="40" y1="0" x2="40" y2="260"
+        stroke="#0A1530" stroke-width="8" stroke-linecap="square"/>
+  <!-- bottom segment (gap from 340 onward) -->
+  <line x1="40" y1="340" x2="40" y2="600"
+        stroke="#0A1530" stroke-width="8" stroke-linecap="square"/>
+  <!-- AIR GAP label rotated -90° centered in the gap -->
+  <text x="300" y="44" transform="rotate(-90)" text-anchor="middle"
+        font-family="Aptos, Inter, sans-serif" font-size="14" font-weight="700"
+        letter-spacing="2" fill="#0A1530">AIR GAP</text>
+</svg>

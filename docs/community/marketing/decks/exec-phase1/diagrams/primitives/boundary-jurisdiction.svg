@@ -1,0 +1,11 @@
+<!-- boundary-jurisdiction: double vertical rule (2px lines, 6px gap) Brand Blue Mid + tiny flag at top. 16x600. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 600" width="16" height="600">
+  <!-- left rule -->
+  <line x1="5" y1="20" x2="5" y2="600" stroke="#1D65B4" stroke-width="2"/>
+  <!-- right rule -->
+  <line x1="11" y1="20" x2="11" y2="600" stroke="#1D65B4" stroke-width="2"/>
+  <!-- mast crowning the boundary -->
+  <line x1="8" y1="0" x2="8" y2="22" stroke="#1D65B4" stroke-width="1.5"/>
+  <!-- flag -->
+  <polygon points="8,2 16,6 8,10" fill="#1D65B4"/>
+</svg>
