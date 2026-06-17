@@ -7,7 +7,7 @@
      Layout: pills are pulled in close to the hub so the radial reads compact and confident.
      Canvas 1760 x 540. Reuses primitive shapes/colors only — no new palette, no new stroke widths.
      Sovereign-Cloud icon mirrors the slide-5 (Pack/Sign/Transport/Deploy) cloud-lock motif. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 560" font-family="Aptos, Inter, system-ui, sans-serif">
   <defs>
     <!-- Per-cluster arrow heads, color-keyed -->
     <marker id="ah-artifact" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
@@ -242,5 +242,5 @@
   <!-- =======================================================================
        FOOTER LINE — supplementary regimes off-canvas.
        ======================================================================= -->
-  <text x="880" y="535" text-anchor="middle" class="footer">plus FedRAMP/FISMA, BSI C5, SecNumCloud — and the regimes specific to your sector.</text>
+  <text x="880" y="552" text-anchor="middle" class="footer">plus FedRAMP/FISMA, BSI C5, SecNumCloud — and the regimes specific to your sector.</text>
 </svg>

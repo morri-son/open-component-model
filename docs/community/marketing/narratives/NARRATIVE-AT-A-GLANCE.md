@@ -8,8 +8,8 @@
 
 ---
 
-**1. Hero** — *Three minutes from now, you'll know what your supply chain doesn't.*
-A new model for delivering software the auditor can verify, the operator can run, and the regulator already requires.
+**1. Hero** — *Your supply chain has blind spots.*
+Three minutes from now, you'll know what they are.
 
 **2. Why now** — *Compliance is rising. Sovereignty makes it harder. Trust must travel with the artifact.*
 EU DORA · NIS2 · CRA · supply-chain attacks · sovereign deployment pressure.
@@ -20,8 +20,8 @@ Hub-and-spoke: OCM bridges every artifact type, every regulatory regime, every d
 **4. The shift — SBoD** — *SBOM lists. SBoD delivers.*
 Software Bill of Delivery: signed, verifiable record of everything you delivered + how to access it. SBOM lives inside it.
 
-**5. How OCM composes** — *OCM doesn't replace your tools. It gives them something to sign together.*
-Comparator slide. Keyless (Sigstore) / key-based (your PKI) signs the complete SBoD — one signature, every artifact, by digest. Your SBOM tool or format (Syft, CycloneDX, SPDX) is unchanged. OCI + Sigstore + your scripts gets you almost there; OCM is the standardised version.
+**5. How OCM composes** — *OCM doesn't replace your tools. It gives them an envelope to compose around.*
+Comparator slide, three axes: **Signing** (keyless or key-based PKI signs one artifact at a time — OCM gives them the complete SBoD to sign). **Transport** (Helm registries, S3, OCI move artifacts — OCM moves a signed envelope across any boundary, including air-gap, signatures travel intact). **Compliance** (Trivy, Grype, SBOM tools scan in isolation — OCM via ODG correlates findings by component identity).
 
 **6. OCM in one picture** — *One model. One flow. Any artifact, any registry, any boundary.*
 Pack · Sign · Transport · Deploy. One source of truth for the whole landscape. Bring your own GitOps (Argo, Flux, KRO).

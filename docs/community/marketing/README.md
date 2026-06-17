@@ -59,7 +59,7 @@ marketing/
 **Locked (decisions reached during Phase 1 grilling, applied to the narratives):**
 
 - Lead-axis: external = compliance + sovereignty pressure; internal-sponsor = strategic-fit + ecosystem leverage (loss-frame).
-- Hero: *"Three minutes from now, you'll know what your supply chain doesn't"* + auditor/operator/regulator subtitle.
+- Hero: *"Your supply chain has blind spots."* + subtitle *"Three minutes from now, you'll know what they are."* (Earlier draft used the longer 11-word *"Three minutes from now…"* as the entire title — abandoned because three lines at 115pt reads as overwhelming. **Convention: hero titles are at most 2 lines, never 3.**)
 - Slide 3 reframed: *"Meet OCM. One identity, every boundary."* (Hub-and-spoke diagram landed.)
 - Slide 5 added: comparator slide *"How OCM composes — OCM doesn't replace your tools."*
 - Regulatory regimes: DORA, NIS2, CRA (Cyber Resilience Act). GDPR dropped. Footer names FedRAMP/FISMA, BSI C5, SecNumCloud.

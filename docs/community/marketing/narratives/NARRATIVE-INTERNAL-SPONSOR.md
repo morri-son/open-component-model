@@ -59,7 +59,7 @@ Each slide carries: **External (NARRATIVE.md) — what this slide says externall
 
 ### 1. Hero
 
-**External (cold-room canonical):** *Three minutes from now, you'll know what your supply chain doesn't.* Subtitle: *A new model for delivering software the auditor can verify, the operator can run, and the regulator already requires.*
+**External (cold-room canonical):** *Your supply chain has blind spots.* Subtitle: *Three minutes from now, you'll know what they are.* (Earlier draft used the longer 11-word *"Three minutes from now, you'll know what your supply chain doesn't"* — abandoned because three lines at 115pt reads as overwhelming.)
 
 **Internal-sponsor:**
 - **Title:** *Why OCM matters more now — and what we lose by walking away.*
@@ -82,7 +82,7 @@ The hero names the loss-frame directly. The subtitle is an asset claim. The org 
 Three columns:
 
 1. **Ecosystem velocity is real.** OCM-shaped abstractions are landing in adjacent OSS projects. NeoNephos is operationalizing. The peer ecosystem (Gardener, Kyma, Konfidence, OCP, Hyperspace, RBSC, CSI) shares the primitive.
-2. **The standardization window is closing.** Adoption is consolidating. Late entrants pay migration cost; early stewards keep optionality.
+2. **The window is closing.** Adoption is consolidating. NeoNephos governance, CRA enforcement, sovereign-cloud market formation — the rails are being laid now. Late entrants pay migration cost; early stewards keep optionality.
 3. **Disinvestment has a cost.** Walking away costs more than staying. Each LoB that builds its own retrofit pays the cost OCM was supposed to amortize. Competitors who keep investing get the standard built around their preferences, not SAP's.
 
 This slide is text-only (3-column layout), no diagram.

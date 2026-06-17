@@ -30,7 +30,7 @@ Read this whole document before touching any file. **Do not redo Phase 1.** The 
 - `decks/exec-phase1/OCM-Sovereign-Delivery-Exec.pptx` — rendered external base (rebuilt 2026-06-17).
 - `decks/exec-phase1/OCM-Sovereign-Delivery-Internal-Sponsor.pptx` — rendered internal-sponsor variant.
 
-**Locked decisions** — see `README.md` "What's locked" section. Highlights: external hero is *"Three minutes from now, you'll know what your supply chain doesn't"* + auditor/operator/regulator subtitle; comparator slide ("How OCM composes") is locked into all variants; CRA replaced GDPR everywhere; ROI-led variant deferred (no real numbers); kro/ESO upstream-contribution claim dropped (factually wrong).
+**Locked decisions** — see `README.md` "What's locked" section. Highlights: external hero is *"Your supply chain has blind spots."* + subtitle *"Three minutes from now, you'll know what they are."* (revised 2026-06-17 from earlier longer draft); comparator slide ("How OCM composes") is locked into all variants and uses three-axis structure (signing / transport / compliance); CRA replaced GDPR everywhere; ROI-led variant deferred (no real numbers); kro/ESO upstream-contribution claim dropped (factually wrong); hero-title convention is max 2 lines, never 3.
 
 ---
 
@@ -140,7 +140,7 @@ These are decisions reached during 2026-06-17 grilling that are now locked into 
 
 | Decision | Locked value |
 |---|---|
-| External canonical hero | *"Three minutes from now, you'll know what your supply chain doesn't"* + auditor/operator/regulator subtitle |
+| External canonical hero | *"Your supply chain has blind spots."* + subtitle *"Three minutes from now, you'll know what they are."* (revised 2026-06-17; max 2 lines convention) |
 | Internal-sponsor lead axis | Loss-frame: "what we lose by walking away" |
 | Internal-sponsor concession line | *"OCM's value is strategic — ecosystem leverage, sovereignty positioning, standardization. The transactional case is built per-LoB, with your team."* (lives on slide 6 footer or slide 9 ecosystem beat) |
 | Internal-sponsor slide 9 outcomes | Six tiles, no per-tile project pointers (italic pointers were AI slop and were dropped) |

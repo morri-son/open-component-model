@@ -66,9 +66,11 @@ Each beat below carries:
 
 ## 1. Hero
 
-**Title:** Three minutes from now, you'll know what your supply chain doesn't.
-**Subtitle:** A new model for delivering software the auditor can verify, the operator can run, and the regulator already requires.
+**Title:** Your supply chain has blind spots.
+**Subtitle:** Three minutes from now, you'll know what they are.
 **Lockup:** Open Component Model — open source, NeoNephos Foundation.
+
+> *Hero convention:* maximum 2 lines on title, never 3. Earlier draft used the 11-word *"Three minutes from now, you'll know what your supply chain doesn't"* as the entire title — abandoned because three lines at 115pt reads as overwhelming. The original concept was decomposed: stake → title, time-bound promise → subtitle.
 ---
 
 ## 2. Why now — two pressures, one answer

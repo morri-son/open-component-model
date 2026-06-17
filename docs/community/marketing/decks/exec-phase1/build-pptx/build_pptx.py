@@ -481,27 +481,27 @@ def build():
     prs = open_template_as_pptx()
     layouts = layouts_by_name(prs)
 
-    expected = {"Hero", "Hero / 3-Line", "CTA", "Content / 3-Column",
+    expected = {"Hero", "CTA", "Content / 3-Column",
                 "Content / Diagram", "Content / Tiles", "Content / 2-Column",
                 "Section Divider", "Plain", "Plain / Compact"}
     missing = expected - set(layouts)
     if missing:
         sys.exit(f"template missing expected layouts: {missing}")
 
-    # ---- SLIDE 1 — HERO (cold-room canonical, locked Phase 1 2026-06-17) ----
-    # Use Hero / 3-Line: the 8-word title splits naturally into three short
-    # phrases. Three distinct placeholders at 115pt give us tight inter-line
-    # margin (~150px center-to-center) without auto-shrink or auto-wrap fights.
-    s = prs.slides.add_slide(layouts["Hero / 3-Line"])
+    # ---- SLIDE 1 — HERO (cold-room canonical, revised 2026-06-17) -----------
+    # Stake-led title + spannungs-subtitle. The original 11-word "Three minutes
+    # from now, you'll know what your supply chain doesn't" was decomposed:
+    # the *stake* lands in the title, the *time-bound promise* lands in the
+    # subtitle. Title fits cleanly on ONE line at 115pt; the gradient sits on
+    # a short second-line noun for visual punch.
+    s = prs.slides.add_slide(layouts["Hero"])
     add_banner_full_bleed(s, THEME_DIR / "OCM-Banner.png")
-    set_text(s, 1, "Three minutes from now,", color=C.WHITE)
-    set_text(s, 2, "you'll know what your", color=C.WHITE)
-    set_split_gradient_title(s, 3, prefix="", noun="supply chain doesn't")
-    set_text(s, 4,
-             "A new model for delivering software the auditor can verify, "
-             "the operator can run, and the regulator already requires.",
+    set_text(s, 1, "Your supply chain has", color=C.WHITE)
+    set_split_gradient_title(s, 2, prefix="", noun="blind spots.")
+    set_text(s, 3,
+             "Three minutes from now, you'll know what they are.",
              color=C.CYAN)
-    set_text(s, 5,
+    set_text(s, 4,
              "Open Component Model — open source, NeoNephos Foundation.",
              color=C.WHITE)
     add_brand_row(s)
@@ -522,11 +522,13 @@ def build():
                      "journey, or compliance is theatre.")
 
     # ---- SLIDE 3 — MEET OCM (hub-and-spoke diagram, Option 3 reframe) -------
+    # Diagram positioned per user spec 2026-06-17: 50.02 × 15.93 cm,
+    # x=-2.4cm (slight bleed left), y=11.65cm.
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "THE ANSWER")
     set_text(s, 2, "Meet OCM. One identity, every boundary.")
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
-                 x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
+                 x_px=-91, y_px=440, max_w_px=1890, max_h_px=602)
 
     # ---- SLIDE 4a — THE SHIFT, SBoD (text-only) -----------------------------
     s = prs.slides.add_slide(layouts["Plain / Compact"])
@@ -556,24 +558,27 @@ def build():
         add_diagram(s, diagram, x_px=195, y_px=415, max_w_px=1478, max_h_px=665)
 
     # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
-    # Disarms the "we already have cosign / SBOM / scripts" objection on the page.
-    # Three columns reuse the Content / 3-Column layout (same as slide 2).
+    # Disarms three "we already have this" objections on one slide:
+    # signing, transport, compliance. Each column says "what you have today"
+    # then "what OCM adds" — OCM doesn't replace, it composes around them.
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "HOW OCM COMPOSES")
-    set_text(s, 2, "OCM doesn't replace your tools. It gives them something to sign together.")
-    set_text(s, 10, "KEYLESS (SIGSTORE) / KEY-BASED (YOUR PKI)")
-    set_text(s, 11, "Only signs one artifact. OCM gives them the complete "
-                     "SBoD to sign. One signature, covering every artifact "
-                     "in the delivery, by digest. Your existing keys still work.")
-    set_text(s, 12, "YOUR SBOM TOOL OR FORMAT (SYFT, CYCLONEDX, SPDX)")
-    set_text(s, 13, "Lists what's in your software. The SBoD contains or "
-                     "references it. Your SBOM tool is unchanged; the SBOM "
-                     "now travels with the signature.")
-    set_text(s, 14, "A BIT OF OCI + SIGSTORE + YOUR OWN SCRIPTS")
-    set_text(s, 15, "Can almost get you there, in pieces. OCM is the "
-                     "standardised version, openly governed, with conformance "
-                     "tests and the SBoD vocabulary your auditors are "
-                     "starting to expect.")
+    set_text(s, 2, "OCM doesn't replace your tools. It gives them an envelope to compose around.")
+    set_text(s, 10, "SIGNING")
+    set_text(s, 11, "Keyless (Sigstore) or key-based (your PKI) signs one "
+                     "artifact at a time. OCM gives them the complete SBoD "
+                     "to sign — one signature covers every artifact in the "
+                     "delivery, by digest.")
+    set_text(s, 12, "TRANSPORT")
+    set_text(s, 13, "Helm registries, S3, OCI — each moves artifacts. OCM "
+                     "moves a signed envelope across any boundary: registry "
+                     "to registry, registry to air-gapped archive. The "
+                     "signature travels intact.")
+    set_text(s, 14, "COMPLIANCE")
+    set_text(s, 15, "Trivy, Grype, your SBOM tools — each scans in isolation. "
+                     "OCM (via Open Delivery Gear) correlates every finding "
+                     "by component identity. Compliance is a system output, "
+                     "not a quarterly project.")
 
     # ---- SLIDE 6 — OCM IN ONE PICTURE (was slide 5) -------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])

@@ -6,15 +6,14 @@ theme and 8 named slide layouts ready for any deck.
 Layouts (ordered as they'll appear in the Slide Master):
 
     1. Hero               — full-bleed banner + title (1 line + gradient noun line) + subtitle + brand row
-    2. Hero / 3-Line      — full-bleed banner + title across THREE distinct lines (line 3 gradient) + subtitle + brand row
-    3. CTA                — dark backdrop + title + 3-item bullet list + brand row
-    4. Content / 3-Column — eyebrow + title + three columns w/ blue rules
-    5. Content / Diagram  — eyebrow + title + image area
-    6. Content / Tiles    — eyebrow + title + 3x2 grid of grey tiles
-    7. Content / 2-Column — eyebrow + title + two-column body
-    8. Section Divider    — solid blue background + centered large title
-    9. Plain              — eyebrow + title + free body (body y=580, for 2-line titles)
-   10. Plain / Compact    — like Plain, but body y=520 (for 1-line titles)
+    2. CTA                — dark backdrop + title + 3-item bullet list + brand row
+    3. Content / 3-Column — eyebrow + title + three columns w/ blue rules
+    4. Content / Diagram  — eyebrow + title + image area
+    5. Content / Tiles    — eyebrow + title + 3x2 grid of grey tiles
+    6. Content / 2-Column — eyebrow + title + two-column body
+    7. Section Divider    — solid blue background + centered large title
+    8. Plain              — eyebrow + title + free body (body y=580, for 2-line titles)
+    9. Plain / Compact    — like Plain, but body y=520 (for 1-line titles)
 
 Theme colors (OCM canonical, deck-spec palette confirmed against the Marp
 reference render):
@@ -436,13 +435,13 @@ def layout_hero() -> bytes:
       - Org line       y=860  h=60
 
     Use this layout when the hero title fits cleanly on TWO lines at 115pt.
-    For three-line hero titles, use the `Hero / 3-Line` layout instead — it
-    provides three distinct title placeholders so authors don't fight
-    auto-wrap or auto-shrink behavior.
+    Convention: hero titles are at most TWO lines, never three. If a title
+    needs three lines, the title is too long — shorten it and push the rest
+    into the subtitle.
     """
     shapes = []
     shapes.append(make_textbox(
-        "Hero Title Line 1", 10, 96, 160, 1700, 200,
+        "Hero Title Line 1", 10, 96, 200, 1700, 140,
         placeholder_type="title", placeholder_idx=1,
         default_text="Secure Delivery for",
         size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
@@ -450,7 +449,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Title Line 2", 11, 96, 380, 1700, 160,
+        "Hero Title Line 2", 11, 96, 350, 1700, 140,
         placeholder_type="body", placeholder_idx=2,
         default_text="Sovereign Clouds",
         size_pt=115, bold=True, color_hex="5CD6FF", algn="l",
@@ -458,7 +457,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Subtitle", 12, 96, 600, 1700, 120,
+        "Hero Subtitle", 12, 96, 530, 1700, 90,
         placeholder_type="body", placeholder_idx=3,
         default_text="Subtitle — one sentence describing the deck.",
         size_pt=30, color_hex="5CD6FF", algn="l",
@@ -466,7 +465,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Org Line", 13, 96, 860, 1700, 60,
+        "Hero Org Line", 13, 96, 660, 1700, 60,
         placeholder_type="body", placeholder_idx=4,
         default_text="Open Component Model — open source, NeoNephos Foundation.",
         size_pt=24, color_hex="FFFFFF", algn="l",
@@ -475,72 +474,14 @@ def layout_hero() -> bytes:
     return wrap_layout("title", "Hero", shapes_xml(*shapes), bg_hex="0A1530")
 
 
-# -- Layout 1b: Hero / 3-Line ------------------------------------------------
-
-def layout_hero_3line() -> bytes:
-    """Three-line hero layout — for titles that need to wrap to three rows
-    at 115pt without PowerPoint shrinking the type or letting an auto-wrap
-    decide the line break.
-
-    Title lives in THREE distinct placeholders, one per line, each set to
-    115pt with no_autofit. Line 3 carries the OCM gradient (operative noun).
-
-    Inter-line gap: ~150px center-to-center. At 115pt Aptos Display the
-    cap-height is ~115px, so a 150px row pitch reads as one continuous
-    sentence rather than three separated phrases.
-
-    Vertical layout (slide 1080 tall, banner is full-bleed background):
-      - Title line 1            y=120  h=140   (115pt white)
-      - Title line 2            y=270  h=140   (115pt white)
-      - Title line 3 (gradient) y=420  h=140   (115pt gradient noun)
-      - Subtitle                y=620  h=120
-      - Org line                y=860  h=60
-
-    Use this layout when the hero copy splits naturally into three short
-    phrases — typical for the cold-room opener "Three minutes from now, /
-    you'll know what your / supply chain doesn't".
-    """
-    shapes = []
-    shapes.append(make_textbox(
-        "Hero Title Line 1", 10, 96, 120, 1700, 140,
-        placeholder_type="title", placeholder_idx=1,
-        default_text="Three minutes from now,",
-        size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
-        font="Aptos Display",
-        no_autofit=True,
-    ))
-    shapes.append(make_textbox(
-        "Hero Title Line 2", 11, 96, 270, 1700, 140,
-        placeholder_type="body", placeholder_idx=2,
-        default_text="you'll know what your",
-        size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
-        font="Aptos Display",
-        no_autofit=True,
-    ))
-    shapes.append(make_textbox(
-        "Hero Title Line 3 (Gradient)", 12, 96, 420, 1700, 140,
-        placeholder_type="body", placeholder_idx=3,
-        default_text="supply chain doesn't",
-        size_pt=115, bold=True, color_hex="5CD6FF", algn="l",
-        font="Aptos Display",
-        no_autofit=True,
-    ))
-    shapes.append(make_textbox(
-        "Hero Subtitle", 13, 96, 620, 1700, 120,
-        placeholder_type="body", placeholder_idx=4,
-        default_text="Subtitle — one sentence describing the deck.",
-        size_pt=30, color_hex="5CD6FF", algn="l",
-        line_spacing_pct=1.15,
-        no_autofit=True,
-    ))
-    shapes.append(make_textbox(
-        "Hero Org Line", 14, 96, 860, 1700, 60,
-        placeholder_type="body", placeholder_idx=5,
-        default_text="Open Component Model — open source, NeoNephos Foundation.",
-        size_pt=24, color_hex="FFFFFF", algn="l",
-        no_autofit=True,
-    ))
-    return wrap_layout("title", "Hero / 3-Line", shapes_xml(*shapes), bg_hex="0A1530")
+# -- Layout 1b: (removed) Hero / 3-Line --------------------------------------
+#
+# A three-line hero layout was prototyped in 2026-06-17 to support an 11-word
+# cold-room opener title that wouldn't fit in the standard two-line Hero. It
+# was abandoned the same day: the visual mass of three 115pt title lines on
+# slide 1 reads as overwhelming, not crisp. Hero convention going forward:
+# **maximum two lines, never three.** If a title needs three lines, the
+# title is too long — shorten the title, push the rest into the subtitle.
 
 
 # -- Layout 2: CTA ------------------------------------------------------------
@@ -608,13 +549,12 @@ def layout_three_column() -> bytes:
             no_autofit=True,
         ))
         next_id += 1
-        # Body. Sits below a 2-line-tall header (header height 56 + 16 top
-        # padding = 72). Extra 28px gap before the body so 2-line headers
-        # (e.g. "KEYLESS (SIGSTORE) / KEY-BASED (YOUR PKI)") don't crowd the
-        # body text — slide 2's 1-line headers and slide 5's 2-line headers
-        # both render with the same visual breathing room.
+        # Body. Sits below a 1-line header (16 top padding + 56 box = 72) with
+        # a 12px gap before the body. Convention: column headers stay on
+        # ONE line; 2-line headers force a tradeoff between eyebrow-header
+        # and header-body spacing that no single layout can satisfy.
         shapes.append(make_textbox(
-            f"Col{i+1} Body", next_id, cx, col_y + 100, col_w, 444,
+            f"Col{i+1} Body", next_id, cx, col_y + 84, col_w, 460,
             placeholder_type="body", placeholder_idx=11 + i * 2,
             default_text=f"Column {i+1} body. Replace with one or two short sentences.",
             size_pt=22, color_hex="000000",
@@ -835,7 +775,6 @@ _picture_placeholder.__name__ = "_picture_placeholder"
 
 LAYOUTS = [
     ("Hero",                "title",   layout_hero),
-    ("Hero / 3-Line",       "title",   layout_hero_3line),
     ("CTA",                 "obj",     layout_cta),
     ("Content / 3-Column",  "obj",     layout_three_column),
     ("Content / Diagram",   "obj",     layout_diagram),
