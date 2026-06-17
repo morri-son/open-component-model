@@ -1,212 +1,143 @@
-# Handoff — content variants for the OCM exec deck
+# Handoff — peer review of OCM exec-deck content options
 
 **Repo root:** `/Users/D032990/.cline/worktrees/marketing-recovery/open-component-model`
 **Working dir:** `docs/community/marketing/`
 **Branch:** `marketing/spike-deck`
-**Picks up from:** 2026-06-16, late evening
+**Picks up from:** 2026-06-17, late morning
 
 ## What this session is about
 
-**Content, not design.** Build multiple variant exec decks from the rework options in:
+You are stepping in as a **second marketing chief reviewing what the first one produced.** The first round generated narrative + critique + content/diagram option menus. The user wants a fresh, independent set of eyes on that material *before* any new deck variants get built.
 
-- `docs/community/marketing/EXEC-DECK-REWORK-OPTIONS.md` — 3–4 alt framings per slide (risk-led / ROI-led / peer-led / regulator-led)
-- `docs/community/marketing/MARKETING-CRITIQUE-EXEC.md` — 15-issue critique + scorecard + top-5 fixes
+**Phase 1 — peer review (do this first).** Read the existing artifacts, push back, surface gaps, sharpen weak framings. Output is feedback, not a rewrite.
 
-The user wants to pit the variants against each other to pick the strongest narrative. **Design is frozen for this round** — no layout, color, font, or coordinate changes unless the user asks.
+**Phase 2 — variants (only after the user agrees Phase 1 has converged).** Build multiple deck variants in Marp, one `.md` per audience/framing, so they can be compared side by side. **Including a new variant the first chief did not consider:** internal-sponsor exec (see below).
 
-## The design rules (do not violate)
+The user is the project owner. They want sharp critique, not validation theatre.
 
-1. **Slides are EITHER text OR diagram, never both.** That's why slide 4 splits into 4a (text) + 4b (diagram), and slide 6 (Sovereign-Ready) splits into 6a (text) + 6b (diagram). When an OPTIONS variant mixes content, split the slide.
-2. **Eyebrow never wraps to 2 lines.** Keep eyebrow text terse.
-3. **1-line title vs 2-line title get DIFFERENT layouts.** See "Layout choice" below.
+## Phase 1: artifacts to review (read these in order)
+
+All in `docs/community/marketing/`:
+
+1. **`NARRATIVE.md`** (201 lines) — locked narrative. The thesis the deck must serve. Treat as ground truth unless review surfaces a tension.
+2. **`NARRATIVE-AT-A-GLANCE.md`** (47 lines) — one-page version. Sanity-check the long form against this.
+3. **`MARKETING-CRITIQUE-EXEC.md`** (240 lines) — first chief's critique of the v1 deck: 15-issue list, scorecard, top-5 fixes. Is the critique itself sharp, or is it polite?
+4. **`EXEC-DECK-REWORK-OPTIONS.md`** (478 lines) — alt framings per slide: risk-led / ROI-led / peer-led / regulator-led. The menu the variants will be picked from. **Highest-leverage doc to review.** Are these four the right axes? Are any framings weak? What's missing?
+5. **`CONTENT-OPTIONS.md`** (371 lines) — older, more granular wording options. Still useful?
+6. **`DIAGRAM-OPTIONS.md`** (121 lines) — catalog of 7 diagram variants. Per the user, design is frozen for this round, but if a diagram is named in critique it matters.
+
+Read everything once before commenting. Do not edit any of them in Phase 1 — produce a review document.
+
+## What "peer review" means concretely
+
+You are not a yes-person. Push hard on:
+
+- **Audience clarity.** Who is each framing actually for? "Exec" is too coarse. CTO ≠ CISO ≠ Head of Platform ≠ Procurement.
+- **Proof asymmetry.** Where do claims outrun evidence? Where is evidence buried?
+- **The "so what" gap.** When a slide tells the audience something true, does it tell them what to *do* with it?
+- **Competitive framing.** Where does the deck assume the audience already wants OCM vs. selling against status quo?
+- **Honest weaknesses.** Where would a hostile reviewer (a competitor, a skeptical CIO, an open-source skeptic) attack? Are those addressed or dodged?
+- **Cross-doc coherence.** Does `EXEC-DECK-REWORK-OPTIONS.md`'s framing actually serve `NARRATIVE.md`'s thesis, or do they pull in different directions?
+- **Missing axes.** The four axes in REWORK-OPTIONS (risk / ROI / peer / regulator) are framings the *first chief saw*. What did they miss?
+
+The first chief's critique is in `MARKETING-CRITIQUE-EXEC.md` — read it, then ask: what did they *not* say?
+
+## The new variant the first chief did not consider
+
+The first chief's `EXEC-DECK-REWORK-OPTIONS.md` implicitly assumes **external audience** — execs at companies considering adoption.
+
+The user is a senior engineer at OCM's **main corporate sponsor** (SAP). They need a deck for **internal-sponsor execs** — the people inside the sponsoring company who decide whether to keep funding, expand, or scale OCM investment.
+
+Different audience, even if both are "execs":
+
+| | External exec | Internal-sponsor exec |
+|---|---|---|
+| Decision | adopt / evaluate / sponsor | keep funding / expand / scale |
+| Wants to hear | "this is safe to bet on" | "this is paying off / this is strategic" |
+| Proof points | peer logos, regulator pressure, ROI | internal traction, ecosystem leverage, strategic fit (sovereignty agenda, NeoNephos), customer wins enabled by OCM |
+| Competitive framing | OCM vs. status quo / vs. proprietary | what we lose if we walk away, what competitors gain |
+| Risk language | "risk of inaction" | "risk of disinvestment / loss of position" |
+
+Treat **internal-sponsor exec** as a fifth framing axis to compare against the first chief's four. The peer review should land an opinion: is this axis distinct enough to deserve its own variant deck, or is it close enough to one of the existing four that a small overlay suffices?
+
+## Phase 1 deliverable
+
+Write `MARKETING-PEER-REVIEW.md` in `docs/community/marketing/` containing:
+
+1. **Cross-doc coherence read** — do narrative / critique / options pull together or apart?
+2. **Per-framing critique** of REWORK-OPTIONS (risk / ROI / peer / regulator) — strengths, weaknesses, audience fit.
+3. **Internal-sponsor framing** — proposed scope, key proof points, what's distinct from the four existing.
+4. **Gaps the first chief missed** — framings, proof points, audiences, objections.
+5. **Top-5 sharpening recommendations** — concrete edits to REWORK-OPTIONS or NARRATIVE before variants are built.
+
+Then **stop and discuss with the user.** Do not start Phase 2 until they agree Phase 1 has landed.
+
+## Phase 2 (only after Phase 1 converges): build variants in Marp
+
+The Marp content playground is fully wired up:
+
+```
+docs/community/marketing/decks/exec-phase1/marp/
+├── .marprc.yml
+├── build.sh             ./build.sh [slides.md] [norender|noserve]
+├── theme/ocm-master.css 1920×1080, tokens aligned with OCM-Master.potx
+├── slides.md            baseline 10-slide deck (mirrors current build_pptx.py)
+└── README.md
+```
+
+Build cycle:
+
+```bash
+cd docs/community/marketing/decks/exec-phase1/marp
+./build.sh                       # renders slides.md, serves on :8080, opens browser
+./build.sh slides-roi.md         # renders a variant
+./build.sh slides.md noserve     # render only
+```
+
+Render output is `marp/slides.html` (next to `slides.md`, not in `dist/` — paths break otherwise). Server is at repo root so `../../../assets/...` resolves.
+
+**Per-variant pattern:** `slides-risk.md`, `slides-roi.md`, `slides-peer.md`, `slides-regulator.md`, `slides-internal-sponsor.md`. Same theme, same canvas, same layouts; only copy + slide order change.
+
+**Don't write all variants up-front.** Pick the highest-leverage 1–2 from Phase 1's recommendations, generate, get user feedback, then expand.
+
+**Marp is iteration only.** The brand-correct PPTX is built by `decks/exec-phase1/build-pptx/build_pptx.py` against `OCM-Master.potx` — not by Marp's pptx export. When copy is locked, port to python-pptx.
+
+## Constraints (do not violate)
+
+- **Slides are EITHER text OR diagram, never both.** That's why slide 4/6 split into 4a+4b and 6a+6b. Mixing forces a split.
+- **Eyebrow never wraps to 2 lines.** Keep eyebrow text terse.
+- **1-line vs 2-line title use different layouts** (Plain / Compact at body y=520 vs Plain at y=580). The Marp theme handles this via `_class:` directives.
+- **Design is frozen.** No layout, color, font, or coordinate changes. If a variant truly needs a new layout, ask the user first.
 
 ## Build state
 
-```
-decks/exec-phase1/build-pptx/
-├── build_potx.py     → ../OCM-Master.potx          (9 layouts, theme, brand)
-├── build_pptx.py     → ../OCM-Sovereign-Delivery-Exec.pptx (12-slide deck)
-└── .venv/            (python-pptx + Pillow)
-```
-
-`rsvg-convert` (homebrew `librsvg`) needed for SVG→PNG.
-
-```bash
-cd decks/exec-phase1/build-pptx
-.venv/bin/python build_potx.py     # template
-.venv/bin/python build_pptx.py     # deck
-```
-
-Both must run in that order. The pptx loads layouts from the potx.
-
-**Before rebuilding, check for `~$*.pptx` lockfiles in `decks/exec-phase1/`** — saving over an open file has corrupted state in earlier rounds. Ask the user to close PowerPoint first.
-
-## Current 12-slide deck (the baseline)
-
-| # | Layout | Title | Notes |
-|---|---|---|---|
-| 1 | Hero | "Secure Delivery for Sovereign Clouds" | line 2 full gradient white→cyan→blue, 115pt |
-| 2 | 3-Column | WHY NOW | columns gutter 56 |
-| 3 | Diagram | THE PAIN | 2-line title; **diagram is ugly per user — pending decision** |
-| 4a | Plain / Compact | THE SHIFT — SBoD | 1-line title, blue ▪ bullets |
-| 4b | Diagram | THE SHIFT — SBOM INSIDE SBoD | "Software Bill of Delivery" aligned with SBOM box |
-| 5 | Diagram | OCM IN ONE PICTURE | pack/sign/transport/deploy; lock centered in cloud |
-| 6a | Plain / Compact | SOVEREIGN-READY | 1-line title, blue ▪ bullets |
-| 6b | Diagram | SOVEREIGN-READY — AIR-GAP | "Identity stays" moved below crossing arrow |
-| 7 | Plain | SCAN — Compliance-native | **2-line title**, blue ▪ bullets, body y=580 |
-| 8 | Tiles | WHAT OCM UNLOCKS | 3×2 grid |
-| 9 | Plain | TRUSTED IN PRODUCTION | logo wall; body placeholder deleted; uniform-height logos |
-| 10 | CTA | Start delivering with confidence. | white title + cyan action labels + white path text |
-
-## Layout choice (1-line vs 2-line title)
-
-The .potx has 9 layouts. Two of them differ ONLY in body Y-position to compensate for title wrap:
-
-| Layout | Body y | Use when |
-|---|---|---|
-| **Plain / Compact** | 520 | Title is 1 line — body sits close under title |
-| **Plain** | 580 | Title is 2 lines — body has 60px extra headroom |
-
-When you write a new variant slide:
-- Title fits on 1 line → `prs.slides.add_slide(layouts["Plain / Compact"])`
-- Title wraps to 2 lines → `prs.slides.add_slide(layouts["Plain"])`
-
-For diagram slides the **Content / Diagram** layout has body y=520, fine for 1-line titles. If a variant needs a 2-line title with a diagram, you'll need to add a **Content / Diagram (Tall)** variant — copy the pattern from `layout_plain_compact()` in `build_potx.py`.
-
-The full layout list:
-**Hero · CTA · Content / 3-Column · Content / Diagram · Content / Tiles · Content / 2-Column · Section Divider · Plain · Plain / Compact**.
-
-## Design tokens (frozen)
-
-Baked into `build_potx.py`. **Do not change.**
-
-- Slide size **1920 × 1080**, 96 dpi → 1 px = 9525 EMU
-- Margins x=**120**, content width **1680**
-- Eyebrow y=**255**, h=48, **28pt** OCM blue (#0F6BFF), ALL CAPS, letter-spacing 1.4 — **never wrap**
-- Title y=**308**, h=200, **64pt** Aptos Display, line_spacing_pct=**0.9**
-- Content y=**520** (Compact / Diagram / Tiles / 2-Column / 3-Column), or **580** (Plain only)
-- Footer y=**1048** — do not move
-- 3-Column: gutter **56**, column header **20pt blue**, body **22pt**
-- Tiles: 544 × 230, gutter 24, body 18pt
-- 2-Column body 22pt, Plain body 22pt
-- Hero: title 115pt both lines, line 2 gradient, subtitle 36pt cyan, org line 28pt white
-- CTA: white title (no gradient); action label cyan + bold, " — path" white
-
-## Helpers in build_pptx.py
-
-| Helper | Purpose |
+| File | Purpose |
 |---|---|
-| `set_text(s, idx, text, color=)` | plain text into a placeholder |
-| `set_blue_box_bullets(s, idx, items)` | blue ▪ + black text per item |
-| `set_split_gradient_title(s, idx, prefix, noun)` | hero — prefix white, noun gradient (use prefix="" + noun=full string for whole-line gradient) |
-| `set_gradient_title(s, idx, text)` | whole title gradient (currently unused — CTA reverted to plain white) |
-| `set_action_path_lines(s, idx, [(action, path)])` | CTA body — action cyan, " — path" white |
-| `delete_placeholder(s, idx)` | remove a layout-supplied placeholder cleanly |
-| `add_diagram(s, svg, x_px, y_px, max_w_px, max_h_px)` | rasterise SVG, embed; **also auto-deletes the layout's empty pic placeholder** so the dotted "Bild einfügen" outline doesn't appear next to the picture |
-| `add_tile_icon(s, tile_x, tile_y, name)` | tile icons from `diagrams/icons/` |
-| `add_logo_row(s, logos, y_px, ...)` | uniform-height logo row (slide 9) |
+| `decks/exec-phase1/build-pptx/build_potx.py` | emits `OCM-Master.potx` (9 layouts, brand theme) |
+| `decks/exec-phase1/build-pptx/build_pptx.py` | emits the brand-correct `OCM-Sovereign-Delivery-Exec.pptx` from the .potx |
+| `decks/exec-phase1/marp/` | Marp content playground (this session works here in Phase 2) |
+| `decks/exec-phase1/POWERPOINT-FINISHING-CHECKLIST.md` | manual touch-ups python-pptx can't do |
 
-## Building variant decks
+**Do not modify** `build_potx.py` or `build_pptx.py` in this session — they are downstream.
 
-User wants **multiple decks** from EXEC-DECK-REWORK-OPTIONS.md. Suggested structure:
+## What was settled in the previous session
 
-```
-decks/exec-phase1/
-├── build-pptx/
-│   ├── build_pptx.py            ← current baseline
-│   ├── build_pptx_risk.py       ← risk-led variant
-│   ├── build_pptx_roi.py        ← ROI-led variant
-│   ├── build_pptx_peer.py       ← peer-led variant
-│   └── build_pptx_regulator.py  ← regulator-led variant
-└── OCM-Sovereign-Delivery-Exec-{risk,roi,peer,regulator}.pptx
-```
+- Marp setup retargeted to 1920×1080, tokens aligned with `build_potx.py`.
+- `slides.md` mirrors the 10-slide baseline as authored by `build_pptx.py`.
+- HTML render works, server resolves images correctly.
+- Marp's pptx export is **not** used. Final pptx always comes from python-pptx + .potx.
 
-Each script reads the same `OCM-Master.potx` and emits a different .pptx. If the helpers grow, factor `build_pptx.py` into a reusable module (e.g. `deck_helpers.py`).
+Don't redo any of this. Don't second-guess the Marp setup; if a variant breaks, the fix is content, not pipeline.
 
-**Don't write all four variants up-front.** Pick the highest-leverage 1-2 first, generate, get user feedback, then expand.
+## Suggested skills for the new session
 
-## Immediate task — slide 3 (THE PAIN)
+- **`grill-with-docs`** — stress-test the existing options against `NARRATIVE.md` and the docs the first chief produced. Best fit for Phase 1.
+- **`grill-me`** — if the user wants to be interviewed about audience/positioning before you review, run this first to extract their priors.
+- **`double-check`** — after writing `MARKETING-PEER-REVIEW.md`, run this against it to catch hand-waving and unjustified assertions.
 
-User feedback (from earlier session):
+## Open questions to confirm with the user before Phase 2
 
-> "Slide 3 with the pain only has a diagram and the diagram is ugly. It does not tell much."
-
-Slide 3 also has a 2-line title which currently uses the Diagram layout (body y=520). Three open paths:
-
-1. Drop `03-fragmented.svg`. Rewrite slide 3 as text-only on **Plain** (since title is 2-line). Pull friction language from MARKETING-CRITIQUE-EXEC.md.
-2. Replace the diagram. There are no v2/v3 alternatives for slide 3 (unlike 04/05/06).
-3. Defer until content variants are picked — the framing in EXEC-DECK-REWORK-OPTIONS.md may change what slide 3 *means*.
-
-Recommend (1).
-
-## Reference docs (don't modify unless asked)
-
-In `docs/community/marketing/`:
-
-- `MARKETING-CRITIQUE-EXEC.md` — strategist read; top-5 fixes is a good entry point
-- `EXEC-DECK-REWORK-OPTIONS.md` — alt framings per slide (the menu)
-- `TECHNICAL-DECK-OUTLINE.md` + `TECHNICAL-DECK-CONTENT.md` — practitioner deck, not built yet
-- `CONTENT-OPTIONS.md` — older, more granular wording options
-- `DIAGRAM-OPTIONS.md` — catalog of 7 diagram variants
-- `NARRATIVE.md` + `NARRATIVE-AT-A-GLANCE.md` — locked narrative
-- `decks/exec-phase1/POWERPOINT-FINISHING-CHECKLIST.md` — manual touch-ups python-pptx can't do
-
-## What was changed this session (latest first)
-
-1. **Two-tier Plain layout** — added `Plain / Compact` (body y=520) for 1-line titles; existing `Plain` stays at y=580 for 2-line titles. Slides 4a and 6a switched to Plain / Compact.
-2. **Slide 9 (SCAN) body** — `Plain` body y=520→580 to clear the 2-line title.
-3. **Slide 8 (airgap) "Identity stays" label** — moved below the crossing arrow in `06-sovereign-airgap.svg` to prevent overlap with TRUST BOUNDARY.
-4. **Slide 6 cloud-lock** — lock recentered vertically inside the cloud silhouette in `05-pack-sign-transport-deploy-v2.svg`.
-5. **Slide 5/6/8 dotted "Bild einfügen" outline** — `add_diagram()` now calls `delete_placeholder(s, 10)` before adding the picture, removing the empty Diagram-layout pic placeholder.
-6. **Diagrams max_h 480→520** — fills the available content area below the title.
-7. **Slide 11 (logo wall)** — `add_logo_row` now sizes each logo to a uniform height (max_h=80) so SAP no longer dominates; rows pushed further from labels.
-8. **CTA title** — gradient removed, plain white. Action labels swapped from blue → cyan (`#5CD6FF`).
-9. **Slide 2 title** — "WHY NOW — V1 · SOVEREIGNTY-LED" → "WHY NOW".
-10. **Slide 2 columns** — gutter 32→56 for leaner column block.
-11. **Hero gradient** — `set_split_gradient_title(s, 2, prefix="", noun="Sovereign Clouds")` so the gradient spans the full noun phrase, not just "Clouds".
-12. **Title line spacing** — added `line_spacing_pct=0.9` on all title placeholders (titles wrapping to 2 lines no longer waste vertical space). Title h grew 130→200 to fit 2 lines comfortably.
-13. **Eyebrow size** — 18→28pt, h 32→48.
-14. **Body sizes** — column headers 16→20, column body 18→22, 2-col body 18→22, tile body 12→18.
-15. **SBoD label aligned** — `04-sbom-inside-sbod.svg` "SOFTWARE BILL OF DELIVERY" x=120→140 to align with SBOM box left edge.
-16. **Rocket icon redrawn** in `05-pack-sign-transport-deploy-v2.svg` (was a fountain pen-looking shape).
-
-## What NOT to do
-
-- **Don't** mix text + diagram on a single slide. Split into two.
-- **Don't** restart from a fresh `Presentation()`. The .potx is canonical.
-- **Don't** re-derive the palette. It's `#0F6BFF / #0A3A99 / #5CD6FF / #0A1530 / #6B7280 / #F3F4F6 / #000 / #FFF`.
-- **Don't** change layout coordinates, token sizes, or color usage — design is frozen.
-- **Don't** add new master layouts unless content forces it (e.g. a needed Tall Diagram variant for a 2-line-title diagram slide).
-- **Don't** re-rasterise SVGs unless `_raster/` is missing files. Cache is mtime-keyed.
-- **Don't** save over an open .pptx. Check `~$*.pptx` lockfiles first; ask user to close.
-
-## Open questions for the new session
-
-1. Which framing(s) from EXEC-DECK-REWORK-OPTIONS.md does the user want first?
-2. Slide 3 (THE PAIN) — text-only or diagram replacement? Decision deferred to first variant work.
-3. Hero subtitle and org-line copy and CTA copy — assume constant across variants unless user says otherwise.
-4. Naming convention for variant `.pptx` files — confirm with user before generating.
-
-## Build / verify cycle
-
-```bash
-cd decks/exec-phase1/build-pptx
-
-# 1. Rebuild template (only if you changed build_potx.py)
-.venv/bin/python build_potx.py
-
-# 2. Rebuild a deck variant
-.venv/bin/python build_pptx.py
-# or
-.venv/bin/python build_pptx_<variant>.py
-
-# 3. Visual check in PowerPoint. Critical: hero gradient on line 2 of title;
-#    bullets are blue ▪; eyebrow doesn't wrap; title doesn't wrap to 3+ lines;
-#    no "Bild einfügen" prompt next to embedded diagrams.
-```
-
-If you see a `~$<name>.pptx` lockfile, ask the user to close the file first.
-
-## Reference: the Marp dist deck
-
-`decks/exec-phase1/dist/preview.NNN.png` are 720p previews of an older Marp render. Useful as a "does this framing tell the story?" benchmark. **Not** a layout reference — our 1080p .pptx has its own coords.
+1. Audience for the **internal-sponsor** variant — SAP exec board, line-of-business heads, OCC steering, all of the above?
+2. Naming convention for variant `.pptx` files when Phase 2 produces them.
+3. Hero subtitle, org-line copy, and CTA copy — assume constant across variants unless user says otherwise.
+4. Is the locked `NARRATIVE.md` actually locked, or open to revision if peer review surfaces a problem?
