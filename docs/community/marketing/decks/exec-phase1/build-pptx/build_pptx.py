@@ -551,7 +551,9 @@ def build():
         DIAGRAMS_DIR / "04-sbom-vs-sbod.svg",
     )
     if diagram:
-        add_diagram(s, diagram, x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
+        # Slide 4b diagram positioned per user spec 2026-06-17:
+        # 39.09 × 17.59 cm at x=5.15cm, y=10.99cm.
+        add_diagram(s, diagram, x_px=195, y_px=415, max_w_px=1478, max_h_px=665)
 
     # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
     # Disarms the "we already have cosign / SBOM / scripts" objection on the page.
