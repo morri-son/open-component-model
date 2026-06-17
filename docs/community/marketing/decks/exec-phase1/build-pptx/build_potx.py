@@ -609,9 +609,12 @@ def layout_three_column() -> bytes:
         ))
         next_id += 1
         # Body. Sits below a 2-line-tall header (header height 56 + 16 top
-        # padding = 72; we add a small gap before the body).
+        # padding = 72). Extra 28px gap before the body so 2-line headers
+        # (e.g. "KEYLESS (SIGSTORE) / KEY-BASED (YOUR PKI)") don't crowd the
+        # body text — slide 2's 1-line headers and slide 5's 2-line headers
+        # both render with the same visual breathing room.
         shapes.append(make_textbox(
-            f"Col{i+1} Body", next_id, cx, col_y + 84, col_w, 460,
+            f"Col{i+1} Body", next_id, cx, col_y + 100, col_w, 444,
             placeholder_type="body", placeholder_idx=11 + i * 2,
             default_text=f"Column {i+1} body. Replace with one or two short sentences.",
             size_pt=22, color_hex="000000",
