@@ -27,6 +27,9 @@ Conceptual: stacks pulling in different directions. Quick to read but light on s
 
 **My recommendation:** v3. Best mix of clarity and concision. v2 is the fallback if you want more technical specificity.
 
+### Phase-1 rework variant — `03-meet-ocm-hub-and-spoke.svg`
+Hub-and-spoke for the new Phase-1 slide 3 ("Meet OCM. One identity, every boundary."). OCM hex hub centred; three clearly-zoned spoke clusters fan out — left: artifact pills (OCI/Helm/npm/Binary/Config + a dashed `… any artifact type` 6th pill signalling the list is illustrative) on solid Brand-Blue spokes; right: regulator badges (DORA/NIS2/CRA — CRA replaces GDPR since CRA is on-thesis for software supply-chain governance) on dashed Brand-Blue-Mid spokes; bottom: deployment-boundary tiles (real EU and US flag glyphs, Sovereign Cloud with cloud-lock motif matching slide 5) on thick Brand-Blue-Night spokes. Artifact-types cluster header softened from "EVERY ARTIFACT TYPE" to "ARTIFACT TYPES" to avoid semantic collision with the open-ended `… any artifact type` pill. A single italic Brand-Blue-Mid footer line under the canvas reads *"plus FedRAMP/FISMA, BSI C5, SecNumCloud — and the regimes specific to your sector."* so the EU-bias of the right cluster doesn't read as the whole regulatory story. Each cluster carries a small eyebrow header so the eye reads three groupings, not 12 equal radials.
+
 ---
 
 ## Slide 4 — "SBoD contains the SBOM"

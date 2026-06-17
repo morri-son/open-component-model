@@ -365,12 +365,54 @@ def add_tile_icon(slide, tile_x_px: int, tile_y_px: int, icon_name: str):
     )
 
 
+def _crop_to_content(png_path: Path) -> Path:
+    """Crop trailing transparent / white margins off a logo PNG so that
+    `add_logo_row` can normalise on *content* height (not file height).
+
+    Without this step, logos that bake whitespace into the file (e.g. the
+    SAP-NS2 PNG, BwI's SVG with .de wordmark padding) render visibly smaller
+    next to logos that fill their bbox edge-to-edge (SAP, Platform Mesh).
+
+    Crops are always written into the local `_raster` cache (never back into
+    the assets tree, even when the input lives there).
+    """
+    from PIL import Image
+    out = RASTER_DIR / (png_path.stem + "_crop.png")
+    if out.exists() and out.stat().st_mtime >= png_path.stat().st_mtime:
+        return out
+    im = Image.open(png_path).convert("RGBA")
+    w, h = im.size
+    px_data = im.load()
+    left, top, right, bot = w, h, 0, 0
+    found = False
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px_data[x, y]
+            if a > 8 and not (r > 240 and g > 240 and b > 240):
+                found = True
+                if x < left: left = x
+                if x > right: right = x
+                if y < top: top = y
+                if y > bot: bot = y
+    if not found:
+        # Defensive fallback: nothing to crop, return original.
+        return png_path
+    im.crop((left, top, right + 1, bot + 1)).save(out)
+    return out
+
+
 def add_logo_row(slide, logos: list[Path], y_px: int,
                   row_h_px: int = 120,
                   max_logo_w_px: int = 320, max_logo_h_px: int = 80):
-    """Three logos centred in a row. Each logo is sized to a uniform height
-    (max_logo_h_px) so the row reads as visually consistent — wider logos
-    take more horizontal slot, but all share the same optical weight."""
+    """Three logos centred in a row, normalised on visible content height.
+
+    Each input logo is rasterised (or used directly for PNG) and then cropped
+    to its visible bounding box, so wordmarks with baked-in whitespace
+    (BwI's tall ".de" frame, the SAP-NS2 PNG, Gardener's tagline) render at
+    the same optical height as logos that already fill their bbox (SAP,
+    Platform Mesh). Final placement uses height-first normalisation with a
+    width cap as the safety net for very wide logos.
+    """
     margin_x = 160
     inner_w = SLIDE_W_PX - 2 * margin_x
     n = len(logos)
@@ -382,6 +424,9 @@ def add_logo_row(slide, logos: list[Path], y_px: int,
             img = rasterize_svg(path, target_w_px=max_logo_w_px * 2)
         else:
             img = path
+        # Crop to visible content so we normalise on logo height, not file
+        # height. Always go through this — even SVG output can carry padding.
+        img = _crop_to_content(img)
         slot_x = margin_x + i * slot_w
         # Add at native size, then scale to fit the height constraint first.
         pic = slide.shapes.add_picture(str(img), px(slot_x), px(y_px))
@@ -436,22 +481,27 @@ def build():
     prs = open_template_as_pptx()
     layouts = layouts_by_name(prs)
 
-    expected = {"Hero", "CTA", "Content / 3-Column", "Content / Diagram",
-                "Content / Tiles", "Content / 2-Column", "Section Divider",
-                "Plain", "Plain / Compact"}
+    expected = {"Hero", "Hero / 3-Line", "CTA", "Content / 3-Column",
+                "Content / Diagram", "Content / Tiles", "Content / 2-Column",
+                "Section Divider", "Plain", "Plain / Compact"}
     missing = expected - set(layouts)
     if missing:
         sys.exit(f"template missing expected layouts: {missing}")
 
-    # ---- SLIDE 1 — HERO -----------------------------------------------------
-    s = prs.slides.add_slide(layouts["Hero"])
+    # ---- SLIDE 1 — HERO (cold-room canonical, locked Phase 1 2026-06-17) ----
+    # Use Hero / 3-Line: the 8-word title splits naturally into three short
+    # phrases. Three distinct placeholders at 115pt give us tight inter-line
+    # margin (~150px center-to-center) without auto-shrink or auto-wrap fights.
+    s = prs.slides.add_slide(layouts["Hero / 3-Line"])
     add_banner_full_bleed(s, THEME_DIR / "OCM-Banner.png")
-    set_text(s, 1, "Secure Delivery for", color=C.WHITE)
-    set_split_gradient_title(s, 2, prefix="", noun="Sovereign Clouds")
-    set_text(s, 3,
-             "Deliver and deploy your software securely. Anywhere, at any scale.",
-             color=C.CYAN)
+    set_text(s, 1, "Three minutes from now,", color=C.WHITE)
+    set_text(s, 2, "you'll know what your", color=C.WHITE)
+    set_split_gradient_title(s, 3, prefix="", noun="supply chain doesn't")
     set_text(s, 4,
+             "A new model for delivering software the auditor can verify, "
+             "the operator can run, and the regulator already requires.",
+             color=C.CYAN)
+    set_text(s, 5,
              "Open Component Model — open source, NeoNephos Foundation.",
              color=C.WHITE)
     add_brand_row(s)
@@ -465,19 +515,18 @@ def build():
                      "sector, or air-gap — software must be deliverable, "
                      "verifiable, and operable inside it.")
     set_text(s, 12, "REGULATION TIGHTENING")
-    set_text(s, 13, "EU DORA · NIS2 · GDPR. Provable supply-chain control, "
+    set_text(s, 13, "EU DORA · NIS2 · CRA. Provable supply-chain control, "
                      "not best effort.")
     set_text(s, 14, "SUPPLY-CHAIN ATTACKS ARE REAL")
     set_text(s, 15, "SolarWinds. xz. log4shell. Signatures must survive the "
                      "journey, or compliance is theatre.")
 
-    # ---- SLIDE 3 — THE PAIN (diagram) ---------------------------------------
+    # ---- SLIDE 3 — MEET OCM (hub-and-spoke diagram, Option 3 reframe) -------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE PAIN")
-    set_text(s, 2, "Software delivery is fragmented.\n"
-                    "Compliance retrofits don't scale.")
-    add_diagram(s, DIAGRAMS_DIR / "03-fragmented.svg",
-                 x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
+    set_text(s, 1, "THE ANSWER")
+    set_text(s, 2, "Meet OCM. One identity, every boundary.")
+    add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
+                 x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
 
     # ---- SLIDE 4a — THE SHIFT, SBoD (text-only) -----------------------------
     s = prs.slides.add_slide(layouts["Plain / Compact"])
@@ -502,19 +551,39 @@ def build():
         DIAGRAMS_DIR / "04-sbom-vs-sbod.svg",
     )
     if diagram:
-        add_diagram(s, diagram, x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
+        add_diagram(s, diagram, x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
 
-    # ---- SLIDE 5 — OCM IN ONE PICTURE ---------------------------------------
+    # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
+    # Disarms the "we already have cosign / SBOM / scripts" objection on the page.
+    # Three columns reuse the Content / 3-Column layout (same as slide 2).
+    s = prs.slides.add_slide(layouts["Content / 3-Column"])
+    set_text(s, 1, "HOW OCM COMPOSES")
+    set_text(s, 2, "OCM doesn't replace your tools. It gives them something to sign together.")
+    set_text(s, 10, "KEYLESS (SIGSTORE) / KEY-BASED (YOUR PKI)")
+    set_text(s, 11, "Only signs one artifact. OCM gives them the complete "
+                     "SBoD to sign. One signature, covering every artifact "
+                     "in the delivery, by digest. Your existing keys still work.")
+    set_text(s, 12, "YOUR SBOM TOOL OR FORMAT (SYFT, CYCLONEDX, SPDX)")
+    set_text(s, 13, "Lists what's in your software. The SBoD contains or "
+                     "references it. Your SBOM tool is unchanged; the SBOM "
+                     "now travels with the signature.")
+    set_text(s, 14, "A BIT OF OCI + SIGSTORE + YOUR OWN SCRIPTS")
+    set_text(s, 15, "Can almost get you there, in pieces. OCM is the "
+                     "standardised version, openly governed, with conformance "
+                     "tests and the SBoD vocabulary your auditors are "
+                     "starting to expect.")
+
+    # ---- SLIDE 6 — OCM IN ONE PICTURE (was slide 5) -------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "OCM IN ONE PICTURE")
     set_text(s, 2, "Pack · Sign · Transport · Deploy")
-    diagram5 = first_existing(
+    diagram6 = first_existing(
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy-v2.svg",
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy.svg",
     )
-    add_diagram(s, diagram5, x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
+    add_diagram(s, diagram6, x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
 
-    # ---- SLIDE 6a — SOVEREIGN-READY (text-only) -----------------------------
+    # ---- SLIDE 7a — SOVEREIGN-READY (text-only, was 6a) --------------------
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "SOVEREIGN-READY")
     set_text(s, 2, "Trust, but verify.")
@@ -530,17 +599,17 @@ def build():
         "artifact it needs along with it. The destination needs nothing more.",
     ])
 
-    # ---- SLIDE 6b — SOVEREIGN-READY (diagram only) --------------------------
+    # ---- SLIDE 7b — SOVEREIGN-READY (diagram only, was 6b) -----------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
-                 x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
+                 x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
 
-    # ---- SLIDE 7 — SCAN / Compliance-native ---------------------------------
+    # ---- SLIDE 8 — SCAN / Compliance-native (was 7) ------------------------
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR")
-    set_text(s, 2, "Compliance as a system property —\nnot a quarterly project.")
+    set_text(s, 2, "Compliance as a system property —\nnot a quarterly retrofit.")
     set_blue_box_bullets(s, 10, [
         "Open Delivery Gear (ODG) is OCM's compliance automation engine.",
         "The Compliance Dashboard is your entry point: every component, "
@@ -552,7 +621,7 @@ def build():
         "get evidence, not spreadsheets.",
     ])
 
-    # ---- SLIDE 8 — WHAT OCM UNLOCKS (tiles) ---------------------------------
+    # ---- SLIDE 9 — WHAT OCM UNLOCKS (tiles, was 8) -------------------------
     s = prs.slides.add_slide(layouts["Content / Tiles"])
     set_text(s, 1, "WHAT OCM UNLOCKS")
     set_text(s, 2, "One model unlocks all of this.")
@@ -577,7 +646,7 @@ def build():
         x, y = tile_origin(i)
         add_tile_icon(s, x, y, icon)
 
-    # ---- SLIDE 9 — Adopters (two-column logo wall) --------------------------
+    # ---- SLIDE 10 — Adopters (two-column logo wall, was 9) ------------------
     # Plain layout + manual logo rows (not enough placeholders for a logo
     # wall; cleaner to draw it inline than add a new layout to the template).
     s = prs.slides.add_slide(layouts["Plain"])
@@ -603,7 +672,7 @@ def build():
                        "An open standard, neutrally governed — your stack "
                        "stays portable, your dependencies stay yours.")
 
-    # ---- SLIDE 10 — CTA ------------------------------------------------------
+    # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
     s = prs.slides.add_slide(layouts["CTA"])
     set_text(s, 1, "Start delivering with confidence.", color=C.WHITE)
     set_action_path_lines(s, 2, [

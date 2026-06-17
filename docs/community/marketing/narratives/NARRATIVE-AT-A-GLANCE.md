@@ -8,36 +8,39 @@
 
 ---
 
-**1. Hero** — *Secure Delivery for Sovereign Clouds*
-Deliver and deploy your software securely. Anywhere, at any scale.
+**1. Hero** — *Three minutes from now, you'll know what your supply chain doesn't.*
+A new model for delivering software the auditor can verify, the operator can run, and the regulator already requires.
 
 **2. Why now** — *Compliance is rising. Sovereignty makes it harder. Trust must travel with the artifact.*
-EU DORA · NIS2 · GDPR · supply-chain attacks · sovereign deployment pressure.
+EU DORA · NIS2 · CRA · supply-chain attacks · sovereign deployment pressure.
 
-**3. The pain** — *Software delivery is fragmented. Compliance retrofits don't scale.*
-Many teams, many stacks. Signatures break in transit. SBOMs were built for inventory. **OCM Coordinates** give every component one identity across the whole lifecycle.
+**3. Meet OCM — one identity, every boundary** — *The answer.*
+Hub-and-spoke: OCM bridges every artifact type, every regulatory regime, every deployment boundary. The "pain" beat from prior versions is now absorbed into slide 2 column 3.
 
 **4. The shift — SBoD** — *SBOM lists. SBoD delivers.*
 Software Bill of Delivery: signed, verifiable record of everything you delivered + how to access it. SBOM lives inside it.
 
-**5. OCM in one picture** — *One model. One flow. Any artifact, any registry, any boundary.*
+**5. How OCM composes** — *OCM doesn't replace your tools. It gives them something to sign together.*
+Comparator slide. Keyless (Sigstore) / key-based (your PKI) signs the complete SBoD — one signature, every artifact, by digest. Your SBOM tool or format (Syft, CycloneDX, SPDX) is unchanged. OCI + Sigstore + your scripts gets you almost there; OCM is the standardised version.
+
+**6. OCM in one picture** — *One model. One flow. Any artifact, any registry, any boundary.*
 Pack · Sign · Transport · Deploy. One source of truth for the whole landscape. Bring your own GitOps (Argo, Flux, KRO).
 
-**6. Sovereign-ready** — *Trust, but verify. Anywhere — including behind the air gap.*
+**7. Sovereign-ready** — *Trust, but verify. Anywhere — including behind the air gap.*
 Location-independent identity and signatures. Day-2 ops inside the boundary — subscribe and pull, scale across regions, no callback upstream.
 
-**7. Scan — Compliance-native with Open Delivery Gear** — *Compliance as a system property — not a quarterly project.*
+**8. Scan — Compliance-native with Open Delivery Gear** — *Compliance as a system property — not a quarterly retrofit.*
 ODG + Compliance Dashboard reads SBoD metadata directly. Continuous scans, contextual rescoring, automated reporting.
 
-**8. What OCM unlocks** — *One model unlocks all of this.*
+**9. What OCM unlocks** — *One model unlocks all of this.*
 Header strip: *Pack · Scan · Ship · Deploy · Scale Out — one model, end to end.*
 Code signing across stacks · air-gapped delivery · Kubernetes-native deployment · async security scans · one source of truth · automated compliance reporting.
 
-**9. Open and governed** — *Trusted in production. Aligned with NeoNephos.*
+**10. Open and governed** — *Trusted in production. Aligned with NeoNephos.*
 Enterprises shipping into regulated environments: SAP · BwI · SAP NS2.
 Built into the open-source ecosystem: Gardener · Konfidence · Platform Mesh.
 
-**10. Call to action** — *Start delivering with confidence.*
+**11. Call to action** — *Start delivering with confidence.*
 ocm.software · github.com/open-component-model · community channels.
 
 ---

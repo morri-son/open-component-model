@@ -16,8 +16,8 @@ This file is the **master narrative**. From it, we can cut various versions of t
 
 | Cut | Depth | Audience | Slides |
 |---|---|---|---|
-| **A — Boardroom** | Outcome-only, terse | C-level, sovereign-cloud buyers | 8–10 |
-| **B — Mixed-audience** | Outcome + one proof point per beat | Foundation events, partner workshops, mid-management with technical staff in the room | 8–10 |
+| **A — Boardroom** | Outcome-only, terse | C-level, sovereign-cloud buyers | 9–11 |
+| **B — Mixed-audience** | Outcome + one proof point per beat | Foundation events, partner workshops, mid-management with technical staff in the room | 9–11 |
 | **C — Phase 2 technical** | Same beats, deeper drilldowns | Architects, security engineers, platform teams | longer (separate plan) |
 
 ---
@@ -26,7 +26,7 @@ This file is the **master narrative**. From it, we can cut various versions of t
 
 **Compliance + sovereignty, together.**
 
-- **Compliance is the demand.** EU DORA (Digital Operational Resilience Act, in force Jan 2025), NIS2, GDPR, supply-chain attacks (SolarWinds, xz, log4shell). Regulators and adversaries both raised the bar on what enterprises must prove about their software.
+- **Compliance is the demand.** EU DORA (Digital Operational Resilience Act, in force Jan 2025), NIS2, the Cyber Resilience Act (CRA, enforcement rolling out Sept 2026), supply-chain attacks (SolarWinds, xz, log4shell). Regulators and adversaries both raised the bar on what enterprises must prove about their software.
 - **Sovereignty is the constraint.** Data residency, regulated jurisdictions, air-gapped environments — software must be deliverable, verifiable, and operable on the customer's own terms, inside their own boundary.
 - **OCM resolves both.** The same architectural property — signed, location-independent, self-contained SBoD — answers both pressures at once. Compliance-native by design; location-independent by construction.
 
@@ -38,10 +38,10 @@ Sovereignty is **not** the slide-1 lead. It lands as the *proof beat* on slide 6
 
 The OCM project uses **two** step-counts depending on context, and this deck uses both, in different registers:
 
-- **4-step (core mechanics) — Pack · Sign · Transport · Deploy.** What every OCM user does on day 1. Lives on slide 5 as the canonical OCM diagram. This is what OCM *is*.
-- **5-step (full lifecycle) — Pack · Scan · Ship · Deploy · Scale Out.** What OCM *enables* as you mature: scanning via Open Delivery Gear (slide 7), and scale-out through subscription-based, multi-region delivery (slide 6 day-2 bullet). Lives on slide 8 as a header strip above the outcome tiles, framing the tiles as the harvest of the full lifecycle.
+- **4-step (core mechanics) — Pack · Sign · Transport · Deploy.** What every OCM user does on day 1. Lives on slide 6 as the canonical OCM diagram. This is what OCM *is*.
+- **5-step (full lifecycle) — Pack · Scan · Ship · Deploy · Scale Out.** What OCM *enables* as you mature: scanning via Open Delivery Gear (slide 8), and scale-out through subscription-based, multi-region delivery (slide 7 day-2 bullet). Lives on slide 9 as a header strip above the outcome tiles, framing the tiles as the harvest of the full lifecycle.
 
-The 4-step is the mechanic; the 5-step is the lifecycle picture. Slide 7 is renamed *"Scan — Compliance-native with Open Delivery Gear"* to invoke the 5-step's second step explicitly. *Scale Out* is not given its own beat — its semantics (multi-region, subscription-based, continuous ops) are absorbed into slide 6's day-2 bullet, where they strengthen the sovereignty story.
+The 4-step is the mechanic; the 5-step is the lifecycle picture. Slide 8 is renamed *"Scan — Compliance-native with Open Delivery Gear"* to invoke the 5-step's second step explicitly. *Scale Out* is not given its own beat — its semantics (multi-region, subscription-based, continuous ops) are absorbed into slide 7's day-2 bullet, where they strengthen the sovereignty story.
 
 ---
 
@@ -66,8 +66,8 @@ Each beat below carries:
 
 ## 1. Hero
 
-**Title:** Secure Delivery for Sovereign Clouds
-**Subtitle:** Deliver and deploy your software securely. Anywhere, at any scale.
+**Title:** Three minutes from now, you'll know what your supply chain doesn't.
+**Subtitle:** A new model for delivering software the auditor can verify, the operator can run, and the regulator already requires.
 **Lockup:** Open Component Model — open source, NeoNephos Foundation.
 ---
 
@@ -76,7 +76,7 @@ Each beat below carries:
 **Punchline:** *Compliance is rising. Sovereignty makes it harder. Trust must travel with the artifact.*
 
 **Body:** Three columns, each one beat:
-- **Regulation tightening.** EU DORA · NIS2 · GDPR. Provable supply-chain control, not best effort.
+- **Regulation tightening.** EU DORA · NIS2 · CRA. Provable supply-chain control, not best effort.
 - **Supply-chain attacks are real.** SolarWinds. xz. log4shell. Signatures must survive the journey, or compliance is theatre.
 - **Sovereignty pressure.** Wherever the law puts the boundary — by jurisdiction, sector, or air-gap — software must be deliverable, verifiable, and operable inside it.
 
@@ -107,7 +107,21 @@ Each beat below carries:
 
 ---
 
-## 5. OCM in one picture — Pack · Sign · Transport · Deploy
+## 5. How OCM composes — comparator slide
+
+**Punchline:** *OCM doesn't replace your tools. It gives them something to sign together.*
+
+**Body:** Three columns, each one beat:
+
+- **Keyless (Sigstore) / key-based (your PKI).** *Only signs one artifact.* OCM gives them the complete SBoD to sign. **One signature, covering every artifact in the delivery, by digest.** Your existing keys still work.
+- **Your SBOM tool or format** (Syft, CycloneDX, SPDX). *Lists what's in your software.* The SBoD contains or references it. Your SBOM tool is unchanged; the SBOM now travels with the signature.
+- **A bit of OCI + Sigstore + your own scripts.** *Can almost get you there, in pieces.* OCM is the standardised version, openly governed, with conformance tests and the SBoD vocabulary your auditors are starting to expect.
+
+**Why this slide exists:** disarms the *"we already have this"* objection on the page, not in the speaker's head. Locked into the deck after Phase 1 peer review surfaced that the cold-room hero (slide 1) creates a comparator-objection debt the deck must repay before the mechanic walkthrough.
+
+---
+
+## 6. OCM in one picture — Pack · Sign · Transport · Deploy
 
 **Punchline:** *One model. One flow. Any artifact, any registry, any boundary.*
 
@@ -121,7 +135,7 @@ Each beat below carries:
 
 ---
 
-## 6. Sovereign-ready — trust, but verify
+## 7. Sovereign-ready — trust, but verify
 
 **Punchline:** *Trust, but verify. Anywhere — including behind the air gap.*
 
@@ -135,7 +149,7 @@ Each beat below carries:
 
 ---
 
-## 7. Scan — Compliance-native with Open Delivery Gear (NEW BEAT)
+## 8. Scan — Compliance-native with Open Delivery Gear (NEW BEAT)
 
 **Punchline:** *Compliance as a system property — not a quarterly project.*
 
@@ -150,7 +164,7 @@ Each beat below carries:
 
 ---
 
-## 8. What OCM unlocks — six tiles
+## 9. What OCM unlocks — six tiles
 
 **Punchline:** *One model unlocks all of this.*
 
@@ -169,7 +183,7 @@ Each beat below carries:
 
 ---
 
-## 9. Open and governed
+## 10. Open and governed
 
 **Punchline:** *Trusted in production. Aligned with NeoNephos.*
 
@@ -191,7 +205,7 @@ OCM is stewarded as open building blocks for sovereign delivery — interoperabl
 
 ---
 
-## 10. Call to action
+## 11. Call to action
 
 **Punchline:** *Start delivering with confidence.*
 
