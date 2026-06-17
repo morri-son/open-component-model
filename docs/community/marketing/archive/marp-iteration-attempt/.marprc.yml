@@ -1,0 +1,6 @@
+themeSet:
+  - ./theme/ocm-master.css
+allowLocalFiles: true
+html: true
+options:
+  html: true

@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 03-meet-ocm-hub-and-spoke.svg — Slide 3: "Meet OCM. One identity, every boundary."
+     Hub-and-spoke composition. OCM blob in the middle, three labelled spoke clusters fan out:
+       - LEFT  cluster (Artifact types):  OCI, Helm, npm, Binary, Config, … any artifact type   — solid Brand-Blue spokes
+       - RIGHT cluster (Regulatory):      DORA, NIS2, CRA                                       — dashed Brand-Blue-Mid spokes
+       - BOTTOM cluster (Deployment):     EU (flag), US (flag), Sovereign Cloud (cloud-lock)     — thick Brand-Blue-Night spokes
+     Layout: pills are pulled in close to the hub so the radial reads compact and confident.
+     Canvas 1760 x 540. Reuses primitive shapes/colors only — no new palette, no new stroke widths.
+     Sovereign-Cloud icon mirrors the slide-5 (Pack/Sign/Transport/Deploy) cloud-lock motif. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, system-ui, sans-serif">
+  <defs>
+    <!-- Per-cluster arrow heads, color-keyed -->
+    <marker id="ah-artifact" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0 0, 8 4, 0 8" fill="#257DDC"/>
+    </marker>
+    <marker id="ah-regulator" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0 0, 8 4, 0 8" fill="#1D65B4"/>
+    </marker>
+    <marker id="ah-boundary" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0 0, 8 4, 0 8" fill="#0A1530"/>
+    </marker>
+    <!-- Reusable EU-flag glyph: blue field + 12 yellow stars (simplified as dots in a ring). -->
+    <g id="flag-eu">
+      <rect x="0" y="0" width="36" height="24" fill="#003399" stroke="#0A1530" stroke-width="0.75"/>
+      <!-- 12 stars approximated as small filled dots, ring centred on (18,12), r=8 -->
+      <g fill="#FFCC00">
+        <circle cx="18" cy="4"     r="1.4"/>
+        <circle cx="22"   cy="5.07" r="1.4"/>
+        <circle cx="24.93" cy="8"    r="1.4"/>
+        <circle cx="26"   cy="12"   r="1.4"/>
+        <circle cx="24.93" cy="16"   r="1.4"/>
+        <circle cx="22"   cy="18.93" r="1.4"/>
+        <circle cx="18"   cy="20"   r="1.4"/>
+        <circle cx="14"   cy="18.93" r="1.4"/>
+        <circle cx="11.07" cy="16"   r="1.4"/>
+        <circle cx="10"   cy="12"   r="1.4"/>
+        <circle cx="11.07" cy="8"    r="1.4"/>
+        <circle cx="14"   cy="5.07" r="1.4"/>
+      </g>
+    </g>
+    <!-- Reusable US-flag glyph: 7 red + 6 white stripes, blue canton with star dots. -->
+    <g id="flag-us">
+      <rect x="0" y="0"  width="36" height="24" fill="#FFFFFF" stroke="#0A1530" stroke-width="0.75"/>
+      <!-- 7 red stripes -->
+      <rect x="0" y="0"     width="36" height="1.85" fill="#DC2626"/>
+      <rect x="0" y="3.7"   width="36" height="1.85" fill="#DC2626"/>
+      <rect x="0" y="7.4"   width="36" height="1.85" fill="#DC2626"/>
+      <rect x="0" y="11.1"  width="36" height="1.85" fill="#DC2626"/>
+      <rect x="0" y="14.8"  width="36" height="1.85" fill="#DC2626"/>
+      <rect x="0" y="18.5"  width="36" height="1.85" fill="#DC2626"/>
+      <rect x="0" y="22.15" width="36" height="1.85" fill="#DC2626"/>
+      <!-- canton -->
+      <rect x="0" y="0" width="14.4" height="12.92" fill="#1D65B4"/>
+      <!-- star dots, 4x3 grid -->
+      <g fill="#FFFFFF">
+        <circle cx="2.5"  cy="2.4"  r="0.7"/>
+        <circle cx="6"    cy="2.4"  r="0.7"/>
+        <circle cx="9.5"  cy="2.4"  r="0.7"/>
+        <circle cx="12.5" cy="2.4"  r="0.7"/>
+        <circle cx="2.5"  cy="6.5"  r="0.7"/>
+        <circle cx="6"    cy="6.5"  r="0.7"/>
+        <circle cx="9.5"  cy="6.5"  r="0.7"/>
+        <circle cx="12.5" cy="6.5"  r="0.7"/>
+        <circle cx="2.5"  cy="10.5" r="0.7"/>
+        <circle cx="6"    cy="10.5" r="0.7"/>
+        <circle cx="9.5"  cy="10.5" r="0.7"/>
+        <circle cx="12.5" cy="10.5" r="0.7"/>
+      </g>
+    </g>
+    <!-- Sovereign-cloud glyph: brand-blue cloud + white lock (mirror of slide-5).
+         Designed to fit a ~60×40 envelope. -->
+    <g id="cloud-lock">
+      <!-- Cloud silhouette, filled brand blue (#0F6BFF) -->
+      <path d="M 14 32 C 5 32 0 25 0 18 C 0 9 8 3 16 4 C 19 -2 27 -5 32 0 C 37 -5 45 -2 49 4 C 56 4 60 9 60 16 C 60 25 53 32 47 32 Z"
+            fill="#0F6BFF" stroke="none"/>
+      <!-- Lock shackle (white arc) -->
+      <path d="M 25 19 L 25 14 C 25 11 28 9 30 9 C 32 9 35 11 35 14 L 35 19"
+            stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Lock body (white rect) -->
+      <rect x="22" y="19" width="16" height="11" rx="1.2" ry="1.2" fill="#FFFFFF" stroke="none"/>
+      <!-- Keyhole (brand blue) -->
+      <circle cx="30" cy="24" r="1.2" fill="#0F6BFF"/>
+      <rect x="29.4" y="24" width="1.2" height="3.6" fill="#0F6BFF"/>
+    </g>
+    <style>
+      .eyebrow      { font-size: 13px; font-weight: 700; letter-spacing: 1.4px; fill: #6B7280; }
+      .pill-stroke  { fill: #FFFFFF; stroke: #257DDC; stroke-width: 1.5; }
+      .pill-text    { font-size: 14px; font-weight: 700; fill: #257DDC; }
+      .pill-stroke-soft { fill: #FFFFFF; stroke: #257DDC; stroke-width: 1.5; stroke-dasharray: 4 3; }
+      .pill-text-soft   { font-size: 13px; font-weight: 600; fill: #1D65B4; font-style: italic; }
+      .reg-stroke   { fill: #FFFFFF; stroke: #1D65B4; stroke-width: 1.5; }
+      .reg-text     { font-size: 14px; font-weight: 700; fill: #1D65B4; }
+      .bd-fill      { fill: #F3F4F6; stroke: #0A1530; stroke-width: 1.5; }
+      .bd-text      { font-size: 15px; font-weight: 700; fill: #0A1530; }
+      .spoke-art    { stroke: #257DDC;  stroke-width: 1.75; fill: none; }
+      .spoke-art-soft { stroke: #257DDC;  stroke-width: 1.5;  fill: none; stroke-dasharray: 4 3; }
+      .spoke-reg    { stroke: #1D65B4;  stroke-width: 1.75; fill: none; stroke-dasharray: 6 4; }
+      .spoke-bnd    { stroke: #0A1530;  stroke-width: 2;    fill: none; }
+      .footer       { font-size: 12px; font-weight: 500; font-style: italic; fill: #1D65B4; letter-spacing: 0.2px; }
+    </style>
+  </defs>
+
+  <!-- =======================================================================
+       HUB — OCM blob, oversized so the radial reads from across the room.
+       Centre at (880, 250). Hex radius ~64.
+       ======================================================================= -->
+  <g transform="translate(816,186)">
+    <!-- soft halo -->
+    <circle cx="64" cy="64" r="78" fill="#257DDC" fill-opacity="0.06"/>
+    <circle cx="64" cy="64" r="64" fill="#257DDC" fill-opacity="0.10"/>
+    <!-- hexagon -->
+    <polygon points="64,6 116,34 116,94 64,122 12,94 12,34"
+             fill="#257DDC" stroke="#1D65B4" stroke-width="2"/>
+    <!-- pack-cube glyph -->
+    <g stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="64,38 86,50 64,62 42,50" fill="#FFFFFF" fill-opacity="0.18"/>
+      <polygon points="42,50 64,62 64,88 42,76"/>
+      <polygon points="86,50 64,62 64,88 86,76"/>
+    </g>
+  </g>
+
+  <!-- =======================================================================
+       CLUSTER 1 — ARTIFACT TYPES   (LEFT, pulled in close to hub)
+       Pills 160 wide, column x = 240. Right edge of pills = 400. Hub left ~ 828.
+       ======================================================================= -->
+  <g>
+    <text x="240" y="38" class="eyebrow">EVERY ARTIFACT TYPE</text>
+    <line x1="240" y1="50" x2="420" y2="50" stroke="#257DDC" stroke-width="2"/>
+
+    <g transform="translate(240,62)">
+      <rect class="pill-stroke" x="0.75" y="0.75" width="158.5" height="34.5" rx="18" ry="18"/>
+      <text class="pill-text" x="80" y="23" text-anchor="middle">OCI</text>
+    </g>
+    <g transform="translate(240,114)">
+      <rect class="pill-stroke" x="0.75" y="0.75" width="158.5" height="34.5" rx="18" ry="18"/>
+      <text class="pill-text" x="80" y="23" text-anchor="middle">Helm</text>
+    </g>
+    <g transform="translate(240,166)">
+      <rect class="pill-stroke" x="0.75" y="0.75" width="158.5" height="34.5" rx="18" ry="18"/>
+      <text class="pill-text" x="80" y="23" text-anchor="middle">npm</text>
+    </g>
+    <g transform="translate(240,218)">
+      <rect class="pill-stroke" x="0.75" y="0.75" width="158.5" height="34.5" rx="18" ry="18"/>
+      <text class="pill-text" x="80" y="23" text-anchor="middle">Binary</text>
+    </g>
+    <g transform="translate(240,270)">
+      <rect class="pill-stroke" x="0.75" y="0.75" width="158.5" height="34.5" rx="18" ry="18"/>
+      <text class="pill-text" x="80" y="23" text-anchor="middle">Config</text>
+    </g>
+    <g transform="translate(240,322)">
+      <rect class="pill-stroke-soft" x="0.75" y="0.75" width="158.5" height="34.5" rx="18" ry="18"/>
+      <text class="pill-text-soft" x="80" y="22" text-anchor="middle">… any artifact type</text>
+    </g>
+
+    <!-- Spokes: from each pill's right edge (x=400) to the hub's left face (x~828, y~250). -->
+    <path class="spoke-art"      d="M400 80  C 560 80,  680 180, 832 224" marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 132 C 560 132, 680 200, 832 240" marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 184 C 560 184, 700 230, 832 252" marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 236 C 560 236, 700 270, 832 264" marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 288 C 560 288, 700 290, 832 276" marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art-soft" d="M400 340 C 560 340, 680 320, 832 290" marker-end="url(#ah-artifact)"/>
+  </g>
+
+  <!-- =======================================================================
+       CLUSTER 2 — REGULATORY REGIMES   (RIGHT, pulled in close to hub)
+       Badges 180 wide, column x = 1360. Left edge = 1360. Hub right ~ 928.
+       ======================================================================= -->
+  <g>
+    <text x="1450" y="38" text-anchor="middle" class="eyebrow">EVERY REGIME</text>
+    <line x1="1360" y1="50" x2="1540" y2="50" stroke="#1D65B4" stroke-width="2"/>
+
+    <!-- DORA -->
+    <g transform="translate(1360,80)">
+      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
+      <circle cx="22" cy="20" r="8" fill="#003399"/>
+      <circle cx="22" cy="20" r="2.6" fill="#FFCC00"/>
+      <text class="reg-text" x="105" y="25" text-anchor="middle">DORA</text>
+    </g>
+    <!-- NIS2 -->
+    <g transform="translate(1360,200)">
+      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
+      <circle cx="22" cy="20" r="8" fill="#003399"/>
+      <circle cx="22" cy="20" r="2.6" fill="#FFCC00"/>
+      <text class="reg-text" x="105" y="25" text-anchor="middle">NIS2</text>
+    </g>
+    <!-- CRA -->
+    <g transform="translate(1360,320)">
+      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
+      <circle cx="22" cy="20" r="8" fill="#003399"/>
+      <circle cx="22" cy="20" r="2.6" fill="#FFCC00"/>
+      <text class="reg-text" x="105" y="25" text-anchor="middle">CRA</text>
+    </g>
+
+    <!-- Spokes: from hub right (x~928) to each badge's left edge (x=1360). -->
+    <path class="spoke-reg" d="M928 232 C 1080 180, 1220 130, 1358 100" marker-end="url(#ah-regulator)"/>
+    <path class="spoke-reg" d="M928 250 C 1080 240, 1220 220, 1358 220" marker-end="url(#ah-regulator)"/>
+    <path class="spoke-reg" d="M928 268 C 1080 320, 1220 340, 1358 340" marker-end="url(#ah-regulator)"/>
+  </g>
+
+  <!-- =======================================================================
+       CLUSTER 3 — DEPLOYMENT BOUNDARIES   (BOTTOM, pulled in close to hub)
+       Tiles 220 x 70. Top y = 380. Centred in x: tile centres at 490, 880, 1270.
+       ======================================================================= -->
+  <g>
+    <text x="880" y="505" text-anchor="middle" class="eyebrow">EVERY DEPLOYMENT BOUNDARY</text>
+    <line x1="750" y1="513" x2="1010" y2="513" stroke="#257DDC" stroke-width="2"/>
+
+    <!-- EU tile: flag + label centred as a group inside the 220-wide tile.
+         Group (flag 36 + gap 12 + label width). With "EU" ≈26px wide, group ≈74px;
+         start group at x = (220-74)/2 ≈ 73. Flag y=23 centres against tile mid (y=35). -->
+    <g transform="translate(380,380)">
+      <rect class="bd-fill" x="0" y="0" width="220" height="70" rx="10"/>
+      <rect x="0" y="0" width="220" height="3" fill="#0A1530"/>
+      <g transform="translate(73,23)"><use href="#flag-eu"/></g>
+      <text class="bd-text" x="123" y="42">EU</text>
+    </g>
+    <!-- US tile: same centring rule as EU -->
+    <g transform="translate(770,380)">
+      <rect class="bd-fill" x="0" y="0" width="220" height="70" rx="10"/>
+      <rect x="0" y="0" width="220" height="3" fill="#0A1530"/>
+      <g transform="translate(73,23)"><use href="#flag-us"/></g>
+      <text class="bd-text" x="123" y="42">US</text>
+    </g>
+    <!-- Sovereign Cloud tile: brand-blue cloud-lock motif (mirror of slide 5),
+         centred horizontally. Group width: cloud(60) + gap(14) + label-block ~110.
+         With label centred under cloud, easier: cloud on left, two-line label right. -->
+    <g transform="translate(1160,380)">
+      <rect class="bd-fill" x="0" y="0" width="220" height="70" rx="10"/>
+      <rect x="0" y="0" width="220" height="3" fill="#0A1530"/>
+      <!-- Cloud-lock glyph, centred vertically (~y=20 puts cloud-mid at tile-mid 35). -->
+      <g transform="translate(28,20)"><use href="#cloud-lock"/></g>
+      <text class="bd-text" x="100" y="32">Sovereign</text>
+      <text class="bd-text" x="100" y="52">Cloud</text>
+    </g>
+
+    <!-- Spokes: from hub bottom (~880,312) to top of each boundary tile (y=380). -->
+    <path class="spoke-bnd" d="M858 306 C 740 340, 600 365, 492 378" marker-end="url(#ah-boundary)"/>
+    <path class="spoke-bnd" d="M880 312 L 880 378"                     marker-end="url(#ah-boundary)"/>
+    <path class="spoke-bnd" d="M902 306 C 1020 340, 1160 365, 1268 378" marker-end="url(#ah-boundary)"/>
+  </g>
+
+  <!-- =======================================================================
+       FOOTER LINE — supplementary regimes off-canvas.
+       ======================================================================= -->
+  <text x="880" y="535" text-anchor="middle" class="footer">plus FedRAMP/FISMA, BSI C5, SecNumCloud — and the regimes specific to your sector.</text>
+</svg>
