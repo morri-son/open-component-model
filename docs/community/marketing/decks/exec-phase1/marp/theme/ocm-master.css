@@ -1,0 +1,341 @@
+/* OCM Master — Marp theme retargeted to 1920×1080 to match OCM-Master.potx */
+/* @theme ocm-master */
+@import 'default';
+
+:root {
+  --brand-blue:        #0F6BFF;
+  --brand-blue-deep:   #0A3A99;
+  --brand-blue-night:  #0A1530;
+  --brand-cyan:        #5CD6FF;
+  --brand-black:       #000000;
+  --brand-grey-mid:    #6B7280;
+  --brand-grey-soft:   #F3F4F6;
+  --brand-white:       #FFFFFF;
+}
+
+/* 1920×1080 canvas — Marp's `size:` directive only ships 16:9/4:3 presets,
+   so we override @page + section box directly. */
+@page { size: 1920px 1080px; }
+
+section {
+  width: 1920px;
+  height: 1080px;
+  font-family: 'Aptos', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--brand-white);
+  color: var(--brand-black);
+  padding: 0;
+  position: relative;
+  font-size: 22pt;
+  line-height: 1.4;
+  overflow: hidden;
+}
+
+/* Hide Marp pagination dot */
+section::after { display: none !important; }
+
+/* ============================================================
+ * Eyebrow / Title / Body — absolute-positioned to mirror .potx tokens
+ *   Eyebrow y=255 h=48  (28pt blue, ALL CAPS, no wrap)
+ *   Title   y=308 h=200 (64pt Aptos Display, line-height 0.9)
+ *   Body    y=520 (Compact / Diagram / Tiles / 2-/3-Col) | y=580 (Plain)
+ *   Margins x=120, content width 1680
+ *   Footer  y=1048
+ * ============================================================ */
+section .eyebrow {
+  position: absolute;
+  left: 120px; top: 255px;
+  width: 1680px; height: 48px;
+  font-size: 28pt;
+  font-weight: 600;
+  color: var(--brand-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.07em; /* ~1.4 in OOXML spc */
+  white-space: nowrap;
+  overflow: hidden;
+  margin: 0;
+}
+
+section .title {
+  position: absolute;
+  left: 120px; top: 308px;
+  width: 1680px; height: 200px;
+  font-family: 'Aptos Display', 'Aptos', sans-serif;
+  font-size: 64pt;
+  line-height: 0.9;
+  font-weight: 700;
+  color: var(--brand-black);
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+section .body {
+  position: absolute;
+  left: 120px;
+  width: 1680px;
+  font-size: 22pt;
+  line-height: 1.4;
+  margin: 0;
+}
+section.compact .body  { top: 520px; }
+section.plain   .body  { top: 580px; }
+section.diagram .body  { top: 520px; } /* diagram stage */
+section.tiles   .body  { top: 520px; }
+section.two-col .body  { top: 520px; }
+section.three-col .body { top: 520px; }
+
+/* Footer line */
+section .footer {
+  position: absolute;
+  left: 120px; bottom: 22px;
+  font-size: 12pt;
+  color: var(--brand-grey-mid);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+ * Bullets — blue ▪ marker matching set_blue_box_bullets()
+ * ============================================================ */
+section .bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+section .bullets li {
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 18px;
+  font-size: 22pt;
+  line-height: 1.4;
+}
+section .bullets li::before {
+  content: '▪';
+  position: absolute;
+  left: 0; top: 0;
+  color: var(--brand-blue);
+  font-size: 22pt;
+}
+
+/* ============================================================
+ * Headline gradient — applied to a <span> inside .title
+ *   white → cyan → brand-blue, mirroring the OOXML gradFill
+ * ============================================================ */
+.gradient-headline {
+  background: linear-gradient(90deg, #FFFFFF 0%, #5CD6FF 35%, #0F6BFF 75%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  display: inline-block;
+}
+
+/* ============================================================
+ * HERO — banner backdrop fading into night-blue, gradient title
+ * ============================================================ */
+section.hero {
+  background: var(--brand-blue-night);
+  color: var(--brand-white);
+}
+section.hero .hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("../../../assets/neonephos/OCM-Banner.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+/* Gradient fade so banner blends down into night-blue, keeping text readable */
+section.hero .hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 21, 48, 0.25) 0%,
+    rgba(10, 21, 48, 0.55) 55%,
+    rgba(10, 21, 48, 0.92) 100%
+  );
+}
+section.hero .hero-stack,
+section.hero .brand-row { z-index: 1; }
+section.hero .hero-stack {
+  position: absolute;
+  top: 50%;
+  left: 120px; right: 120px;
+  transform: translateY(-50%);
+}
+section.hero h1 {
+  font-family: 'Aptos Display', 'Aptos', sans-serif;
+  font-size: 115pt;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0;
+  color: var(--brand-white);
+}
+section.hero .subtitle {
+  font-size: 36pt;
+  font-weight: 400;
+  color: var(--brand-cyan);
+  margin: 18px 0 12px 0;
+}
+section.hero .org-line {
+  font-size: 28pt;
+  color: rgba(255,255,255,0.85);
+  margin: 0;
+}
+section.hero .brand-row {
+  position: absolute;
+  bottom: 56px; left: 120px; right: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+section.hero .brand-row img.ocm-mark { height: 92px; }
+section.hero .brand-row img.nn-mark  { height: 64px; opacity: 0.95; }
+
+/* ============================================================
+ * CTA — night-blue backdrop, white title, cyan action labels
+ * ============================================================ */
+section.cta {
+  background: var(--brand-blue-night);
+  color: var(--brand-white);
+}
+section.cta .title { color: var(--brand-white); }
+section.cta .actions {
+  position: absolute;
+  left: 120px; top: 580px;
+  width: 1680px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+section.cta .actions li {
+  font-size: 30pt;
+  line-height: 1.6;
+  color: var(--brand-white);
+}
+section.cta .actions li .action {
+  color: var(--brand-cyan);
+  font-weight: 700;
+}
+
+/* ============================================================
+ * 3-Column — slide 2 (WHY NOW)
+ *   gutter 56, header 20pt blue, body 22pt
+ * ============================================================ */
+section.three-col .columns {
+  position: absolute;
+  left: 120px; top: 520px;
+  width: 1680px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 56px;
+}
+section.three-col .columns > div {
+  border-top: 4px solid var(--brand-blue);
+  padding-top: 22px;
+}
+section.three-col .columns h3 {
+  font-size: 20pt;
+  font-weight: 700;
+  color: var(--brand-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px 0;
+}
+section.three-col .columns p {
+  font-size: 22pt;
+  line-height: 1.4;
+  margin: 0;
+  color: var(--brand-black);
+}
+
+/* ============================================================
+ * Diagram — eyebrow + title + centered SVG stage
+ * ============================================================ */
+section.diagram .stage {
+  position: absolute;
+  left: 120px; top: 520px;
+  width: 1680px;
+  height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+section.diagram .stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* ============================================================
+ * Tiles — 3×2 grid, 544×230 each, 24px gutter
+ * ============================================================ */
+section.tiles .tile-grid {
+  position: absolute;
+  left: 120px; top: 520px;
+  width: 1680px;
+  display: grid;
+  grid-template-columns: repeat(3, 544px);
+  grid-template-rows: repeat(2, 230px);
+  gap: 24px;
+}
+section.tiles .tile {
+  background: var(--brand-grey-soft);
+  border-top: 3px solid var(--brand-blue);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+section.tiles .tile .tile-icon {
+  width: 40px; height: 40px;
+  color: var(--brand-blue);
+}
+section.tiles .tile .tile-label {
+  font-size: 20pt;
+  font-weight: 700;
+  color: var(--brand-blue-deep);
+  margin: 0;
+}
+section.tiles .tile .tile-outcome {
+  font-size: 18pt;
+  color: var(--brand-black);
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* ============================================================
+ * Logo wall (slide 9) — section labels + logo rows
+ * ============================================================ */
+section.logos .section-label {
+  position: absolute;
+  left: 120px;
+  width: 1680px;
+  font-size: 18pt;
+  font-weight: 700;
+  color: var(--brand-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+section.logos .logo-row {
+  position: absolute;
+  left: 120px; right: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 48px;
+}
+section.logos .logo-row img { max-height: 80px; max-width: 360px; object-fit: contain; }
+section.logos .proof {
+  position: absolute;
+  left: 120px; top: 970px;
+  width: 1680px;
+  text-align: center;
+  font-size: 20pt;
+  color: var(--brand-grey-mid);
+  font-style: italic;
+}
