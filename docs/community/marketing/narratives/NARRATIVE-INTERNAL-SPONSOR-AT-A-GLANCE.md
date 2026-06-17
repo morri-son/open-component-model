@@ -10,9 +10,9 @@
 
 ---
 
-**1. Hero** — *Why OCM matters more now —*
-*and what we lose by walking away.*
-Compounding strategic position in the open standard for regulated delivery. Stewarded by SAP.
+**1. Hero** — *Every LoB rebuilds*
+*the same delivery stack.*
+OCM is the shared standard. Each LoB still ships — but on the same model. Stewarded by SAP.
 
 **2. Why now — internal** — *Compliance and sovereignty are given. The strategic position is not.*
 Three columns: **Ecosystem velocity** (OCM-shaped abstractions are landing in adjacent OSS projects; the peer ecosystem already shares the primitive) · **The window is closing** (NeoNephos governance, CRA enforcement, sovereign-cloud market formation — the rails are being laid now; late entrants pay migration cost) · **Disinvestment has a cost** (each LoB that builds its own retrofit pays the cost OCM was supposed to amortize; competitors who keep investing get the standard built around their preferences).
@@ -52,5 +52,4 @@ Internal SAP projects converging on OCM: **Hyperspace** (internal Dev Portal, li
 
 **14-slide deck:** 1, 2, 3, 4a, 4b, 5, 6, 7a, 7b, 8, 9, 10a, 10b, 11.
 **Lead axis:** strategic-fit + ecosystem-leverage, framed as loss (what we lose by walking away).
-**Out of scope:** SAP board / CTO office — they have context already, or politics don't run through this deck.
-**No real numbers in this deck:** the user cannot deliver per-LoB ROI numbers; the deck argues strategy, not transactions.
+**No real numbers in this deck:** we cannot deliver per-LoB ROI numbers; the deck argues strategy, not transactions.

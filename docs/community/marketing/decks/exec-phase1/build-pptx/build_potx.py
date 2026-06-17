@@ -441,7 +441,7 @@ def layout_hero() -> bytes:
     """
     shapes = []
     shapes.append(make_textbox(
-        "Hero Title Line 1", 10, 96, 200, 1700, 140,
+        "Hero Title Line 1", 10, 96, 180, 1700, 160,
         placeholder_type="title", placeholder_idx=1,
         default_text="Secure Delivery for",
         size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
@@ -449,7 +449,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Title Line 2", 11, 96, 350, 1700, 140,
+        "Hero Title Line 2", 11, 96, 370, 1700, 160,
         placeholder_type="body", placeholder_idx=2,
         default_text="Sovereign Clouds",
         size_pt=115, bold=True, color_hex="5CD6FF", algn="l",
@@ -457,7 +457,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Subtitle", 12, 96, 530, 1700, 90,
+        "Hero Subtitle", 12, 96, 560, 1700, 90,
         placeholder_type="body", placeholder_idx=3,
         default_text="Subtitle — one sentence describing the deck.",
         size_pt=30, color_hex="5CD6FF", algn="l",
@@ -465,7 +465,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Org Line", 13, 96, 660, 1700, 60,
+        "Hero Org Line", 13, 96, 690, 1700, 60,
         placeholder_type="body", placeholder_idx=4,
         default_text="Open Component Model — open source, NeoNephos Foundation.",
         size_pt=24, color_hex="FFFFFF", algn="l",

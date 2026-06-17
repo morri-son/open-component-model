@@ -90,7 +90,7 @@ marketing/
 
 - **SBoD** = Software Bill of Delivery. The category claim OCM owns. Contains the SBOM as one payload item.
 - **OCM Coordinates** = globally unique, location-agnostic component identity.
-- **ODG** = Open Delivery Gear. OCM's compliance-automation engine; reads SBoD metadata directly.
+- **ODG** = Open Delivery Gear. The OCM compliance-automation engine; reads SBoD metadata directly.
 - **NeoNephos** = Linux Foundation Europe foundation under which OCM is governed.
 - **CRA** = Cyber Resilience Act (EU). Mandates SBOMs, vulnerability management, supply-chain accountability. Sept 2026 enforcement begins.
 

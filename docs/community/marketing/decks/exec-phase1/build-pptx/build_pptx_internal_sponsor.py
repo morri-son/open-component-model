@@ -443,14 +443,20 @@ def build():
     if missing:
         sys.exit(f"template missing expected layouts: {missing}")
 
-    # ---- SLIDE 1 — HERO (internal-sponsor, loss-frame) ---------------------
+    # ---- SLIDE 1 — HERO (internal-sponsor, observation-frame) --------------
+    # Hero opens with a concrete observation about the SAP-internal status quo:
+    # every LoB rebuilds delivery mechanics separately. Subtitle resolves the
+    # observation: each LoB still ships its own artifacts — what changes is
+    # that they ship "on the same model" (shared concept, shared vocabulary,
+    # shared signing/transport/compliance mechanics), not on parallel
+    # bespoke pipelines.
     s = prs.slides.add_slide(layouts["Hero"])
     add_banner_full_bleed(s, THEME_DIR / "OCM-Banner.png")
-    set_text(s, 1, "Why OCM matters more now —", color=C.WHITE)
-    set_split_gradient_title(s, 2, prefix="and ", noun="what we lose by walking away")
+    set_text(s, 1, "Every LoB rebuilds", color=C.WHITE)
+    set_split_gradient_title(s, 2, prefix="", noun="the same delivery stack.")
     set_text(s, 3,
-             "Compounding strategic position in the open standard "
-             "for regulated delivery.",
+             "OCM is the shared standard. Each LoB still ships — "
+             "but on the same model.",
              color=C.CYAN)
     set_text(s, 4,
              "Open Component Model — open source, NeoNephos Foundation. "
@@ -476,7 +482,7 @@ def build():
     set_text(s, 15, "Walking away costs more than staying. Each LoB that "
                      "builds its own retrofit pays the cost OCM was supposed "
                      "to amortize. Competitors who keep investing get the "
-                     "standard built around their preferences, not SAP's.")
+                     "standard built around their preferences. SAP doesn't.")
 
     # ---- SLIDE 3 — MEET OCM (hub-and-spoke diagram, Option 3 reframe) -------
     # Diagram positioned per user spec 2026-06-17: 50.02 × 15.93 cm,
@@ -569,15 +575,17 @@ def build():
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
+    # Diagram positioned per user spec 2026-06-17:
+    # 40.22 × 17.6 cm at x=3.72cm, y=10.25cm.
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
-                 x_px=120, y_px=520, max_w_px=1680, max_h_px=520)
+                 x_px=141, y_px=387, max_w_px=1519, max_h_px=665)
 
     # ---- SLIDE 8 — SCAN / Compliance-native (internal sub-bullet added) ----
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR")
     set_text(s, 2, "Compliance as a system property —\nnot a quarterly retrofit.")
     set_blue_box_bullets(s, 10, [
-        "Open Delivery Gear (ODG) is OCM's compliance automation engine.",
+        "Open Delivery Gear (ODG) is the OCM compliance automation engine.",
         "The Compliance Dashboard is your entry point: every component, "
         "every finding, every signature in one view.",
         "Continuous scans run asynchronously — even after release.",
@@ -629,7 +637,7 @@ def build():
     set_text(s, 2, "Peer in the open ecosystem.")
     set_blue_box_bullets(s, 10, [
         "Gardener — Kubernetes-as-a-service, open ecosystem.",
-        "Kyma — SAP's open-source Kubernetes-based runtime.",
+        "Kyma — SAP-originated open-source Kubernetes-based runtime.",
         "Konfidence — a development and delivery framework "
         "(SAP-originated, now open source).",
         "Open Control Plane (OCP) — a platform that lets you create and "

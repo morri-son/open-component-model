@@ -62,11 +62,11 @@ Each slide carries: **External (NARRATIVE.md) — what this slide says externall
 **External (cold-room canonical):** *Your supply chain has blind spots.* Subtitle: *Three minutes from now, you'll know what they are.* (Earlier draft used the longer 11-word *"Three minutes from now, you'll know what your supply chain doesn't"* — abandoned because three lines at 115pt reads as overwhelming.)
 
 **Internal-sponsor:**
-- **Title:** *Why OCM matters more now — and what we lose by walking away.*
-- **Subtitle:** *Compounding strategic position in the open standard for regulated delivery.*
+- **Title:** *Every LoB rebuilds the same delivery stack.*
+- **Subtitle:** *OCM is the shared standard. Each LoB still ships — but on the same model.*
 - **Org line:** *Open Component Model — open source, NeoNephos Foundation. Stewarded by SAP.*
 
-The hero names the loss-frame directly. The subtitle is an asset claim. The org line adds *Stewarded by SAP* — a line the external deck cannot make.
+The hero names the SAP-internal status quo directly: every LoB rebuilds delivery mechanics in parallel. The subtitle resolves the observation — each LoB still ships its own artifacts, but on the same model (shared concept, shared vocabulary, shared signing/transport/compliance mechanics). The org line adds *Stewarded by SAP* — a line the external deck cannot make.
 
 ---
 
@@ -83,7 +83,7 @@ Three columns:
 
 1. **Ecosystem velocity is real.** OCM-shaped abstractions are landing in adjacent OSS projects. NeoNephos is operationalizing. The peer ecosystem (Gardener, Kyma, Konfidence, OCP, Hyperspace, RBSC, CSI) shares the primitive.
 2. **The window is closing.** Adoption is consolidating. NeoNephos governance, CRA enforcement, sovereign-cloud market formation — the rails are being laid now. Late entrants pay migration cost; early stewards keep optionality.
-3. **Disinvestment has a cost.** Walking away costs more than staying. Each LoB that builds its own retrofit pays the cost OCM was supposed to amortize. Competitors who keep investing get the standard built around their preferences, not SAP's.
+3. **Disinvestment has a cost.** Walking away costs more than staying. Each LoB that builds its own retrofit pays the cost OCM was supposed to amortize. Competitors who keep investing get the standard built around their preferences. SAP doesn't.
 
 This slide is text-only (3-column layout), no diagram.
 
@@ -215,7 +215,7 @@ These are outcome claims, not metric claims. No numbers asserted. **The transact
 - **Title:** *Peer in the open ecosystem.*
 - **Body — open peer projects** (no metrics):
   - **Gardener** — Kubernetes-as-a-service, open ecosystem.
-  - **Kyma** — SAP's open-source Kubernetes-based runtime.
+  - **Kyma** — SAP-originated open-source Kubernetes-based runtime.
   - **Konfidence** — a development and delivery framework (SAP-originated, now open source).
   - **Open Control Plane (OCP)** — a platform that lets you create and manage Kubernetes-based ControlPlanes for your teams.
 - **Forward-looking footer:** *And forthcoming: every NeoNephos foundation project as it lands.*

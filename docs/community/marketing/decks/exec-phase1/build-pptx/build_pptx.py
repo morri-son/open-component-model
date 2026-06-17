@@ -610,15 +610,17 @@ def build():
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
+    # Diagram positioned per user spec 2026-06-17:
+    # 40.22 × 17.6 cm at x=3.72cm, y=10.25cm.
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
-                 x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
+                 x_px=141, y_px=387, max_w_px=1519, max_h_px=665)
 
     # ---- SLIDE 8 — SCAN / Compliance-native (was 7) ------------------------
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR")
     set_text(s, 2, "Compliance as a system property —\nnot a quarterly retrofit.")
     set_blue_box_bullets(s, 10, [
-        "Open Delivery Gear (ODG) is OCM's compliance automation engine.",
+        "Open Delivery Gear (ODG) is the OCM compliance automation engine.",
         "The Compliance Dashboard is your entry point: every component, "
         "every finding, every signature in one view.",
         "Continuous scans run asynchronously — even after release.",

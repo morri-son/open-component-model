@@ -156,7 +156,7 @@ Each beat below carries:
 **Punchline:** *Compliance as a system property — not a quarterly project.*
 
 **Body:**
-- Open Delivery Gear (ODG) is OCM's compliance automation engine.
+- Open Delivery Gear (ODG) is the OCM compliance automation engine.
 - The Compliance Dashboard is your entry point: every component, every finding, every signature in one view.
 - Continuous scans run asynchronously — even after release.
 - Findings get rescored against contextual risk, so your team patches what actually matters.
