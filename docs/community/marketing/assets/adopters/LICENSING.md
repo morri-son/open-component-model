@@ -100,6 +100,42 @@ usage is consistent with each owner's brand and trademark policies.
   via the neonephos/artwork repo licence.
 - **Caveat:** None.
 
+### OpenControlPlane (OCP)
+
+- **File:** `open-control-plane/opencontrolplane-icon-color.svg`
+- **Source URL:** <https://open-control-plane.io/img/opencontrolplane-icon-color.svg>
+- **Licence:** No explicit logo licence published on the project site at fetch
+  time. Project is the open-source rebrand of openMCP (rename triggered by
+  licensing concerns prior to OSS release). Treat as **TRADEMARK: editorial
+  use only — do not imply endorsement.** Verify with the OpenControlPlane
+  project before external publication.
+- **Caveat:** Icon-only mark (no horizontal lockup available at fetch time).
+  Reads slightly smaller than the horizontal logos in a row, acceptable
+  trade-off until a horizontal variant is published.
+
+### Kyma
+
+- **File:** `kyma/kyma-icon-color.svg`
+- **Source URL:** <https://kyma-project.io/assets/logo_icon.svg>
+- **Licence:** Kyma is an SAP-originated open-source project. No explicit
+  separate logo licence published; project assets are part of the public site.
+  Treat as **TRADEMARK: editorial use only — do not imply endorsement.**
+- **Caveat:** Icon-only mark (the kyma-project.io site uses this as its
+  primary navigation logo). No horizontal wordmark variant identified.
+
+### NeoNephos Foundation
+
+- **File:** `neonephos/neonephos-foundation-horizontal-color.svg`
+  (copied from `assets/neonephos/`, where the same SVG is used for the slide
+  brand row — kept under `adopters/` for consistency with the adopter-wall
+  convention)
+- **Source URL:** Vendored alongside the OCM brand assets; canonical source is
+  the NeoNephos Foundation (Linux Foundation Europe project).
+- **Licence:** Linux Foundation trademark usage guidelines apply
+  (<https://www.linuxfoundation.org/legal/trademark-usage/>). Editorial use
+  to indicate adoption is consistent with those guidelines.
+- **Caveat:** None.
+
 ---
 
 ## Decisions taken (slide 9 authoring)

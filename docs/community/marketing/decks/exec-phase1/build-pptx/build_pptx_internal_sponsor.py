@@ -365,17 +365,25 @@ def add_tile_icon(slide, tile_x_px: int, tile_y_px: int, icon_name: str):
     )
 
 
-def add_logo_row(slide, logos: list[Path], y_px: int,
+def add_logo_row(slide, logos: list, y_px: int,
                   row_h_px: int = 120,
                   max_logo_w_px: int = 320, max_logo_h_px: int = 80):
-    """Three logos centred in a row. Each logo is sized to a uniform height
-    (max_logo_h_px) so the row reads as visually consistent — wider logos
-    take more horizontal slot, but all share the same optical weight."""
+    """Three (or more) logos centred in a row, sized to a uniform height
+    (max_logo_h_px) so the row reads as visually consistent.
+
+    `logos` accepts either Path entries (no link) or (Path, url) tuples
+    (clickable). Tuples make the picture shape clickable in PowerPoint and
+    in PDF export.
+    """
     margin_x = 160
     inner_w = SLIDE_W_PX - 2 * margin_x
     n = len(logos)
     slot_w = inner_w // n
-    for i, path in enumerate(logos):
+    for i, entry in enumerate(logos):
+        if isinstance(entry, tuple):
+            path, url = entry
+        else:
+            path, url = entry, None
         if path is None or not path.exists():
             continue
         if path.suffix.lower() == ".svg":
@@ -396,6 +404,8 @@ def add_logo_row(slide, logos: list[Path], y_px: int,
             pic.height = int(pic.height * ratio)
         pic.left = px(slot_x) + (px(slot_w) - pic.width) // 2
         pic.top = px(y_px) + (px(row_h_px) - pic.height) // 2
+        if url:
+            pic.click_action.hyperlink.address = url
 
 
 # -----------------------------------------------------------------------------
@@ -535,10 +545,11 @@ def build():
                      "to sign — one signature covers every artifact in the "
                      "delivery, by digest.")
     set_text(s, 12, "TRANSPORT")
-    set_text(s, 13, "Helm registries, S3, OCI — each moves artifacts. OCM "
-                     "moves a signed envelope across any boundary: registry "
-                     "to registry, registry to air-gapped archive. The "
-                     "signature travels intact.")
+    set_text(s, 13, "S3, OCI and Helm registries — each stores artifacts "
+                     "differently. OCM transports a signed envelope of "
+                     "artifacts across any boundary: registry to registry, "
+                     "registry to air-gapped archive. The signature travels "
+                     "intact.")
     set_text(s, 14, "COMPLIANCE")
     set_text(s, 15, "Trivy, Grype, your SBOM tools — each scans in isolation. "
                      "OCM (via Open Delivery Gear) correlates every finding "
@@ -631,19 +642,29 @@ def build():
         add_tile_icon(s, x, y, icon)
 
     # ---- SLIDE 10a — WHERE OCM IS SHIPPING — OPEN ECOSYSTEM ---------------
-    # Internal-sponsor: open-peer wall, text-based (most peer projects don't
-    # have logos in assets/, and a mixed text/logo row reads inconsistently).
+    # Internal-sponsor: open-peer wall, logo-based (matches the external
+    # deck's slide-10 pattern). Logos are clickable; the URL line below
+    # carries the references through PDF export and print.
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "WHERE OCM IS SHIPPING — OPEN ECOSYSTEM")
     set_text(s, 2, "Peer in the open ecosystem.")
-    set_blue_box_bullets(s, 10, [
-        "Gardener — Production-grade Kubernetes-as-a-service, open ecosystem.",
-        "Kyma — Kubernetes-based modular building blocks, to run enterprise-grade cloud-native applications.",
-        "OpenControlPlane — a platform for creating and managing "
-        "Kubernetes-based ControlPlanes for your teams",
-        "Konfidence — comprehensive framework for all aspects of DevOps.",
-        "And forthcoming: every NeoNephos foundation project as it lands.",
-    ])
+    delete_placeholder(s, 10)
+    add_label_at(s, 510, "OPEN PEER PROJECTS BUILDING ON OCM")
+    add_logo_row(s, [
+        (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
+         "https://gardener.cloud"),
+        (ASSETS_DIR / "adopters" / "kyma" / "kyma-icon-color.svg",
+         "https://kyma-project.io"),
+        (ASSETS_DIR / "adopters" / "open-control-plane" / "opencontrolplane-icon-color.svg",
+         "https://open-control-plane.io"),
+        (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
+         "https://konfidence.cloud"),
+        (ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
+         "https://neonephos.org"),
+    ], y_px=620)
+    add_centred_proof(s, 850,
+                       "And forthcoming: every NeoNephos foundation project "
+                       "as it lands.")
     add_source_line(s, 1020,
                      "gardener.cloud · kyma-project.io · "
                      "open-control-plane.io · konfidence.cloud · "
@@ -682,6 +703,9 @@ def build():
         ("Standardize", "Bring your LoB into the OCM steering conversation — SAP Slack #sap-tech-ocm."),
     ])
     add_brand_row(s)
+
+    # ---- HIDDEN — Trademark & licensing notice -----------------------------
+    add_hidden_trademark_slide(prs, layouts)
 
     prs.save(str(OUTPUT_PPTX))
     print(f"Wrote {OUTPUT_PPTX}")
@@ -747,6 +771,43 @@ def add_source_line(slide, y_px: int, text: str):
     r.font.name = "Aptos"
     r.font.size = Pt(13)
     r.font.color.rgb = C.GREY_MID
+
+
+def add_hidden_trademark_slide(prs, layouts):
+    """Append a non-presented slide with trademark/licensing notices.
+    show="0" hides it in slideshow but it stays in the file. Mirrors the
+    external deck's helper. Canonical record: assets/adopters/LICENSING.md."""
+    s = prs.slides.add_slide(layouts["Plain"])
+    s.element.set("show", "0")
+    set_text(s, 1, "TRADEMARK & LICENSE NOTICES")
+    set_text(s, 2, "Logos and trademarks belong to their respective owners.")
+    set_blue_box_bullets(s, 10, [
+        "SAP, SAP NS2 — trademarks of SAP SE / SAP National Security "
+        "Services. Editorial use only; no endorsement implied. "
+        "sap.com · sapns2.com",
+        "BWI — trademark of BWI GmbH (Bundeswehr-IT). Editorial use of the "
+        "Wikimedia public-domain wordmark; verify against BWI press "
+        "conditions before external publication. bwi.de",
+        "Gardener, Platform Mesh, NeoNephos Foundation — Linux Foundation "
+        "Europe artwork; usage governed by the Linux Foundation trademark "
+        "usage guidelines (linuxfoundation.org/legal/trademark-usage). "
+        "gardener.cloud · platform-mesh.io · neonephos.org",
+        "Konfidence — SAP-supported open project; logo from konfidence.cloud. "
+        "Editorial use only; verify with the Konfidence project before "
+        "external publication. konfidence.cloud",
+        "OpenControlPlane — open-source project at open-control-plane.io. "
+        "Editorial use only; verify with the project before external "
+        "publication. open-control-plane.io",
+        "Kyma — SAP-originated open-source project at kyma-project.io. "
+        "Editorial use only. kyma-project.io",
+        "Hyperspace, RBSC, CSI, Greenhouse, Steampunk — internal SAP "
+        "delivery infrastructure named for context; not third-party marks.",
+        "Trivy, Grype, Sigstore, Helm, OCI, Kubernetes, kro, Flux, Argo CD — "
+        "third-party trademarks named for technical reference; ownership "
+        "remains with their respective projects and organisations.",
+        "Full sourcing record: assets/adopters/LICENSING.md in the OCM "
+        "marketing repository.",
+    ])
 
 
 # =============================================================================

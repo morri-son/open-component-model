@@ -401,10 +401,14 @@ def _crop_to_content(png_path: Path) -> Path:
     return out
 
 
-def add_logo_row(slide, logos: list[Path], y_px: int,
+def add_logo_row(slide, logos: list, y_px: int,
                   row_h_px: int = 120,
                   max_logo_w_px: int = 320, max_logo_h_px: int = 80):
-    """Three logos centred in a row, normalised on visible content height.
+    """Three (or more) logos centred in a row, normalised on visible content height.
+
+    `logos` accepts either Path entries (no link) or (Path, url) tuples
+    (clickable). Tuples make the picture shape clickable in PowerPoint and
+    in PDF export.
 
     Each input logo is rasterised (or used directly for PNG) and then cropped
     to its visible bounding box, so wordmarks with baked-in whitespace
@@ -417,7 +421,11 @@ def add_logo_row(slide, logos: list[Path], y_px: int,
     inner_w = SLIDE_W_PX - 2 * margin_x
     n = len(logos)
     slot_w = inner_w // n
-    for i, path in enumerate(logos):
+    for i, entry in enumerate(logos):
+        if isinstance(entry, tuple):
+            path, url = entry
+        else:
+            path, url = entry, None
         if path is None or not path.exists():
             continue
         if path.suffix.lower() == ".svg":
@@ -441,6 +449,8 @@ def add_logo_row(slide, logos: list[Path], y_px: int,
             pic.height = int(pic.height * ratio)
         pic.left = px(slot_x) + (px(slot_w) - pic.width) // 2
         pic.top = px(y_px) + (px(row_h_px) - pic.height) // 2
+        if url:
+            pic.click_action.hyperlink.address = url
 
 
 # -----------------------------------------------------------------------------
@@ -570,10 +580,11 @@ def build():
                      "to sign — one signature covers every artifact in the "
                      "delivery, by digest.")
     set_text(s, 12, "TRANSPORT")
-    set_text(s, 13, "Helm registries, S3, OCI — each moves artifacts. OCM "
-                     "moves a signed envelope across any boundary: registry "
-                     "to registry, registry to air-gapped archive. The "
-                     "signature travels intact.")
+    set_text(s, 13, "S3, OCI and Helm registries — each stores artifacts "
+                     "differently. OCM transports a signed envelope of "
+                     "artifacts across any boundary: registry to registry, "
+                     "registry to air-gapped archive. The signature travels "
+                     "intact.")
     set_text(s, 14, "COMPLIANCE")
     set_text(s, 15, "Trivy, Grype, your SBOM tools — each scans in isolation. "
                      "OCM (via Open Delivery Gear) correlates every finding "
@@ -666,24 +677,34 @@ def build():
     # Plain layout has a body placeholder at idx=10. We want neither text nor
     # an empty container; the ALL-CAPS labels and logo rows below replace it.
     delete_placeholder(s, 10)
-    # Top section label + logos
+    # Top section label + logos (clickable — links survive PowerPoint and
+    # PDF export; the URL line below survives print).
     add_label_at(s, 510, "ADOPTED BY ENTERPRISES SHIPPING INTO REGULATED ENVIRONMENTS")
     add_logo_row(s, [
-        ASSETS_DIR / "adopters" / "sap" / "sap-horizontal-color.svg",
-        ASSETS_DIR / "adopters" / "bwi" / "bwi-horizontal-color.svg",
-        ASSETS_DIR / "adopters" / "sap-ns2" / "sap-ns2-getlogovector.png",
+        (ASSETS_DIR / "adopters" / "sap" / "sap-horizontal-color.svg",
+         "https://www.sap.com"),
+        (ASSETS_DIR / "adopters" / "bwi" / "bwi-horizontal-color.svg",
+         "https://www.bwi.de"),
+        (ASSETS_DIR / "adopters" / "sap-ns2" / "sap-ns2-getlogovector.png",
+         "https://sapns2.com"),
     ], y_px=580)
     add_label_at(s, 740, "BUILT INTO THE OPEN-SOURCE ECOSYSTEM")
     add_logo_row(s, [
-        ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
-        ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
-        ASSETS_DIR / "adopters" / "platform-mesh" / "platform-mesh-horizontal-color.svg",
+        (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
+         "https://gardener.cloud"),
+        (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
+         "https://konfidence.cloud"),
+        (ASSETS_DIR / "adopters" / "open-control-plane" / "opencontrolplane-icon-color.svg",
+         "https://open-control-plane.io"),
+        (ASSETS_DIR / "adopters" / "platform-mesh" / "platform-mesh-horizontal-color.svg",
+         "https://platform-mesh.io"),
     ], y_px=810)
     add_centred_proof(s, 970,
                        "An open standard, neutrally governed — your stack "
                        "stays portable, your dependencies stay yours.")
     add_source_line(s, 1040,
-                     "neonephos.org · gardener.cloud · konfidence.cloud · "
+                     "sap.com · bwi.de · sapns2.com · neonephos.org · "
+                     "gardener.cloud · konfidence.cloud · "
                      "platform-mesh.io · open-control-plane.io")
 
     # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
@@ -695,6 +716,12 @@ def build():
         ("Talk to us",    "community channels on the website"),
     ])
     add_brand_row(s)
+
+    # ---- HIDDEN — Trademark & licensing notice -----------------------------
+    # Marked show="0" so it doesn't appear in slideshow mode but is visible
+    # when editing and survives PDF export. Lives at the back of the deck for
+    # legal/audit completeness; the speaker need never present it.
+    add_hidden_trademark_slide(prs, layouts)
 
     prs.save(str(OUTPUT_PPTX))
     print(f"Wrote {OUTPUT_PPTX}")
@@ -759,6 +786,45 @@ def add_source_line(slide, y_px: int, text: str):
     r.font.name = "Aptos"
     r.font.size = Pt(13)
     r.font.color.rgb = C.GREY_MID
+
+
+def add_hidden_trademark_slide(prs, layouts):
+    """Append a non-presented slide carrying trademark and licensing notices
+    for every third-party logo on the deck. Marked show="0" so it is skipped
+    in slideshow mode but visible to editors and survives PDF export — keeps
+    the legal acknowledgement attached to the deck without burdening the
+    speaker. References the canonical record at
+    docs/community/marketing/assets/adopters/LICENSING.md."""
+    s = prs.slides.add_slide(layouts["Plain"])
+    # Hide from slideshow.
+    s.element.set("show", "0")
+    set_text(s, 1, "TRADEMARK & LICENSE NOTICES")
+    set_text(s, 2, "Logos and trademarks belong to their respective owners.")
+    set_blue_box_bullets(s, 10, [
+        "SAP, SAP NS2 — trademarks of SAP SE / SAP National Security "
+        "Services. Editorial use only; no endorsement implied. "
+        "sap.com · sapns2.com",
+        "BWI — trademark of BWI GmbH (Bundeswehr-IT). Editorial use of the "
+        "Wikimedia public-domain wordmark; verify against BWI press "
+        "conditions before external publication. bwi.de",
+        "Gardener, Platform Mesh, NeoNephos Foundation — Linux Foundation "
+        "Europe artwork; usage governed by the Linux Foundation trademark "
+        "usage guidelines (linuxfoundation.org/legal/trademark-usage). "
+        "gardener.cloud · platform-mesh.io · neonephos.org",
+        "Konfidence — SAP-supported open project; logo from konfidence.cloud. "
+        "Editorial use only; verify with the Konfidence project before "
+        "external publication. konfidence.cloud",
+        "OpenControlPlane — open-source project at open-control-plane.io. "
+        "Editorial use only; verify with the project before external "
+        "publication. open-control-plane.io",
+        "Kyma — SAP-originated open-source project at kyma-project.io. "
+        "Editorial use only. kyma-project.io",
+        "Trivy, Grype, Sigstore, Helm, OCI, Kubernetes, kro, Flux, Argo CD — "
+        "third-party trademarks named for technical reference; ownership "
+        "remains with their respective projects and organisations.",
+        "Full sourcing record: assets/adopters/LICENSING.md in the OCM "
+        "marketing repository.",
+    ])
 
 
 # =============================================================================
