@@ -535,7 +535,7 @@ def build():
     set_text(s, 1, "THE SHIFT")
     set_text(s, 2, "SBOM lists. SBoD delivers.")
     set_blue_box_bullets(s, 10, [
-        "An SBOM tells you what's in your software. It was built for inventory.",
+        "An SBOM (Software Bill of Materials) tells you what's in your software. It was built for inventory.",
         "A Software Bill of Delivery (SBoD) tells you what you delivered, "
         "how to verify it, how to transport it, and how to operate it. "
         "It was built for delivery.",
@@ -629,6 +629,8 @@ def build():
         "Every compliance signal correlates by component identity. Auditors "
         "get evidence, not spreadsheets.",
     ])
+    add_source_line(s, 1020,
+                     "github.com/open-component-model/open-delivery-gear")
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS (tiles, was 8) -------------------------
     s = prs.slides.add_slide(layouts["Content / Tiles"])
@@ -680,6 +682,9 @@ def build():
     add_centred_proof(s, 970,
                        "An open standard, neutrally governed — your stack "
                        "stays portable, your dependencies stay yours.")
+    add_source_line(s, 1040,
+                     "neonephos.org · gardener.cloud · konfidence.cloud · "
+                     "platform-mesh.io · open-control-plane.io")
 
     # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
     s = prs.slides.add_slide(layouts["CTA"])
@@ -735,6 +740,25 @@ def add_centred_proof(slide, y_px: int, text: str):
     r.font.name = "Aptos"
     r.font.size = Pt(18)
     r.font.color.rgb = C.BLUE_MID
+
+
+def add_source_line(slide, y_px: int, text: str):
+    """Small grey source/reference line — for slide footers that name the
+    canonical URL of a project (NeoNephos, ODG, OpenControlPlane, etc.).
+    Renders at the bottom of the slide as a discreet citation, not a CTA."""
+    from pptx.enum.text import PP_ALIGN
+    tb = slide.shapes.add_textbox(px(120), px(y_px),
+                                   px(SLIDE_W_PX - 240), px(40))
+    tf = tb.text_frame
+    tf.margin_left = tf.margin_right = 0
+    tf.margin_top = tf.margin_bottom = 0
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = text
+    r.font.name = "Aptos"
+    r.font.size = Pt(13)
+    r.font.color.rgb = C.GREY_MID
 
 
 # =============================================================================

@@ -471,8 +471,8 @@ def build():
     set_text(s, 10, "ECOSYSTEM VELOCITY IS REAL")
     set_text(s, 11, "OCM-shaped abstractions are landing in adjacent OSS "
                      "projects. NeoNephos is operationalizing. The peer "
-                     "ecosystem (Gardener, Kyma, Konfidence, OCP, Hyperspace, "
-                     "RBSC, CSI) shares the primitive.")
+                     "ecosystem (Gardener, Kyma, OpenControlPlane, Konfidence, "
+                     "Hyperspace, RBSC, CSI) shares the primitive.")
     set_text(s, 12, "THE WINDOW IS CLOSING")
     set_text(s, 13, "Adoption is consolidating. NeoNephos governance, CRA "
                      "enforcement, sovereign-cloud market formation — the "
@@ -498,7 +498,7 @@ def build():
     set_text(s, 1, "THE SHIFT")
     set_text(s, 2, "SBOM lists. SBoD delivers.")
     set_blue_box_bullets(s, 10, [
-        "An SBOM tells you what's in your software. It was built for inventory.",
+        "An SBOM (Software Bill of Materials) tells you what's in your software. It was built for inventory.",
         "A Software Bill of Delivery (SBoD) tells you what you delivered, "
         "how to verify it, how to transport it, and how to operate it. "
         "It was built for delivery.",
@@ -596,6 +596,8 @@ def build():
         "Every SAP LoB gets compliance correlation by component identity, "
         "without each LoB building its own retrofit.",
     ])
+    add_source_line(s, 1020,
+                     "github.com/open-component-model/open-delivery-gear")
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS FOR SAP (tiles, internal outcomes) -----
     s = prs.slides.add_slide(layouts["Content / Tiles"])
@@ -603,24 +605,23 @@ def build():
     set_text(s, 2, "Six outcomes from one shared primitive.")
     tiles = [
         ("cloud-upload.svg", "Faster sovereign delivery",
-         "Pack a complete component once. From source into a regulated "
-         "sovereign environment — every operator, every region, every "
-         "air-gap."),
+         "Pack once, ship everywhere. Validated end-to-end in OCM's "
+         "open-source sovereign conformance scenario."),
         ("report-analytics.svg", "Compliance leverage across LoBs",
-         "Each LoB gets DORA-aligned reporting from one shared primitive — "
-         "not built N times."),
+         "DORA-aligned reporting from one shared primitive — "
+         "ODG correlates findings by component identity, not built N times."),
         ("rocket.svg", "Integration after acquisition",
          "Acquired teams' signing schemes converge on one mechanism. "
          "The retire-list shrinks every quarter."),
         ("radar.svg", "Cross-LoB security correlation",
-         "An incident's blast radius is one query — “which deployments "
-         "contain OCM component X?” — across every LoB on OCM."),
+         "Blast radius is one query — “which deployments contain OCM "
+         "component X?” — answered via the OCM coordinate system."),
         ("source-of-truth.svg", "One source of truth",
-         "One signed descriptor per delivery. Rebuild any landscape. Audit "
-         "prep is composition, not archaeology."),
+         "One signed descriptor per delivery. Rebuild any landscape. "
+         "Audit prep is composition, not archaeology."),
         ("lock.svg", "Ecosystem stewardship",
-         "SAP investment in OCM compounds with the open-peer ecosystem "
-         "(Gardener, Konfidence, OCP, NeoNephos)."),
+         "SAP investment compounds with Gardener, OpenControlPlane, "
+         "Konfidence, NeoNephos — the open-peer ecosystem."),
     ]
     for i, (icon, label, body) in enumerate(tiles):
         # Tile placeholders alternate label/body: idx 20+2i = label, 21+2i = body
@@ -636,14 +637,17 @@ def build():
     set_text(s, 1, "WHERE OCM IS SHIPPING — OPEN ECOSYSTEM")
     set_text(s, 2, "Peer in the open ecosystem.")
     set_blue_box_bullets(s, 10, [
-        "Gardener — Kubernetes-as-a-service, open ecosystem.",
-        "Kyma — SAP-originated open-source Kubernetes-based runtime.",
-        "Konfidence — a development and delivery framework "
-        "(SAP-originated, now open source).",
-        "Open Control Plane (OCP) — a platform that lets you create and "
-        "manage Kubernetes-based ControlPlanes for your teams.",
+        "Gardener — Production-grade Kubernetes-as-a-service, open ecosystem.",
+        "Kyma — Kubernetes-based modular building blocks, to run enterprise-grade cloud-native applications.",
+        "OpenControlPlane — a platform for creating and managing "
+        "Kubernetes-based ControlPlanes for your teams",
+        "Konfidence — comprehensive framework for all aspects of DevOps.",
         "And forthcoming: every NeoNephos foundation project as it lands.",
     ])
+    add_source_line(s, 1020,
+                     "gardener.cloud · kyma-project.io · "
+                     "open-control-plane.io · konfidence.cloud · "
+                     "neonephos.org")
 
     # ---- SLIDE 10b — WHERE OCM IS SHIPPING — INTERNAL SAP ----------------
     # Internal-only delivery infrastructure converging on OCM.
@@ -725,6 +729,24 @@ def add_centred_proof(slide, y_px: int, text: str):
     r.font.size = Pt(16)
     r.font.italic = True
     r.font.color.rgb = C.BLUE_MID
+
+
+def add_source_line(slide, y_px: int, text: str):
+    """Small grey source/reference line — for slide footers that name the
+    canonical URL of a project (NeoNephos, ODG, OpenControlPlane, etc.)."""
+    from pptx.enum.text import PP_ALIGN
+    tb = slide.shapes.add_textbox(px(120), px(y_px),
+                                   px(SLIDE_W_PX - 240), px(40))
+    tf = tb.text_frame
+    tf.margin_left = tf.margin_right = 0
+    tf.margin_top = tf.margin_bottom = 0
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run()
+    r.text = text
+    r.font.name = "Aptos"
+    r.font.size = Pt(13)
+    r.font.color.rgb = C.GREY_MID
 
 
 # =============================================================================

@@ -162,11 +162,11 @@
   </g>
 
   <!-- =======================================================================
-       CLUSTER 2 — REGULATORY REGIMES   (RIGHT, pulled in close to hub)
+       CLUSTER 2 — COMPLIANCE FRAMEWORKS   (RIGHT, pulled in close to hub)
        Badges 180 wide, column x = 1360. Left edge = 1360. Hub right ~ 928.
        ======================================================================= -->
   <g>
-    <text x="1450" y="38" text-anchor="middle" class="eyebrow">EVERY REGIME</text>
+    <text x="1450" y="38" text-anchor="middle" class="eyebrow">EVERY FRAMEWORK</text>
     <line x1="1360" y1="50" x2="1540" y2="50" stroke="#1D65B4" stroke-width="2"/>
 
     <!-- DORA -->
