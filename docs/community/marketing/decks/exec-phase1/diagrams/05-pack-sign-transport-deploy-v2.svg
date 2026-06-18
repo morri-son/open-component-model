@@ -109,7 +109,7 @@
       <path class="icon" d="M 25 52 L 27 60 L 30 56 L 33 60 L 35 52"/>
     </g>
     <text x="32" y="170" class="step-label">DEPLOY</text>
-    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bring your own GitOps</tspan><tspan x="32" dy="36">(Argo · Flux · KRO) or</tspan><tspan x="32" dy="36">use OCM's Kubernetes</tspan><tspan x="32" dy="36">controllers.</tspan></text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bring your own GitOps</tspan><tspan x="32" dy="36">(Argo · Flux) and</tspan><tspan x="32" dy="36">use OCM's Kubernetes</tspan><tspan x="32" dy="36">controllers.</tspan></text>
   </g>
 
   <!-- Big arrow to target -->
