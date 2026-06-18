@@ -82,11 +82,11 @@
           <text x="80" y="52" font-size="13" fill="#6b7280">v1.0.0 · signed component</text>
         </g>
 
-        <!-- "Identity stays · signature stays" caption sits to the right of
-             the landed component, inside the air-gapped zone. Two short lines
-             so it fits the ~145px gap between the component box and the
-             air-gap container's right edge. -->
-        <text x="460" y="88" font-size="14" font-weight="600" fill="#0a3a99"><tspan x="460" dy="0">Identity stays</tspan><tspan x="460" dy="18">signature stays</tspan></text>
+        <!-- "Identity stays · signature stays" caption removed — its claim
+             is now consolidated into the bottom accent caption
+             (SAME IDENTITY · SAME SIGNATURE · ANY LOCATION). Reduces caption
+             count on the slide so the new TRANSPORT label on the arrow has
+             room to breathe. -->
 
         <!-- Three local consumers, all verifying -->
         <g transform="translate(30,170)">
@@ -112,9 +112,14 @@
         <text x="300" y="360" text-anchor="middle" font-size="16" fill="#6b7280">No callback to source. Day-2 ops included.</text>
 
         <!-- Bottom accent: light-blue background rect sized to fit the
-             ALL-CAPS letter-spaced caption with breathing room on both sides. -->
-        <rect x="140" y="400" width="320" height="42" rx="6" fill="#e8f0ff"/>
-        <text x="300" y="428" text-anchor="middle" font-size="14" font-weight="700" fill="#0a3a99" letter-spacing="2">SAME SIGNATURE · ANY LOCATION</text>
+             ALL-CAPS letter-spaced caption with breathing room on both sides.
+             Caption widened to consolidate the "identity stays / signature
+             stays" claim previously sitting next to the landing component —
+             one caption now carries the full thesis. Rect width 320→480,
+             x=140→60, kept centred at x=300 inside the 600-wide air-gap
+             container (60px margin both sides). -->
+        <rect x="60" y="400" width="480" height="42" rx="6" fill="#e8f0ff"/>
+        <text x="300" y="428" text-anchor="middle" font-size="14" font-weight="700" fill="#0a3a99" letter-spacing="2">SAME IDENTITY · SAME SIGNATURE · ANY LOCATION</text>
       </g>
     </g>
 
@@ -126,5 +131,15 @@
     <path d="M 385 385 C 600 385, 850 335, 1055 335"
           fill="none" stroke="url(#brandFill)" stroke-width="3.5"/>
     <polygon points="1055,335 1033,323 1033,347" fill="#0f6bff"/>
+
+    <!-- TRANSPORT label sits above the arrow's mid-flight, just to the right
+         of the trust boundary (boundary at x=650; arrow apex around x=720).
+         Anchors the diagram to the canonical Pack · Sign · Transport · Deploy
+         four-step from slide 6: this slide *is* the Transport step in motion.
+         Rendered after the arrow so it draws on top — same z-order reason
+         the arrow itself is the last layer. Same letter-spaced caps style as
+         the bottom accent caption so the two captions read as one visual
+         family (one labels the action, one states the consequence). -->
+    <text x="720" y="345" text-anchor="middle" font-size="14" font-weight="700" fill="#0a3a99" letter-spacing="3">TRANSPORT</text>
   </g>
 </svg>
