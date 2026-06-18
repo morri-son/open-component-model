@@ -50,6 +50,5 @@ Internal SAP projects converging on OCM: **Hyperspace** (internal Dev Portal, li
 
 ---
 
-**14-slide deck:** 1, 2, 3, 4a, 4b, 5, 6, 7a, 7b, 8, 9, 10a, 10b, 11.
 **Lead axis:** strategic-fit + ecosystem-leverage, framed as loss (what we lose by walking away).
 **No real numbers in this deck:** we cannot deliver per-LoB ROI numbers; the deck argues strategy, not transactions.
