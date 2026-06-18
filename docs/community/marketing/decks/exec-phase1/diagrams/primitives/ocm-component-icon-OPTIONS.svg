@@ -1,0 +1,274 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 760"
+     font-family="Aptos, Inter, sans-serif">
+  <!--
+    OCM-component icon — design options
+
+    Each column shows one design at TWO scales:
+      • TOP row  = "mini"  — slide 3 hub centre (no inner text)
+      • BOTTOM row = "full" — slide 7b component glyph (with name + version)
+
+    All five options carry the same three semantic anchors:
+      1) envelope / container shape           → SBoD ("we wrap your delivery")
+      2) lock or seal glyph                    → signature
+      3) name + version label area             → identity (location-independent)
+
+    Pick by feel. Spec for whichever you choose:
+      mini target size  ≈ 200×140
+      full target size  ≈ 290×70  (matches existing slide-7b component glyph)
+  -->
+
+  <defs>
+    <linearGradient id="brandFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5cd6ff"/>
+      <stop offset="100%" stop-color="#0f6bff"/>
+    </linearGradient>
+    <linearGradient id="paperFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f3f4f6"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="b"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Lock glyph reused by every option -->
+    <symbol id="lock" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/>
+        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/>
+        <path d="M8 11v-4a4 4 0 1 1 8 0v4"/>
+      </g>
+    </symbol>
+
+    <!-- Seal-style lock used by option C -->
+    <symbol id="sealLock" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9 12v-2a3 3 0 0 1 6 0v2" stroke-linecap="round"/>
+        <rect x="8" y="12" width="8" height="6" rx="1.5"/>
+      </g>
+    </symbol>
+  </defs>
+
+  <!-- Column titles -->
+  <g fill="#0a3a99" font-weight="700" font-size="16" letter-spacing="2"
+     text-anchor="middle">
+    <text x="180"  y="34">A — SEALED ENVELOPE</text>
+    <text x="540"  y="34">B — TAGGED PACKAGE</text>
+    <text x="900"  y="34">C — SEAL ON CARD</text>
+    <text x="1260" y="34">D — HEX CELL</text>
+    <text x="1620" y="34">E — TICKET</text>
+  </g>
+  <g fill="#6b7280" font-size="12" text-anchor="middle">
+    <text x="180"  y="54">flap + horizontal seal strip + label slot</text>
+    <text x="540"  y="54">crate / box with hanging name tag</text>
+    <text x="900"  y="54">card with circular wax seal + footer</text>
+    <text x="1260" y="54">two stacked hex cells, bonded by seal</text>
+    <text x="1620" y="54">boarding-pass strip with stub</text>
+  </g>
+
+  <!-- Row labels -->
+  <g fill="#6b7280" font-size="11" letter-spacing="2" font-weight="700">
+    <text x="20" y="180">MINI · slide 3 hub</text>
+    <text x="20" y="500">FULL · slide 7b glyph</text>
+  </g>
+
+  <!-- Mini-row baseline guide -->
+  <line x1="60" y1="280" x2="1740" y2="280" stroke="#e8f0ff" stroke-width="1"/>
+  <!-- Full-row baseline guide -->
+  <line x1="60" y1="600" x2="1740" y2="600" stroke="#e8f0ff" stroke-width="1"/>
+
+  <!-- ============================================================
+       A — SEALED ENVELOPE (flap + horizontal seal strip + label)
+       Reads as: a parcel that has been closed and stamped.
+       Strongest "container" feel; seal strip is unmistakably a signature.
+       ============================================================ -->
+  <!-- A mini: 200×140 centred at (180, 200) -->
+  <g transform="translate(80,140)">
+    <rect x="0" y="20" width="200" height="120" rx="8"
+          fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <!-- envelope flap (V shape) -->
+    <path d="M 0 20 L 100 70 L 200 20" fill="none" stroke="#0f6bff" stroke-width="2"/>
+    <!-- horizontal seal strip across mid-body -->
+    <rect x="0" y="78" width="200" height="22" fill="url(#brandFill)"/>
+    <use href="#lock" x="86" y="80" width="20" height="20" color="#ffffff"/>
+    <!-- bottom label slot -->
+    <rect x="14" y="112" width="172" height="18" rx="3" fill="#e8f0ff"/>
+  </g>
+
+  <!-- A full: 290×100 centred at (180, 540) -->
+  <g transform="translate(35,460)">
+    <rect x="0" y="14" width="290" height="86" rx="8"
+          fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <path d="M 0 14 L 145 50 L 290 14" fill="none" stroke="#0f6bff" stroke-width="2"/>
+    <rect x="0" y="56" width="290" height="18" fill="url(#brandFill)"/>
+    <use href="#lock" x="134" y="58" width="16" height="16" color="#ffffff"/>
+    <text x="14" y="92" font-size="13" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
+    <text x="218" y="92" font-size="11" fill="#6b7280">v1.0.0</text>
+  </g>
+
+  <!-- ============================================================
+       B — TAGGED PACKAGE (box + dangling tag with name)
+       Reads as: a shipping crate with a luggage-tag identity.
+       Most warehouse-shipping feel. Tag carries the name; lock on the box face.
+       ============================================================ -->
+  <!-- B mini: 200×140 centred at (540, 200) -->
+  <g transform="translate(440,140)">
+    <!-- box body with isometric-lite shading -->
+    <rect x="20" y="40" width="160" height="100" rx="6"
+          fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <line x1="20" y1="74" x2="180" y2="74" stroke="#0f6bff" stroke-width="2"/>
+    <line x1="100" y1="40" x2="100" y2="74" stroke="#0f6bff" stroke-width="2"/>
+    <!-- lock badge centred -->
+    <circle cx="100" cy="106" r="20" fill="#0f6bff"/>
+    <use href="#lock" x="86" y="92" width="28" height="28" color="#ffffff"/>
+    <!-- hanging tag (string + tag) -->
+    <line x1="170" y1="40" x2="180" y2="20" stroke="#6b7280" stroke-width="1.2"/>
+    <rect x="155" y="14" width="50" height="20" rx="3" fill="#e8f0ff" stroke="#0f6bff" stroke-width="1.2"/>
+    <circle cx="180" cy="16" r="1.5" fill="#0f6bff"/>
+  </g>
+
+  <!-- B full: 290×100 centred at (540, 540) -->
+  <g transform="translate(395,460)">
+    <rect x="0" y="20" width="240" height="80" rx="6"
+          fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <line x1="0" y1="44" x2="240" y2="44" stroke="#0f6bff" stroke-width="2"/>
+    <line x1="120" y1="20" x2="120" y2="44" stroke="#0f6bff" stroke-width="2"/>
+    <circle cx="34" cy="76" r="16" fill="#0f6bff"/>
+    <use href="#lock" x="22" y="64" width="24" height="24" color="#ffffff"/>
+    <text x="60" y="72" font-size="13" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
+    <text x="60" y="90" font-size="11" fill="#6b7280">v1.0.0</text>
+    <!-- hanging tag -->
+    <line x1="230" y1="20" x2="252" y2="6" stroke="#6b7280" stroke-width="1.2"/>
+    <rect x="246" y="0" width="44" height="18" rx="3" fill="#e8f0ff" stroke="#0f6bff" stroke-width="1.2"/>
+    <text x="268" y="13" text-anchor="middle" font-size="9" font-weight="700" fill="#0a3a99" letter-spacing="1">SBoD</text>
+  </g>
+
+  <!-- ============================================================
+       C — SEAL ON CARD (clean card with circular wax-seal lock + name footer)
+       Reads as: a passport / certificate. Most "trustworthy document" feel.
+       Closest to OCM's existing slide-7b component glyph; refines it rather
+       than reinvents it.
+       ============================================================ -->
+  <!-- C mini: 200×140 centred at (900, 200) -->
+  <g transform="translate(800,140)">
+    <rect x="0" y="20" width="200" height="120" rx="10"
+          fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <!-- circular seal -->
+    <circle cx="100" cy="64" r="26" fill="#0f6bff"/>
+    <circle cx="100" cy="64" r="20" fill="none" stroke="#5cd6ff" stroke-width="1.5"/>
+    <use href="#lock" x="86" y="50" width="28" height="28" color="#ffffff"/>
+    <!-- footer label slot -->
+    <rect x="14" y="106" width="172" height="22" rx="3" fill="#ffffff" stroke="#0f6bff" stroke-width="1"/>
+  </g>
+
+  <!-- C full: 290×80 centred at (900, 540) -->
+  <g transform="translate(755,470)">
+    <rect x="0" y="0" width="290" height="80" rx="10"
+          fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <circle cx="40" cy="40" r="22" fill="#0f6bff"/>
+    <circle cx="40" cy="40" r="17" fill="none" stroke="#5cd6ff" stroke-width="1.4"/>
+    <use href="#lock" x="26" y="26" width="28" height="28" color="#ffffff"/>
+    <text x="80" y="38" font-size="14" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
+    <text x="80" y="58" font-size="12" fill="#6b7280">v1.0.0 · signed component</text>
+  </g>
+
+  <!-- ============================================================
+       D — HEX CELL (twin hexagons bonded by a seal)
+       Reads as: cellular / modular. Echoes the existing OCM hexagon brand mark.
+       Strongest "this is OCM" recognition because the hex is already brand DNA.
+       Weakest envelope-feel.
+       ============================================================ -->
+  <!-- D mini: 200×140 centred at (1260, 200) -->
+  <g transform="translate(1160,140)">
+    <!-- two stacked hex cells -->
+    <polygon points="40,40 100,40 130,90 100,140 40,140 10,90"
+             fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+             filter="url(#softShadow)"/>
+    <polygon points="100,40 160,40 190,90 160,140 100,140 130,90"
+             fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+    <!-- bonded seal where they meet -->
+    <circle cx="100" cy="90" r="18" fill="#0f6bff"/>
+    <use href="#lock" x="86" y="76" width="28" height="28" color="#ffffff"/>
+  </g>
+
+  <!-- D full: 290×80 centred at (1260, 540) -->
+  <g transform="translate(1115,470)">
+    <polygon points="20,8 90,8 110,40 90,72 20,72 0,40"
+             fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+             filter="url(#softShadow)"/>
+    <polygon points="90,8 160,8 180,40 160,72 90,72 110,40"
+             fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+    <circle cx="90" cy="40" r="14" fill="#0f6bff"/>
+    <use href="#lock" x="80" y="30" width="20" height="20" color="#ffffff"/>
+    <text x="200" y="34" font-size="13" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
+    <text x="200" y="54" font-size="11" fill="#6b7280">v1.0.0</text>
+  </g>
+
+  <!-- ============================================================
+       E — TICKET (boarding-pass strip with detachable stub on the right)
+       Reads as: a delivery ticket. Most "in-transit" feel — the perforation
+       implies movement. Distinct silhouette, doesn't look like anything else
+       on the deck.
+       ============================================================ -->
+  <!-- E mini: 220×130 centred at (1620, 200) -->
+  <g transform="translate(1510,150)">
+    <!-- main body -->
+    <rect x="0" y="20" width="160" height="100" rx="8"
+          fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <!-- perforation -->
+    <line x1="160" y1="30" x2="160" y2="110" stroke="#0f6bff" stroke-width="2" stroke-dasharray="4 3"/>
+    <!-- stub -->
+    <rect x="160" y="20" width="60" height="100" rx="8"
+          fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+    <!-- lock on main -->
+    <circle cx="50" cy="70" r="18" fill="#0f6bff"/>
+    <use href="#lock" x="36" y="56" width="28" height="28" color="#ffffff"/>
+    <!-- name strip on main -->
+    <rect x="80" y="58" width="68" height="6" rx="2" fill="#0f6bff"/>
+    <rect x="80" y="74" width="48" height="6" rx="2" fill="#5cd6ff"/>
+    <!-- stub mark -->
+    <text x="190" y="78" text-anchor="middle" font-size="11" font-weight="700"
+          fill="#0a3a99" letter-spacing="2">v1.0</text>
+  </g>
+
+  <!-- E full: 320×80 centred at (1620, 540) -->
+  <g transform="translate(1460,470)">
+    <rect x="0" y="0" width="240" height="80" rx="8"
+          fill="url(#paperFill)" stroke="#0f6bff" stroke-width="2"
+          filter="url(#softShadow)"/>
+    <line x1="240" y1="10" x2="240" y2="70" stroke="#0f6bff" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="240" y="0" width="80" height="80" rx="8"
+          fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+    <circle cx="36" cy="40" r="18" fill="#0f6bff"/>
+    <use href="#lock" x="22" y="26" width="28" height="28" color="#ffffff"/>
+    <text x="68" y="36" font-size="13" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
+    <text x="68" y="56" font-size="11" fill="#6b7280">signed component</text>
+    <text x="280" y="36" text-anchor="middle" font-size="13" font-weight="700"
+          fill="#0a3a99" letter-spacing="1">v1.0.0</text>
+    <text x="280" y="56" text-anchor="middle" font-size="9" fill="#6b7280" letter-spacing="2">SBoD</text>
+  </g>
+
+  <!-- Bottom-of-page guidance -->
+  <g fill="#6b7280" font-size="11" font-style="italic">
+    <text x="900" y="700" text-anchor="middle">
+      Each option pairs the same three semantic anchors: container · seal · identity-label.
+    </text>
+    <text x="900" y="720" text-anchor="middle">
+      Pick by which "thing" the audience should feel they're looking at: parcel, crate, certificate, cell, or ticket.
+    </text>
+    <text x="900" y="740" text-anchor="middle">
+      The chosen one becomes a reusable &lt;symbol&gt; with two presets (mini/full) and replaces the slide-3 hub centre + slide-7b component glyphs.
+    </text>
+  </g>
+</svg>

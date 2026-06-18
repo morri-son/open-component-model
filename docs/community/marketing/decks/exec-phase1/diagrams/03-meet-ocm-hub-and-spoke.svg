@@ -101,21 +101,53 @@
   </defs>
 
   <!-- =======================================================================
-       HUB — OCM blob, oversized so the radial reads from across the room.
-       Centre at (880, 250). Hex radius ~64.
+       HUB — OCM-component icon (e-ticket preset, mini variant) on a soft halo.
+       The hexagon backdrop has been removed: with the e-ticket as the hub
+       primitive, the icon itself carries the "this is the OCM component"
+       reading and the hex was redundant chrome. The halo (translucent blue
+       circles) keeps the radial centre legible against the spoke arrows.
+       Centre at (880, 250). Icon ~140 wide × 80 tall, with v1.0.0 on the stub.
+       Same icon family as slide 7b at "full" scale — slide-3 hub and
+       slide-7b component glyphs visually rhyme.
        ======================================================================= -->
-  <g transform="translate(816,186)">
-    <!-- soft halo -->
-    <circle cx="64" cy="64" r="78" fill="#257DDC" fill-opacity="0.06"/>
-    <circle cx="64" cy="64" r="64" fill="#257DDC" fill-opacity="0.10"/>
-    <!-- hexagon -->
-    <polygon points="64,6 116,34 116,94 64,122 12,94 12,34"
-             fill="#257DDC" stroke="#1D65B4" stroke-width="2"/>
-    <!-- pack-cube glyph -->
-    <g stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round">
-      <polygon points="64,38 86,50 64,62 42,50" fill="#FFFFFF" fill-opacity="0.18"/>
-      <polygon points="42,50 64,62 64,88 42,76"/>
-      <polygon points="86,50 64,62 64,88 86,76"/>
+  <g transform="translate(802,220)">
+    <!-- Two-circle hub target. Outer circle (r=104) is the canonical
+         termination radius for every incoming arrow on this slide; inner
+         circle (r=88) fully encloses the e-ticket icon (icon corner at
+         hub-local (78,30), distance from centre ≈ 83.6). Hub centre in
+         slide coords: (880, 250). -->
+    <circle cx="78" cy="30" r="104" fill="#257DDC" fill-opacity="0.06"/>
+    <circle cx="78" cy="30" r="88"  fill="#257DDC" fill-opacity="0.10"/>
+    <!-- OCM-component icon: e-ticket mini-with-version, leaner aspect.
+         Icon spans x=0..156, y=0..60; visually centred on the hub circles
+         at hub-local (78, 30). Stub is wider (56px) so the v1.0.0 text
+         no longer bleeds into the perforation/edge. -->
+    <g>
+      <!-- ticket main body (left part) -->
+      <rect x="0" y="0" width="100" height="60" rx="10"
+            fill="#FFFFFF" stroke="#1D65B4" stroke-width="2.2"/>
+      <!-- perforation between body and stub -->
+      <line x1="100" y1="8" x2="100" y2="52" stroke="#1D65B4"
+            stroke-width="1.8" stroke-dasharray="5 3"/>
+      <!-- ticket stub (right part) — widened so the version text fits -->
+      <rect x="100" y="0" width="56" height="60" rx="10"
+            fill="#E8F0FF" stroke="#1D65B4" stroke-width="2.2"/>
+      <!-- lock badge on the body, centred vertically -->
+      <circle cx="24" cy="30" r="14" fill="#1D65B4"/>
+      <g fill="none" stroke="#FFFFFF" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round"
+         transform="translate(11,18) scale(1.08)">
+        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/>
+        <circle cx="12" cy="16" r="1"/>
+        <path d="M8 11v-4a4 4 0 1 1 8 0v4"/>
+      </g>
+      <!-- name strip on body (abstract bars at this scale — no full URL) -->
+      <rect x="46" y="22" width="44" height="5" rx="2" fill="#1D65B4"/>
+      <rect x="46" y="34" width="32" height="5" rx="2" fill="#5cd6ff"/>
+      <!-- version on stub (text centre at stub centre x=128) -->
+      <text x="128" y="36" text-anchor="middle" font-size="14"
+            font-weight="700" fill="#0a3a99" letter-spacing="1"
+            font-family="Aptos, Inter, sans-serif">v1.0.0</text>
     </g>
   </g>
 
@@ -152,13 +184,15 @@
       <text class="pill-text-soft" x="80" y="22" text-anchor="middle">… any artifact type</text>
     </g>
 
-    <!-- Spokes: from each pill's right edge (x=400) to the hub's left face (x~828, y~250). -->
-    <path class="spoke-art"      d="M400 80  C 560 80,  680 180, 832 224" marker-end="url(#ah-artifact)"/>
-    <path class="spoke-art"      d="M400 132 C 560 132, 680 200, 832 240" marker-end="url(#ah-artifact)"/>
-    <path class="spoke-art"      d="M400 184 C 560 184, 700 230, 832 252" marker-end="url(#ah-artifact)"/>
-    <path class="spoke-art"      d="M400 236 C 560 236, 700 270, 832 264" marker-end="url(#ah-artifact)"/>
-    <path class="spoke-art"      d="M400 288 C 560 288, 700 290, 832 276" marker-end="url(#ah-artifact)"/>
-    <path class="spoke-art-soft" d="M400 340 C 560 340, 680 320, 832 290" marker-end="url(#ah-artifact)"/>
+    <!-- Spokes: from each pill's right edge (x=400) to the hub's outer
+         target circle (centre 880,250 r=104). All endpoints lie ON the
+         outer circle so the arrowheads land exactly at its perimeter. -->
+    <path class="spoke-art"      d="M400 80  C 560 80,  640 200, 779.3 224"  marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 132 C 560 132, 640 220, 776.5 240"  marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 184 C 560 184, 660 240, 776 252"    marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 236 C 560 236, 660 256, 777 264"    marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art"      d="M400 288 C 560 288, 660 274, 779.3 276"  marker-end="url(#ah-artifact)"/>
+    <path class="spoke-art-soft" d="M400 340 C 560 340, 640 305, 784 290"    marker-end="url(#ah-artifact)"/>
   </g>
 
   <!-- =======================================================================
@@ -166,8 +200,8 @@
        Badges 180 wide, column x = 1360. Left edge = 1360. Hub right ~ 928.
        ======================================================================= -->
   <g>
-    <text x="1450" y="38" text-anchor="middle" class="eyebrow">EVERY FRAMEWORK</text>
-    <line x1="1360" y1="50" x2="1540" y2="50" stroke="#1D65B4" stroke-width="2"/>
+    <text x="1450" y="38" text-anchor="middle" class="eyebrow">EVERY COMPLIANCE FRAMEWORK</text>
+    <line x1="1340" y1="50" x2="1560" y2="50" stroke="#1D65B4" stroke-width="2"/>
 
     <!-- DORA -->
     <g transform="translate(1360,80)">
@@ -191,10 +225,13 @@
       <text class="reg-text" x="105" y="25" text-anchor="middle">CRA</text>
     </g>
 
-    <!-- Spokes: from hub right (x~928) to each badge's left edge (x=1360). -->
-    <path class="spoke-reg" d="M928 232 C 1080 180, 1220 130, 1358 100" marker-end="url(#ah-regulator)"/>
-    <path class="spoke-reg" d="M928 250 C 1080 240, 1220 220, 1358 220" marker-end="url(#ah-regulator)"/>
-    <path class="spoke-reg" d="M928 268 C 1080 320, 1220 340, 1358 340" marker-end="url(#ah-regulator)"/>
+    <!-- Spokes: regulatory frameworks flow INTO the hub. All endpoints lie
+         ON the hub's outer target circle (centre 880,250 r=104) so arrowheads
+         land exactly at its perimeter. Three angles fan above/at/below
+         horizontal: 30° / 0° / -30° from the right side of the circle. -->
+    <path class="spoke-reg" d="M1358 100 C 1220 130, 1080 180, 970.07 198" marker-end="url(#ah-regulator)"/>
+    <path class="spoke-reg" d="M1358 220 C 1220 220, 1080 240, 984 250"    marker-end="url(#ah-regulator)"/>
+    <path class="spoke-reg" d="M1358 340 C 1220 340, 1080 320, 970.07 302" marker-end="url(#ah-regulator)"/>
   </g>
 
   <!-- =======================================================================
@@ -233,10 +270,13 @@
       <text class="bd-text" x="100" y="52">Cloud</text>
     </g>
 
-    <!-- Spokes: from hub bottom (~880,312) to top of each boundary tile (y=380). -->
-    <path class="spoke-bnd" d="M858 306 C 740 340, 600 365, 492 378" marker-end="url(#ah-boundary)"/>
-    <path class="spoke-bnd" d="M880 312 L 880 378"                     marker-end="url(#ah-boundary)"/>
-    <path class="spoke-bnd" d="M902 306 C 1020 340, 1160 365, 1268 378" marker-end="url(#ah-boundary)"/>
+    <!-- Spokes: hub → boundary tiles. Arrow STARTS lie ON the hub's outer
+         target circle (centre 880,250 r=104), so the arrows visually emanate
+         from the circle, not from the icon. Endpoints land just above each
+         tile's top edge (y=378). Three angles fan: 225° / 270° / 315°. -->
+    <path class="spoke-bnd" d="M806.46 323.54 C 740 340, 600 365, 492 378" marker-end="url(#ah-boundary)"/>
+    <path class="spoke-bnd" d="M880 354    L 880 378"                       marker-end="url(#ah-boundary)"/>
+    <path class="spoke-bnd" d="M953.54 323.54 C 1020 340, 1160 365, 1268 378" marker-end="url(#ah-boundary)"/>
   </g>
 
   <!-- =======================================================================

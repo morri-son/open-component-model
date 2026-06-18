@@ -367,21 +367,31 @@ def add_tile_icon(slide, tile_x_px: int, tile_y_px: int, icon_name: str):
 
 def add_logo_row(slide, logos: list, y_px: int,
                   row_h_px: int = 120,
-                  max_logo_w_px: int = 320, max_logo_h_px: int = 80):
+                  max_logo_w_px: int = 320, max_logo_h_px: int = 80,
+                  caption_pt: int = 14):
     """Three (or more) logos centred in a row, sized to a uniform height
     (max_logo_h_px) so the row reads as visually consistent.
 
-    `logos` accepts either Path entries (no link) or (Path, url) tuples
-    (clickable). Tuples make the picture shape clickable in PowerPoint and
-    in PDF export.
+    `logos` accepts entries as:
+      - Path                — no link, no caption
+      - (Path, url)         — clickable, no caption
+      - (Path, url, caption) — clickable + caption text rendered below
+
+    Captions are useful for icon-only marks (Kyma, OpenControlPlane) where
+    the logo alone doesn't carry the project name.
     """
+    from pptx.enum.text import PP_ALIGN
     margin_x = 160
     inner_w = SLIDE_W_PX - 2 * margin_x
     n = len(logos)
     slot_w = inner_w // n
     for i, entry in enumerate(logos):
+        caption = None
         if isinstance(entry, tuple):
-            path, url = entry
+            if len(entry) == 3:
+                path, url, caption = entry
+            else:
+                path, url = entry
         else:
             path, url = entry, None
         if path is None or not path.exists():
@@ -406,6 +416,22 @@ def add_logo_row(slide, logos: list, y_px: int,
         pic.top = px(y_px) + (px(row_h_px) - pic.height) // 2
         if url:
             pic.click_action.hyperlink.address = url
+        if caption:
+            cap_y = y_px + row_h_px + 6
+            tb = slide.shapes.add_textbox(px(slot_x), px(cap_y),
+                                           px(slot_w), px(28))
+            tf = tb.text_frame
+            tf.margin_left = tf.margin_right = 0
+            tf.margin_top = tf.margin_bottom = 0
+            p = tf.paragraphs[0]
+            p.alignment = PP_ALIGN.CENTER
+            r = p.add_run()
+            r.text = caption
+            r.font.name = "Aptos"
+            r.font.size = Pt(caption_pt)
+            r.font.color.rgb = C.GREY_MID
+            if url:
+                r.hyperlink.address = url
 
 
 # -----------------------------------------------------------------------------
@@ -607,16 +633,14 @@ def build():
         "Every SAP LoB gets compliance correlation by component identity, "
         "without each LoB building its own retrofit.",
     ])
-    add_source_line(s, 1020,
-                     "github.com/open-component-model/open-delivery-gear")
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS FOR SAP (tiles, internal outcomes) -----
     s = prs.slides.add_slide(layouts["Content / Tiles"])
     set_text(s, 1, "WHAT OCM UNLOCKS FOR SAP")
     set_text(s, 2, "Six outcomes from one shared primitive.")
     tiles = [
-        ("cloud-upload.svg", "Faster sovereign delivery",
-         "Pack once, ship everywhere. Validated end-to-end in OCM's "
+        ("package-export.svg", "Faster sovereign delivery",
+         "Pack once, ship everywhere. Validated end-to-end in the OCM "
          "open-source sovereign conformance scenario."),
         ("report-analytics.svg", "Compliance leverage across LoBs",
          "DORA-aligned reporting from one shared primitive — "
@@ -652,23 +676,24 @@ def build():
     add_label_at(s, 510, "OPEN PEER PROJECTS BUILDING ON OCM")
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
-         "https://gardener.cloud"),
+         "https://gardener.cloud", "Gardener"),
         (ASSETS_DIR / "adopters" / "kyma" / "kyma-icon-color.svg",
-         "https://kyma-project.io"),
+         "https://kyma-project.io", "Kyma"),
         (ASSETS_DIR / "adopters" / "open-control-plane" / "opencontrolplane-icon-color.svg",
-         "https://open-control-plane.io"),
+         "https://open-control-plane.io", "OpenControlPlane"),
         (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
-         "https://konfidence.cloud"),
-        (ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
-         "https://neonephos.org"),
-    ], y_px=620)
-    add_centred_proof(s, 850,
-                       "And forthcoming: every NeoNephos foundation project "
-                       "as it lands.")
-    add_source_line(s, 1020,
-                     "gardener.cloud · kyma-project.io · "
-                     "open-control-plane.io · konfidence.cloud · "
-                     "neonephos.org")
+         "https://konfidence.cloud", "Konfidence"),
+    ], y_px=620, max_logo_w_px=300, max_logo_h_px=96, caption_pt=20)
+    # "Aligned with [NeoNephos logo]" — replaces the prior "And forthcoming…"
+    # caption + URL footer. Single, larger, clickable NeoNephos logo carries
+    # the alignment claim without needing an explicit URL line.
+    add_centred_proof_with_logo(
+        s, 870,
+        "Aligned with ",
+        ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
+        "",
+        logo_url="https://neonephos.org",
+        logo_caption="NeoNephos")
 
     # ---- SLIDE 10b — WHERE OCM IS SHIPPING — INTERNAL SAP ----------------
     # Internal-only delivery infrastructure converging on OCM.
@@ -684,10 +709,10 @@ def build():
         "infrastructure converging on OCM.",
         "Common Service Infrastructure (CSI) — the largest "
         "internal-services footprint shared across SAP.",
-        "Greenhouse — a cloud operations platform that streamlines "
-        "management of large-scale, distributed infrastructure.",
         "Steampunk — internal name for SAP BTP ABAP Environment "
         "(PaaS within SAP BTP); large user of OCM and ODG.",
+        "Greenhouse — a cloud operations platform that streamlines "
+        "management of large-scale, distributed infrastructure.",
     ])
     add_centred_proof(s, 945,
         "Stewardship is leverage. Disinvestment forfeits it. The window "
@@ -755,6 +780,114 @@ def add_centred_proof(slide, y_px: int, text: str):
     r.font.color.rgb = C.BLUE_MID
 
 
+def add_centred_proof_with_logo(slide, y_px: int, text_before: str,
+                                 logo_path: Path, text_after: str,
+                                 logo_h_px: int = 40,
+                                 logo_url: str | None = None,
+                                 logo_caption: str | None = None,
+                                 caption_pt: int = 20):
+    """Centred italic proof line with an inline image substituted for one word.
+
+    Renders text_before + <logo> + text_after as three siblings on the same
+    baseline, all horizontally centred as a group. Approximates text widths
+    from character counts (python-pptx has no font-metrics API); good enough
+    for a single static line. Style mirrors `add_centred_proof`.
+
+    If `logo_url` is provided the logo picture becomes clickable. If
+    `logo_caption` is provided, a small caption (e.g. "neonephos.org") is
+    rendered under the logo, matching the caption_pt size used by
+    add_logo_row so the visual hierarchy stays consistent.
+    """
+    from pptx.enum.text import PP_ALIGN
+    # Approx width in px for 20pt italic Aptos: ~10.5 px/char average.
+    char_w_px = 10.5
+    # Horizontal padding between text segments and the inline logo, so the
+    # logo doesn't sit flush against the italic text baseline edge.
+    GAP_PX = 16
+    tb_before_w_px = int(len(text_before) * char_w_px) + 8
+    tb_after_w_px = int(len(text_after) * char_w_px) + 8
+
+    # Rasterize SVG so we can read its natural size, then scale to logo_h_px.
+    if logo_path.suffix.lower() == ".svg":
+        img = rasterize_svg(logo_path, target_w_px=600)
+    else:
+        img = logo_path
+    # Add picture off-slide first to read intrinsic size, then move/resize.
+    pic = slide.shapes.add_picture(str(img), px(0), px(0))
+    ratio = px(logo_h_px) / pic.height
+    pic.height = px(logo_h_px)
+    pic.width = int(pic.width * ratio)
+    logo_w_px = pic.width / PX
+
+    total_w_px = tb_before_w_px + GAP_PX + logo_w_px + GAP_PX + tb_after_w_px
+    start_x_px = (SLIDE_W_PX - total_w_px) / 2
+
+    # Vertical: text-frame top at y_px; logo nudged to sit on the same
+    # visual baseline as 20pt italic text (~24px line height, cap-height ~22).
+    logo_y_px = y_px + 2
+    text_y_px = y_px
+
+    # ---- text_before (right-aligned in its slot) ---------------------------
+    tb1 = slide.shapes.add_textbox(px(start_x_px), px(text_y_px),
+                                    px(tb_before_w_px), px(50))
+    tf1 = tb1.text_frame
+    tf1.margin_left = tf1.margin_right = 0
+    tf1.margin_top = tf1.margin_bottom = 0
+    p1 = tf1.paragraphs[0]
+    p1.alignment = PP_ALIGN.RIGHT
+    r1 = p1.add_run()
+    r1.text = text_before
+    r1.font.name = "Aptos"
+    r1.font.size = Pt(20)
+    r1.font.italic = True
+    r1.font.color.rgb = C.BLUE_MID
+
+    # ---- inline logo -------------------------------------------------------
+    pic.left = px(start_x_px + tb_before_w_px + GAP_PX)
+    pic.top = px(logo_y_px)
+    if logo_url:
+        pic.click_action.hyperlink.address = logo_url
+
+    # ---- caption under the whole composite (text + logo) -----------------
+    # Centred under the entire line so it sits under the visual mid-point of
+    # "Aligned with [LOGO]", not just under the logo (which would read as
+    # off-centre). Caption styling matches add_logo_row's caption convention.
+    if logo_caption:
+        cap_y = logo_y_px + logo_h_px + 6
+        cap_w = max(int(total_w_px), 200)
+        cap_x = start_x_px + (total_w_px - cap_w) / 2
+        cb = slide.shapes.add_textbox(px(cap_x), px(cap_y), px(cap_w), px(28))
+        cf = cb.text_frame
+        cf.margin_left = cf.margin_right = 0
+        cf.margin_top = cf.margin_bottom = 0
+        cp = cf.paragraphs[0]
+        cp.alignment = PP_ALIGN.CENTER
+        cr = cp.add_run()
+        cr.text = logo_caption
+        cr.font.name = "Aptos"
+        cr.font.size = Pt(caption_pt)
+        cr.font.color.rgb = C.GREY_MID
+        if logo_url:
+            cr.hyperlink.address = logo_url
+
+    # ---- text_after (left-aligned in its slot) -----------------------------
+    if text_after:
+        tb2 = slide.shapes.add_textbox(
+            px(start_x_px + tb_before_w_px + GAP_PX + logo_w_px + GAP_PX),
+            px(text_y_px), px(tb_after_w_px), px(50))
+        tf2 = tb2.text_frame
+        tf2.margin_left = tf2.margin_right = 0
+        tf2.margin_top = tf2.margin_bottom = 0
+        p2 = tf2.paragraphs[0]
+        p2.alignment = PP_ALIGN.LEFT
+        r2 = p2.add_run()
+        r2.text = text_after
+        r2.font.name = "Aptos"
+        r2.font.size = Pt(20)
+        r2.font.italic = True
+        r2.font.color.rgb = C.BLUE_MID
+
+
 def add_source_line(slide, y_px: int, text: str):
     """Small grey source/reference line — for slide footers that name the
     canonical URL of a project (NeoNephos, ODG, OpenControlPlane, etc.)."""
@@ -769,17 +902,18 @@ def add_source_line(slide, y_px: int, text: str):
     r = p.add_run()
     r.text = text
     r.font.name = "Aptos"
-    r.font.size = Pt(13)
+    r.font.size = Pt(16)
     r.font.color.rgb = C.GREY_MID
 
 
 def add_hidden_trademark_slide(prs, layouts):
-    """Append a non-presented slide with trademark/licensing notices.
-    show="0" hides it in slideshow but it stays in the file. Mirrors the
+    """Append two non-presented slides with trademark/licensing notices.
+    show="0" hides them in slideshow but they stay in the file. Mirrors the
     external deck's helper. Canonical record: assets/adopters/LICENSING.md."""
+    # ---- Hidden 1/2 — adopter logos -----------------------------------------
     s = prs.slides.add_slide(layouts["Plain"])
     s.element.set("show", "0")
-    set_text(s, 1, "TRADEMARK & LICENSE NOTICES")
+    set_text(s, 1, "TRADEMARK & LICENSE NOTICES (1/2)")
     set_text(s, 2, "Logos and trademarks belong to their respective owners.")
     set_blue_box_bullets(s, 10, [
         "SAP, SAP NS2 — trademarks of SAP SE / SAP National Security "
@@ -798,6 +932,14 @@ def add_hidden_trademark_slide(prs, layouts):
         "OpenControlPlane — open-source project at open-control-plane.io. "
         "Editorial use only; verify with the project before external "
         "publication. open-control-plane.io",
+    ])
+
+    # ---- Hidden 2/2 — remaining marks + internal projects + sourcing -------
+    s = prs.slides.add_slide(layouts["Plain"])
+    s.element.set("show", "0")
+    set_text(s, 1, "TRADEMARK & LICENSE NOTICES (2/2)")
+    set_text(s, 2, "Third-party trademarks named for technical reference.")
+    set_blue_box_bullets(s, 10, [
         "Kyma — SAP-originated open-source project at kyma-project.io. "
         "Editorial use only. kyma-project.io",
         "Hyperspace, RBSC, CSI, Greenhouse, Steampunk — internal SAP "

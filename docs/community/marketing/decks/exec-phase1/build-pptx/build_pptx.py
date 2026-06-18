@@ -403,12 +403,18 @@ def _crop_to_content(png_path: Path) -> Path:
 
 def add_logo_row(slide, logos: list, y_px: int,
                   row_h_px: int = 120,
-                  max_logo_w_px: int = 320, max_logo_h_px: int = 80):
+                  max_logo_w_px: int = 320, max_logo_h_px: int = 80,
+                  caption_pt: int = 14):
     """Three (or more) logos centred in a row, normalised on visible content height.
 
-    `logos` accepts either Path entries (no link) or (Path, url) tuples
-    (clickable). Tuples make the picture shape clickable in PowerPoint and
-    in PDF export.
+    `logos` accepts entries as:
+      - Path                 — no link, no caption
+      - (Path, url)          — clickable, no caption
+      - (Path, url, caption) — clickable + caption text rendered below
+
+    Captions are useful for icon-only marks (Kyma, OpenControlPlane) where
+    the logo alone doesn't carry the project name. Tuples make the picture
+    shape clickable in PowerPoint and in PDF export.
 
     Each input logo is rasterised (or used directly for PNG) and then cropped
     to its visible bounding box, so wordmarks with baked-in whitespace
@@ -417,13 +423,18 @@ def add_logo_row(slide, logos: list, y_px: int,
     Platform Mesh). Final placement uses height-first normalisation with a
     width cap as the safety net for very wide logos.
     """
+    from pptx.enum.text import PP_ALIGN
     margin_x = 160
     inner_w = SLIDE_W_PX - 2 * margin_x
     n = len(logos)
     slot_w = inner_w // n
     for i, entry in enumerate(logos):
+        caption = None
         if isinstance(entry, tuple):
-            path, url = entry
+            if len(entry) == 3:
+                path, url, caption = entry
+            else:
+                path, url = entry
         else:
             path, url = entry, None
         if path is None or not path.exists():
@@ -451,6 +462,22 @@ def add_logo_row(slide, logos: list, y_px: int,
         pic.top = px(y_px) + (px(row_h_px) - pic.height) // 2
         if url:
             pic.click_action.hyperlink.address = url
+        if caption:
+            cap_y = y_px + row_h_px + 6
+            tb = slide.shapes.add_textbox(px(slot_x), px(cap_y),
+                                           px(slot_w), px(28))
+            tf = tb.text_frame
+            tf.margin_left = tf.margin_right = 0
+            tf.margin_top = tf.margin_bottom = 0
+            p = tf.paragraphs[0]
+            p.alignment = PP_ALIGN.CENTER
+            r = p.add_run()
+            r.text = caption
+            r.font.name = "Aptos"
+            r.font.size = Pt(caption_pt)
+            r.font.color.rgb = C.GREY_MID
+            if url:
+                r.hyperlink.address = url
 
 
 # -----------------------------------------------------------------------------
@@ -640,8 +667,6 @@ def build():
         "Every compliance signal correlates by component identity. Auditors "
         "get evidence, not spreadsheets.",
     ])
-    add_source_line(s, 1020,
-                     "github.com/open-component-model/open-delivery-gear")
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS (tiles, was 8) -------------------------
     s = prs.slides.add_slide(layouts["Content / Tiles"])
@@ -650,7 +675,7 @@ def build():
     tiles = [
         ("lock.svg", "Code signing across stacks",
          "Sign once at source; verify everywhere, with no per-stack tooling."),
-        ("cloud-upload.svg", "Air-gapped delivery",
+        ("package-export.svg", "Air-gapped delivery",
          "Walk a complete component across an air gap; verify at destination."),
         ("rocket.svg", "Kubernetes-native deployment",
          "OCM controllers deploy components directly into clusters."),
@@ -678,34 +703,28 @@ def build():
     # an empty container; the ALL-CAPS labels and logo rows below replace it.
     delete_placeholder(s, 10)
     # Top section label + logos (clickable — links survive PowerPoint and
-    # PDF export; the URL line below survives print).
-    add_label_at(s, 510, "ADOPTED BY ENTERPRISES SHIPPING INTO REGULATED ENVIRONMENTS")
+    # PDF export; captions name the project under each logo).
+    add_label_at(s, 510, "ADOPTED BY ENTERPRISES SHIPPING INTO REGULATED ENVIRONMENTS AND THE OPEN-SOURCE ECOSYSTEM")
     add_logo_row(s, [
+        (ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
+         "https://neonephos.org", "NeoNephos"),
         (ASSETS_DIR / "adopters" / "sap" / "sap-horizontal-color.svg",
-         "https://www.sap.com"),
+         "https://www.sap.com", "SAP"),
         (ASSETS_DIR / "adopters" / "bwi" / "bwi-horizontal-color.svg",
-         "https://www.bwi.de"),
+         "https://www.bwi.de", "BWI"),
         (ASSETS_DIR / "adopters" / "sap-ns2" / "sap-ns2-getlogovector.png",
-         "https://sapns2.com"),
-    ], y_px=580)
-    add_label_at(s, 740, "BUILT INTO THE OPEN-SOURCE ECOSYSTEM")
+         "https://sapns2.com", "SAP NS2"),
+    ], y_px=580, max_logo_w_px=260, max_logo_h_px=72, caption_pt=20)
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
-         "https://gardener.cloud"),
+         "https://gardener.cloud", "Gardener"),
         (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
-         "https://konfidence.cloud"),
+         "https://konfidence.cloud", "Konfidence"),
         (ASSETS_DIR / "adopters" / "open-control-plane" / "opencontrolplane-icon-color.svg",
-         "https://open-control-plane.io"),
+         "https://open-control-plane.io", "OpenControlPlane"),
         (ASSETS_DIR / "adopters" / "platform-mesh" / "platform-mesh-horizontal-color.svg",
-         "https://platform-mesh.io"),
-    ], y_px=810)
-    add_centred_proof(s, 970,
-                       "An open standard, neutrally governed — your stack "
-                       "stays portable, your dependencies stay yours.")
-    add_source_line(s, 1040,
-                     "sap.com · bwi.de · sapns2.com · neonephos.org · "
-                     "gardener.cloud · konfidence.cloud · "
-                     "platform-mesh.io · open-control-plane.io")
+         "https://platform-mesh.io", "Platform Mesh"),
+    ], y_px=830, max_logo_w_px=260, max_logo_h_px=72, caption_pt=20)
 
     # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
     s = prs.slides.add_slide(layouts["CTA"])
@@ -789,16 +808,17 @@ def add_source_line(slide, y_px: int, text: str):
 
 
 def add_hidden_trademark_slide(prs, layouts):
-    """Append a non-presented slide carrying trademark and licensing notices
-    for every third-party logo on the deck. Marked show="0" so it is skipped
-    in slideshow mode but visible to editors and survives PDF export — keeps
-    the legal acknowledgement attached to the deck without burdening the
-    speaker. References the canonical record at
-    docs/community/marketing/assets/adopters/LICENSING.md."""
+    """Append two non-presented slides carrying trademark and licensing
+    notices for every third-party logo on the deck. Marked show="0" so they
+    are skipped in slideshow mode but visible to editors and survive PDF
+    export — keeps the legal acknowledgement attached to the deck without
+    burdening the speaker. Two slides used because a single Plain layout
+    body bleeds into the footer at this bullet count.
+    Canonical record: assets/adopters/LICENSING.md."""
+    # ---- Hidden 1/2 — adopter logos -----------------------------------------
     s = prs.slides.add_slide(layouts["Plain"])
-    # Hide from slideshow.
     s.element.set("show", "0")
-    set_text(s, 1, "TRADEMARK & LICENSE NOTICES")
+    set_text(s, 1, "TRADEMARK & LICENSE NOTICES (1/2)")
     set_text(s, 2, "Logos and trademarks belong to their respective owners.")
     set_blue_box_bullets(s, 10, [
         "SAP, SAP NS2 — trademarks of SAP SE / SAP National Security "
@@ -817,6 +837,14 @@ def add_hidden_trademark_slide(prs, layouts):
         "OpenControlPlane — open-source project at open-control-plane.io. "
         "Editorial use only; verify with the project before external "
         "publication. open-control-plane.io",
+    ])
+
+    # ---- Hidden 2/2 — remaining marks + sourcing pointer --------------------
+    s = prs.slides.add_slide(layouts["Plain"])
+    s.element.set("show", "0")
+    set_text(s, 1, "TRADEMARK & LICENSE NOTICES (2/2)")
+    set_text(s, 2, "Third-party trademarks named for technical reference.")
+    set_blue_box_bullets(s, 10, [
         "Kyma — SAP-originated open-source project at kyma-project.io. "
         "Editorial use only. kyma-project.io",
         "Trivy, Grype, Sigstore, Helm, OCI, Kubernetes, kro, Flux, Argo CD — "

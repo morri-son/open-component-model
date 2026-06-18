@@ -449,7 +449,7 @@ def layout_hero() -> bytes:
         no_autofit=True,
     ))
     shapes.append(make_textbox(
-        "Hero Title Line 2", 11, 96, 370, 1700, 160,
+        "Hero Title Line 2", 11, 96, 345, 1700, 160,
         placeholder_type="body", placeholder_idx=2,
         default_text="Sovereign Clouds",
         size_pt=115, bold=True, color_hex="5CD6FF", algn="l",

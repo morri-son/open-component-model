@@ -35,13 +35,32 @@
         <use href="#ico-registry" x="20" y="20" width="56" height="56" stroke="#0f6bff"/>
         <text x="100" y="50" font-size="20" font-weight="700" fill="#0a3a99">Public registry</text>
         <text x="100" y="76" font-size="14" fill="#6b7280">Build artifacts live here.</text>
-        <!-- Signed component glyph (widened so the long URL fits without overflow). -->
+        <!-- Signed component glyph — OCM-component icon (e-ticket full
+             preset). The same icon family appears on slide 3 hub (mini
+             preset) so the audience reads "same thing, in motion." Three
+             semantic anchors: ticket body = SBoD envelope; lock circle =
+             signature; perforated stub = identity (carried across the
+             boundary). 290×70 to match the prior glyph footprint so the
+             arrow endpoint at x=385 stays valid. -->
         <g transform="translate(15,110)">
-          <rect width="290" height="70" rx="10" fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
-          <circle cx="40" cy="35" r="20" fill="#0f6bff"/>
-          <use href="#ico-lock" x="22" y="17" width="36" height="36" color="#ffffff"/>
-          <text x="80" y="32" font-size="14" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
-          <text x="80" y="52" font-size="13" fill="#6b7280">v1.0.0 · signed component</text>
+          <!-- Ticket main body (left part) -->
+          <rect x="0" y="0" width="220" height="70" rx="10"
+                fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+          <!-- Perforation between body and stub -->
+          <line x1="220" y1="8" x2="220" y2="62" stroke="#0f6bff"
+                stroke-width="1.6" stroke-dasharray="4 3"/>
+          <!-- Ticket stub (right part) — slightly darker fill so it reads
+               as a distinct sub-region -->
+          <rect x="220" y="0" width="70" height="70" rx="10"
+                fill="#d1e3ff" stroke="#0f6bff" stroke-width="2"/>
+          <!-- Lock badge on body -->
+          <circle cx="30" cy="35" r="18" fill="#0f6bff"/>
+          <use href="#ico-lock" x="14" y="19" width="32" height="32" color="#ffffff"/>
+          <!-- Component name + role on body -->
+          <text x="62" y="32" font-size="14" font-weight="700" fill="#0a3a99">github.com/acme/app</text>
+          <text x="62" y="52" font-size="13" fill="#6b7280">signed component</text>
+          <!-- Version on stub -->
+          <text x="255" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="#0a3a99" letter-spacing="1">v1.0.0</text>
         </g>
       </g>
     </g>
@@ -70,16 +89,23 @@
         <rect width="600" height="480" rx="14" fill="#ffffff" stroke="#0f6bff" stroke-width="2.5" stroke-dasharray="8 6"/>
         <text x="20" y="36" font-size="13" font-weight="700" fill="#0f6bff" letter-spacing="2">AIR-GAPPED</text>
 
-        <!-- Receiving component — identical to source-registry component glyph,
-             shown landed inside the air-gapped boundary. The arrow above ends
-             at this box's left edge so the journey reads source → boundary →
-             air-gap as one continuous motion. -->
+        <!-- Receiving component — IDENTICAL to source-side glyph above so
+             the journey reads "same thing, different location." Same e-ticket
+             full preset, same dimensions, same coordinates. The arrow ends
+             at this box's left edge (x=1055 absolute = translate(900) +
+             translate(155) + 0). -->
         <g transform="translate(155,60)">
-          <rect width="290" height="70" rx="10" fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
-          <circle cx="40" cy="35" r="20" fill="#0f6bff"/>
-          <use href="#ico-lock" x="22" y="17" width="36" height="36" color="#ffffff"/>
-          <text x="80" y="32" font-size="14" font-weight="700" fill="#0a3a99">github.com/acme/webshop</text>
-          <text x="80" y="52" font-size="13" fill="#6b7280">v1.0.0 · signed component</text>
+          <rect x="0" y="0" width="220" height="70" rx="10"
+                fill="#e8f0ff" stroke="#0f6bff" stroke-width="2"/>
+          <line x1="220" y1="8" x2="220" y2="62" stroke="#0f6bff"
+                stroke-width="1.6" stroke-dasharray="4 3"/>
+          <rect x="220" y="0" width="70" height="70" rx="10"
+                fill="#d1e3ff" stroke="#0f6bff" stroke-width="2"/>
+          <circle cx="30" cy="35" r="18" fill="#0f6bff"/>
+          <use href="#ico-lock" x="14" y="19" width="32" height="32" color="#ffffff"/>
+          <text x="62" y="32" font-size="14" font-weight="700" fill="#0a3a99">github.com/acme/app</text>
+          <text x="62" y="52" font-size="13" fill="#6b7280">signed component</text>
+          <text x="255" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="#0a3a99" letter-spacing="1">v1.0.0</text>
         </g>
 
         <!-- "Identity stays · signature stays" caption removed — its claim
@@ -88,24 +114,38 @@
              count on the slide so the new TRANSPORT label on the arrow has
              room to breathe. -->
 
-        <!-- Three local consumers, all verifying -->
+        <!-- Three local consumers, all verifying. Each tile carries a small
+             green check-badge in place of the prior "verify ✓" text — green
+             is the only off-brand colour on the slide, used here as a deck-
+             wide visual exception to stamp the moment of trust on each tile.
+             Badge: filled circle r=11 in #16A34A (muted professional green),
+             white tick stroke. -->
         <g transform="translate(30,170)">
           <rect width="170" height="120" rx="10" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2"/>
           <use href="#ico-registry" x="62" y="14" width="46" height="46" stroke="#0f6bff"/>
           <text x="85" y="80" text-anchor="middle" font-size="15" font-weight="700" fill="#0a3a99">Local registry</text>
-          <text x="85" y="102" text-anchor="middle" font-size="12" fill="#6b7280">verify ✓</text>
+          <g transform="translate(85,100)">
+            <circle r="11" fill="#16A34A"/>
+            <path d="M -5 0 L -1.5 4 L 5 -4" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
         </g>
         <g transform="translate(216,170)">
           <rect width="170" height="120" rx="10" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2"/>
           <use href="#ico-cluster" x="62" y="14" width="46" height="46" stroke="#0f6bff"/>
           <text x="85" y="80" text-anchor="middle" font-size="15" font-weight="700" fill="#0a3a99">K8s cluster</text>
-          <text x="85" y="102" text-anchor="middle" font-size="12" fill="#6b7280">verify ✓</text>
+          <g transform="translate(85,100)">
+            <circle r="11" fill="#16A34A"/>
+            <path d="M -5 0 L -1.5 4 L 5 -4" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
         </g>
         <g transform="translate(402,170)">
           <rect width="170" height="120" rx="10" fill="url(#pillarFill)" stroke="#e8f0ff" stroke-width="2"/>
           <use href="#ico-shield" x="62" y="14" width="46" height="46" stroke="#0f6bff"/>
           <text x="85" y="80" text-anchor="middle" font-size="15" font-weight="700" fill="#0a3a99">Auditor</text>
-          <text x="85" y="102" text-anchor="middle" font-size="12" fill="#6b7280">verify ✓</text>
+          <g transform="translate(85,100)">
+            <circle r="11" fill="#16A34A"/>
+            <path d="M -5 0 L -1.5 4 L 5 -4" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
         </g>
 
         <text x="300" y="330" text-anchor="middle" font-size="20" font-weight="700" fill="#0a3a99">Trust, but verify.</text>
