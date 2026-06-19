@@ -14,9 +14,9 @@
     </style>
   </defs>
 
-  <!-- Outer SBoD container -->
+  <!-- Outer SBOD container -->
   <rect x="80" y="80" width="1440" height="500" rx="24" ry="24" class="sbod-stroke"/>
-  <text x="140" y="135" class="label-sbod">SOFTWARE BILL OF DELIVERY (SBoD)</text>
+  <text x="140" y="135" class="label-sbod">SOFTWARE BILL OF DELIVERY (SBOD)</text>
   <text x="140" y="165" class="desc">What you delivered · how to verify it · how to transport it · how to operate it</text>
 
   <!-- Inner SBOM box -->
@@ -35,7 +35,7 @@
   <!-- Plus sign between SBOM and the trio -->
   <text x="710" y="370" fill="#0F6BFF" font-size="56" font-weight="300">+</text>
 
-  <!-- Right-side trio: what SBoD adds on top -->
+  <!-- Right-side trio: what SBOD adds on top -->
   <rect x="800" y="220" width="660" height="80" rx="10" ry="10" class="sat-fill"/>
   <text x="830" y="252" class="label-sat">Signatures</text>
   <text x="830" y="278" class="desc" font-size="14">Cryptographic proof of integrity and origin — covers every artifact by digest.</text>
@@ -49,5 +49,5 @@
   <text x="830" y="478" class="desc" font-size="14">Transport, deployment, day-2 operations — everything the destination needs.</text>
 
   <!-- Caption -->
-  <text x="800" y="650" text-anchor="middle" class="caption">SBOM lists. SBoD delivers.</text>
+  <text x="800" y="650" text-anchor="middle" class="caption">SBOM lists. SBOD delivers.</text>
 </svg>

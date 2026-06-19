@@ -43,12 +43,20 @@
       <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
     </g>
     <rect width="360" height="4" class="step-rule"/>
-    <!-- Pack icon: open box -->
-    <g transform="translate(32, 36)">
-      <path class="icon" d="M 5 18 L 30 5 L 55 18 L 55 48 L 30 60 L 5 48 Z"/>
-      <path class="icon" d="M 5 18 L 30 30 L 55 18"/>
-      <line class="icon" x1="30" y1="30" x2="30" y2="60"/>
-    </g>
+    <!-- Pack icon: Tabler `package` (closed cardboard box, isometric).
+         Hosted in a nested SVG so the 24x24 Tabler viewBox renders inside
+         our 60x60 slot. vector-effect on every path keeps the stroke at
+         the existing 2.4px thickness regardless of scale, so the icon
+         visually matches the rest of slide 6 instead of bulking up. -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/>
+        <path vector-effect="non-scaling-stroke" d="M12 12l8 -4.5"/>
+        <path vector-effect="non-scaling-stroke" d="M12 12l0 9"/>
+        <path vector-effect="non-scaling-stroke" d="M12 12l-8 -4.5"/>
+        <path vector-effect="non-scaling-stroke" d="M16 5.25l-8 4.5"/>
+      </g>
+    </svg>
     <text x="32" y="170" class="step-label">PACK</text>
     <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bundle your software</tspan><tspan x="32" dy="36">One source of truth.</tspan></text>
   </g>
@@ -62,11 +70,13 @@
       <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
     </g>
     <rect width="360" height="4" class="step-rule"/>
-    <!-- Sign icon: shield with checkmark -->
-    <g transform="translate(32, 36)">
-      <path class="icon" d="M 30 5 L 55 14 L 55 32 C 55 46 45 56 30 60 C 15 56 5 46 5 32 L 5 14 Z"/>
-      <path class="icon" d="M 19 32 L 27 40 L 41 24"/>
-    </g>
+    <!-- Sign icon: Tabler `shield-check`. Same nesting trick as Pack. -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"/>
+        <path vector-effect="non-scaling-stroke" d="M15 19l2 2l4 -4"/>
+      </g>
+    </svg>
     <text x="32" y="170" class="step-label">SIGN</text>
     <text x="32" y="216" class="step-body"><tspan x="32" dy="0">One signature covers</tspan><tspan x="32" dy="36">all artifacts.</tspan></text>
   </g>
@@ -80,13 +90,16 @@
       <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
     </g>
     <rect width="360" height="4" class="step-rule"/>
-    <!-- Transport icon: globe with meridians -->
-    <g transform="translate(32, 36)">
-      <circle class="icon" cx="30" cy="32" r="25"/>
-      <path class="icon" d="M 5 32 L 55 32"/>
-      <path class="icon" d="M 30 7 C 18 19 18 45 30 57"/>
-      <path class="icon" d="M 30 7 C 42 19 42 45 30 57"/>
-    </g>
+    <!-- Transport icon: Tabler `world` (globe with meridians + parallels). -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/>
+        <path vector-effect="non-scaling-stroke" d="M3.6 9h16.8"/>
+        <path vector-effect="non-scaling-stroke" d="M3.6 15h16.8"/>
+        <path vector-effect="non-scaling-stroke" d="M11.5 3a17 17 0 0 0 0 18"/>
+        <path vector-effect="non-scaling-stroke" d="M12.5 3a17 17 0 0 1 0 18"/>
+      </g>
+    </svg>
     <text x="32" y="170" class="step-label">TRANSPORT</text>
     <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Across any boundary.</tspan><tspan x="32" dy="36">Even air-gapped.</tspan></text>
   </g>
@@ -100,19 +113,17 @@
       <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
     </g>
     <rect width="360" height="4" class="step-rule"/>
-    <!-- Deploy icon: rocket — rotated 45° clockwise (icon takes flight up/right
-         instead of straight up). Rotation pivot is the rocket's visual centre
-         (~30, 33) inside the local 60x60 icon viewport, so the rocket stays
-         within the header strip after the rotation. -->
-    <g transform="translate(32, 36)">
-      <g transform="rotate(45 30 33)">
-      <path class="icon" d="M 30 7 C 38 7 42 17 42 27 L 42 48 C 42 50 40 52 38 52 L 22 52 C 20 52 18 50 18 48 L 18 27 C 18 17 22 7 30 7 Z"/>
-      <circle class="icon" cx="30" cy="24" r="5" fill="#FFFFFF"/>
-      <path class="icon" d="M 18 40 L 8 50 L 8 56 L 18 52 Z"/>
-      <path class="icon" d="M 42 40 L 52 50 L 52 56 L 42 52 Z"/>
-      <path class="icon" d="M 25 52 L 27 60 L 30 56 L 33 60 L 35 52"/>
+    <!-- Deploy icon: Tabler `rocket` (paths verbatim from
+         diagrams/icons/rocket.svg, the same source feeding slide 9 tile-icon
+         "Kubernetes-native deployment"). The Tabler rocket already points
+         up-and-to-the-right at its native orientation — no rotation needed. -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"/>
+        <path vector-effect="non-scaling-stroke" d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"/>
+        <path vector-effect="non-scaling-stroke" d="M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
       </g>
-    </g>
+    </svg>
     <text x="32" y="170" class="step-label">DEPLOY</text>
     <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bring your own GitOps.</tspan><tspan x="32" dy="36">Use OCM's K8s Controllers</tspan></text>
   </g>

@@ -235,8 +235,8 @@
     <g transform="translate(1380,320)">
       <rect class="bd-fill" x="0" y="0" width="180" height="70" rx="10"/>
       <g transform="translate(14,20)"><use href="#cloud-lock"/></g>
-      <text class="bd-text" x="120" y="32">Sovereign</text>
-      <text class="bd-text" x="120" y="52">Cloud</text>
+      <text class="bd-text" x="80" y="32">Sovereign</text>
+      <text class="bd-text" x="80" y="52">Cloud</text>
     </g>
 
     <!-- Spokes: hub → boundary tiles. Starts on hub outer circle (880,250 r=104)
@@ -254,11 +254,12 @@
        the central force, not a side cluster.
        ======================================================================= -->
   <g>
-    <text x="880" y="430" text-anchor="middle" class="eyebrow">EVERY COMPLIANCE FRAMEWORK</text>
-    <line x1="750" y1="438" x2="1010" y2="438" stroke="#1D65B4" stroke-width="2"/>
+    <text x="880" y="520" text-anchor="middle" class="eyebrow">EVERY COMPLIANCE FRAMEWORK</text>
+    <line x1="750" y1="528" x2="1010" y2="528" stroke="#1D65B4" stroke-width="2"/>
 
     <!-- DORA pill: centre x=490, top y=455. Bullet indicators removed —
          the eyebrow already names the cluster, the pill itself just labels
+         the framework. Text now centred at pill mid (x=90). -->
          the framework. Text now centred at pill mid (x=90). -->
     <g transform="translate(400,455)">
       <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>

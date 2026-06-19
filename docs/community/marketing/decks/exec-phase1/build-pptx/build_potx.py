@@ -621,11 +621,14 @@ def layout_tiles() -> bytes:
         # variant). Icon occupies x..x+48 of the tile padding zone (added
         # inline at build time, not by the layout). Label starts at x+24+48+16
         # = x+88, vertically centred against the 48-tall icon row at y+24.
+        # anchor="ctr" puts the label text mid-row so the icon and the label
+        # baseline align visually instead of the label sitting on the icon's top.
         shapes.append(make_textbox(
             f"Tile{i+1} Label", next_id, x + 88, y + 24, tile_w - 88 - 24, 48,
             placeholder_type="body", placeholder_idx=20 + i * 2,
             default_text=f"Tile {i+1} label",
             size_pt=18, bold=True, color_hex="0F6BFF",
+            anchor="ctr",
         ))
         next_id += 1
         # Tile body placeholder — full tile width below the icon/label row.

@@ -525,8 +525,8 @@ def build():
 
     # ---- SLIDE 2 — WHY NOW (internal lens) ---------------------------------
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
-    set_text(s, 1, "WHY NOW — INTERNAL")
-    set_text(s, 2, "Compliance and sovereignty are given. The strategic position is not.")
+    set_text(s, 1, "WHY NOW")
+    set_text(s, 2, "Compliance and sovereignty are given.\nOur strategic position is a choice.")
     set_text(s, 10, "ECOSYSTEM VELOCITY IS REAL")
     set_text(s, 11, "OCM-shaped abstractions are landing in adjacent OSS "
                      "projects. NeoNephos is operationalizing. The peer "
@@ -552,25 +552,25 @@ def build():
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
                  x_px=-91, y_px=440, max_w_px=1890, max_h_px=602)
 
-    # ---- SLIDE 4a — THE SHIFT, SBoD (text-only, internal-sponsor footer) ---
+    # ---- SLIDE 4a — THE SHIFT, SBOD (text-only, internal-sponsor footer) ---
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "THE SHIFT")
-    set_text(s, 2, "SBOM lists. SBoD delivers.")
+    set_text(s, 2, "SBOM lists. SBOD delivers.")
     set_blue_box_bullets(s, 10, [
         "An SBOM tells you what's in your software. It was built for inventory.",
-        "A Software Bill of Delivery (SBoD) tells you what you delivered, "
+        "A Software Bill of Delivery (SBOD) tells you what you delivered, "
         "how to verify, transport, and operate it. "
         "It was built for delivery.",
-        "The SBoD contains the SBOM. OCM doesn't replace your SBOM tooling — "
+        "The SBOD contains the SBOM. OCM doesn't replace your SBOM tooling — "
         "it gives the SBOM an envelope that's compliance-native, signed once, "
         "and travels intact across any boundary.",
-        "SBoD is the category SAP led the definition of — now standardised "
+        "SBOD is the category SAP led the definition of — now standardised "
         "through NeoNephos governance.",
     ])
 
     # ---- SLIDE 4b — THE SHIFT (diagram only) --------------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBoD")
+    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD")
     set_text(s, 2, "An envelope, not a list.")
     diagram = first_existing(
         DIAGRAMS_DIR / "04-sbom-inside-sbod.svg",
@@ -590,7 +590,7 @@ def build():
     set_text(s, 2, "OCM doesn't replace your tools. It gives them an envelope to compose around.")
     set_text(s, 10, "SIGNING")
     set_text(s, 11, "Keyless (Sigstore) or key-based (your PKI) signs one "
-                     "artifact at a time. OCM gives them the complete SBoD "
+                     "artifact at a time. OCM gives them the complete SBOD "
                      "to sign — one signature covers every artifact in the "
                      "delivery, by digest.")
     set_text(s, 12, "TRANSPORT")
@@ -621,14 +621,13 @@ def build():
     set_text(s, 2, "Trust, but verify.")
     set_blue_box_bullets(s, 10, [
         "Identity is location-independent. A component carries its name "
-        "regardless of which registry it lives in.",
-        "Signatures are location-independent. Sign once at source; verify at "
-        "the destination, or at any hop in between, with no callback upstream.",
-        "Day-2 ops happen inside the boundary. Subscribe to the component and "
-        "pull upgrades on your schedule, scale across regions, all without "
-        "reaching back upstream.",
+        "regardless where it lives.",
+        "Signatures are location-independent. Sign once at source, verify at "
+        "all hops up to the destination. No callback upstream.",
+        "Day-2 ops happen inside the boundary. Subscribe to a component and "
+        "pull upgrades when needed. Again, no callback upstream.",
         "On transfer into a sovereign environment, a component can carry every "
-        "artifact it needs along with it. The destination needs nothing more.",
+        "artifact it needs along with it. Completely self-contained.",
     ])
 
     # ---- SLIDE 7b — SOVEREIGN-READY (diagram only, was 6b) -----------------
@@ -647,14 +646,12 @@ def build():
     set_blue_box_bullets(s, 10, [
         "Open Delivery Gear (ODG) is the OCM compliance automation engine.",
         "The Compliance Dashboard is your entry point: every component, "
-        "every finding, every signature in one view.",
+        "every finding in one view.",
         "Continuous scans run asynchronously — even after release.",
-        "Findings get rescored against contextual risk, so your team patches "
+        "Findings get rescored against contextual risk. Your team only patches "
         "what actually matters.",
         "Every compliance signal correlates by component identity. Auditors "
         "get evidence, not spreadsheets.",
-        "Every SAP LoB gets compliance correlation by component identity, "
-        "without each LoB building its own retrofit.",
     ])
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS FOR SAP (tiles, internal outcomes) -----
@@ -663,22 +660,22 @@ def build():
     set_text(s, 2, "Six outcomes from one shared primitive.")
     tiles = [
         ("package-export.svg", "Faster sovereign delivery",
-         "Pack once, ship everywhere."
+         "Pack once, ship everywhere.\n"
          "Sovereign Cloud for all products."),
         ("report-analytics.svg", "Compliance leverage across LoBs",
-         "Report from one shared primitive — "
+         "Report from one shared primitive —\n"
          "ODG correlates all findings."),
-        ("rocket.svg", "Integration after acquisition",
-         "Let's be efficient:"
+        ("git-merge.svg", "Integration after acquisition",
+         "Let's be efficient:\n"
          "Delivery schemes converge on one mechanism."),
         ("radar.svg", "Cross-LoB security correlation",
-         "Blast radius is one query —"
+         "Blast radius is one query —\n"
          "answered via the OCM coordinate system."),
         ("source-of-truth.svg", "One source of truth",
-         "One signed descriptor per delivery."
-         "Rebuild any landscape."),
-        ("lock.svg", "Ecosystem stewardship",
-         "SAP investment compounds with "
+         "One signed descriptor per delivery.\n"
+         "Rebuild any landscape easily."),
+        ("heart-handshake.svg", "Ecosystem stewardship",
+         "SAP investment compounds with\n"
          "the open-peer ecosystem."),
     ]
     for i, (icon, label, body) in enumerate(tiles):
@@ -696,7 +693,10 @@ def build():
     set_text(s, 1, "WHERE OCM IS SHIPPING — OPEN ECOSYSTEM")
     set_text(s, 2, "Peer in the open ecosystem.")
     delete_placeholder(s, 10)
-    add_label_at(s, 510, "OPEN PEER PROJECTS BUILDING ON OCM")
+    # Section label ("OPEN PEER PROJECTS BUILDING ON OCM") removed — the
+    # eyebrow + title already frame the slide; an extra label between title
+    # and logos read as redundant chrome. Reclaimed space goes to bigger
+    # logos and a higher first row.
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
          "https://gardener.cloud", "Gardener"),
@@ -706,41 +706,36 @@ def build():
          "https://open-control-plane.io", "OpenControlPlane"),
         (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
          "https://konfidence.cloud", "Konfidence"),
-    ], y_px=620, max_logo_w_px=300, max_logo_h_px=96, caption_pt=20)
+    ], y_px=560, max_logo_w_px=360, max_logo_h_px=120, caption_pt=20)
     # "Aligned with [NeoNephos logo]" — replaces the prior "And forthcoming…"
     # caption + URL footer. Single, larger, clickable NeoNephos logo carries
     # the alignment claim without needing an explicit URL line.
     add_centred_proof_with_logo(
-        s, 870,
+        s, 820,
         "Aligned with ",
         ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
         "",
         logo_url="https://neonephos.org",
         logo_caption="NeoNephos")
 
-    # ---- SLIDE 10b — WHERE OCM IS SHIPPING — INTERNAL SAP ----------------
-    # Internal-only delivery infrastructure converging on OCM.
-    # Manifesto closes as a centred italic caption — visually separated from
-    # the bullet list, not a bulleted item.
+    # ---- SLIDE 10b — WHERE OCM IS SHIPPING — SAP -------------------------
+    # Internal-only delivery infrastructure converging on OCM. Just the
+    # bullet list — the rhetorical "stewardship is leverage" closing
+    # previously sat here, but slide 2 already states the thesis (Velocity /
+    # Window / Disinvestment) and slide 11 CTA is the actual closing
+    # surface. Removing the duplicate keeps this slide a clean adoption map.
     s = prs.slides.add_slide(layouts["Plain / Compact"])
-    set_text(s, 1, "WHERE OCM IS SHIPPING — INTERNAL SAP")
+    set_text(s, 1, "WHERE OCM IS SHIPPING — SAP")
     set_text(s, 2, "Backbone of internal SAP delivery.")
     set_blue_box_bullets(s, 10, [
         "Hyperspace — hosts the internal Dev Portal, lifecycle processes, "
-        "and the shipment / delivery of SAP products. Direct OCM consumer.",
-        "Release-Based Shipment Channel (RBSC) — internal SAP delivery "
-        "infrastructure converging on OCM.",
+        "and delivery of SAP products.",
+        "Release-Based Shipment Channel (RBSC) — SAP delivery infrastructure for customer shipments.",
         "Common Service Infrastructure (CSI) — the largest "
         "internal-services footprint shared across SAP.",
-        "Steampunk — internal name for SAP BTP ABAP Environment "
-        "(PaaS within SAP BTP); large user of OCM and ODG.",
-        "Greenhouse — a cloud operations platform that streamlines "
-        "management of large-scale, distributed infrastructure.",
+        "Steampunk — SAP BTP PaaS for ABAP Development. ",
+        "Greenhouse — Cloud operations platform designed to streamline the management of distributed infrastructure.",
     ])
-    add_centred_proof(s, 945,
-        "Stewardship is leverage. Disinvestment forfeits it. The window "
-        "for shaping the open standard for regulated delivery is closing — "
-        "what compounds for SAP today migrates elsewhere if we step back.")
 
     # ---- SLIDE 11 — CTA (sponsor / scale / standardize) -------------------
     s = prs.slides.add_slide(layouts["CTA"])
@@ -810,12 +805,14 @@ def add_centred_proof_with_logo(slide, y_px: int, text_before: str,
                                  logo_url: str | None = None,
                                  logo_caption: str | None = None,
                                  caption_pt: int = 20):
-    """Centred italic proof line with an inline image substituted for one word.
+    """Centred proof line with an inline image substituted for one word.
 
     Renders text_before + <logo> + text_after as three siblings on the same
     baseline, all horizontally centred as a group. Approximates text widths
     from character counts (python-pptx has no font-metrics API); good enough
-    for a single static line. Style mirrors `add_centred_proof`.
+    for a single static line. Style mirrors `add_centred_proof` minus the
+    italic — "Aligned with [LOGO]" reads as a regular caption next to a
+    branded logo, not as a quoted aside.
 
     If `logo_url` is provided the logo picture becomes clickable. If
     `logo_caption` is provided, a small caption (e.g. "neonephos.org") is
@@ -823,8 +820,10 @@ def add_centred_proof_with_logo(slide, y_px: int, text_before: str,
     add_logo_row so the visual hierarchy stays consistent.
     """
     from pptx.enum.text import PP_ALIGN
-    # Approx width in px for 20pt italic Aptos: ~10.5 px/char average.
-    char_w_px = 10.5
+    # Approx width in px for 20pt regular Aptos: ~11.0 px/char average. Was
+    # 10.5 when the line was italic (italic glyphs run a touch narrower);
+    # bumped slightly so the composite stays visually centred at regular weight.
+    char_w_px = 11.0
     # Horizontal padding between text segments and the inline logo, so the
     # logo doesn't sit flush against the italic text baseline edge.
     GAP_PX = 16
@@ -863,7 +862,7 @@ def add_centred_proof_with_logo(slide, y_px: int, text_before: str,
     r1.text = text_before
     r1.font.name = "Aptos"
     r1.font.size = Pt(20)
-    r1.font.italic = True
+    r1.font.italic = False
     r1.font.color.rgb = C.BLUE_MID
 
     # ---- inline logo -------------------------------------------------------
@@ -908,7 +907,7 @@ def add_centred_proof_with_logo(slide, y_px: int, text_before: str,
         r2.text = text_after
         r2.font.name = "Aptos"
         r2.font.size = Pt(20)
-        r2.font.italic = True
+        r2.font.italic = False
         r2.font.color.rgb = C.BLUE_MID
 
 
@@ -932,31 +931,32 @@ def add_source_line(slide, y_px: int, text: str):
 
 # Glossary on the appendix slide. Term → expansion. Two-column layout, term
 # in brand-blue bold, expansion in black. Mirrors the external deck list so
-# the abbreviations have one definition surface across both decks.
+# the abbreviations have one definition surface across both decks. Sorted
+# alphabetically (case-insensitive) for scannable reference.
 GLOSSARY_ENTRIES: list[tuple[str, str]] = [
+    ("BSI C5",    "Bundesamt für Sicherheit in der Informationstechnik — Cloud Computing Compliance Criteria Catalogue."),
+    ("BTP",       "SAP Business Technology Platform."),
     ("CRA",       "Cyber Resilience Act — EU regulation on cybersecurity for products with digital elements."),
     ("DORA",      "Digital Operational Resilience Act — EU regulation for ICT risk in financial services."),
-    ("NIS2",      "Network and Information Security Directive 2 — EU baseline for cybersecurity of essential entities."),
     ("FedRAMP",   "Federal Risk and Authorization Management Program — US standardised cloud security assessment."),
     ("FISMA",     "Federal Information Security Modernization Act — US federal information security mandate."),
-    ("BSI C5",    "Bundesamt für Sicherheit in der Informationstechnik — Cloud Computing Compliance Criteria Catalogue."),
-    ("SecNumCloud", "French cloud security qualification scheme operated by ANSSI."),
+    ("Grype",     "Open-source vulnerability scanner for container images and filesystems (Anchore)."),
+    ("Helm",      "Package manager for Kubernetes; reference artifact type for OCM."),
+    ("LoB",       "Line of Business — SAP organisational unit owning a product portfolio."),
+    ("NeoNephos", "European foundation for sovereign cloud open-source projects, hosted under the Linux Foundation."),
+    ("NIS2",      "Network and Information Security Directive 2 — EU baseline for cybersecurity of essential entities."),
+    ("OCI",       "Open Container Initiative — open standards for container image format and distribution."),
     ("OCM",       "Open Component Model — vendor-neutral specification for signed, transportable software components."),
     ("ODG",       "Open Delivery Gear — OCM-native compliance automation engine and dashboard."),
-    ("OCI",       "Open Container Initiative — open standards for container image format and distribution."),
+    ("OSS",       "Open Source Software."),
+    ("PKI",       "Public Key Infrastructure — framework for managing certificates and signing keys."),
+    ("SBOD",      "Software Bill of Delivery — the OCM component descriptor, signed and traceable. Containing all artifacts and metadata for delivery and deployment."),
     ("SBOM",      "Software Bill of Materials — inventory of components and dependencies inside a software artifact."),
-    ("SBoD",      "Signed Bill of Delivery — OCM's signed envelope describing what was actually delivered, where, and by whom."),
+    ("SecNumCloud", "French cloud security qualification scheme operated by ANSSI."),
+    ("Sigstore",  "Open-source project for keyless software signing using OIDC identities."),
     ("SPDX",      "Software Package Data Exchange — ISO/IEC 5962 standard format for SBOM data."),
     ("SWID",      "Software Identification Tags — ISO/IEC 19770-2 standard for software inventory."),
-    ("PKI",       "Public Key Infrastructure — framework for managing certificates and signing keys."),
-    ("Sigstore",  "Open-source project for keyless software signing using OIDC identities."),
-    ("LoB",       "Line of Business — SAP organisational unit owning a product portfolio."),
-    ("BTP",       "SAP Business Technology Platform."),
-    ("OSS",       "Open Source Software."),
-    ("NeoNephos", "European foundation for sovereign cloud open-source projects, hosted under the Linux Foundation."),
-    ("Grype",     "Open-source vulnerability scanner for container images and filesystems (Anchore)."),
     ("Trivy",     "Open-source security scanner for containers, IaC, and code (Aqua Security)."),
-    ("Helm",      "Package manager for Kubernetes; reference artifact type for OCM."),
 ]
 
 
@@ -1001,12 +1001,13 @@ def add_glossary_grid(slide, entries: list[tuple[str, str]],
 
 
 def add_appendix_glossary_slide(prs, layouts):
-    """Last visible slide: abbreviations and acronyms used in the deck."""
-    s = prs.slides.add_slide(layouts["Plain"])
+    """Last visible slide: abbreviations and acronyms used in the deck.
+    Plain / Compact layout — see external builder for rationale."""
+    s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "APPENDIX — ABBREVIATIONS")
     set_text(s, 2, "Quick reference for the acronyms used in this deck.")
     delete_placeholder(s, 10)
-    add_glossary_grid(s, GLOSSARY_ENTRIES, y_top_px=360)
+    add_glossary_grid(s, GLOSSARY_ENTRIES, y_top_px=520)
 
 
 def add_hidden_trademark_slide(prs, layouts):
@@ -1050,8 +1051,6 @@ def add_hidden_trademark_slide(prs, layouts):
         "Trivy, Grype, Sigstore, Helm, OCI, Kubernetes, kro, Flux, Argo CD — "
         "third-party trademarks named for technical reference; ownership "
         "remains with their respective projects and organisations.",
-        "Full sourcing record: assets/adopters/LICENSING.md in the OCM "
-        "marketing repository.",
     ])
 
 

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 04-sbom-inside-sbod-v2.svg — Variant 2: nested concentric envelopes.
-     Outer rounded rectangle = SBoD (signed envelope).
+     Outer rounded rectangle = SBOD (signed envelope).
      Inside it: artifact pills (OCI, Helm, npm, Binary, Config) + a smaller
      SBOM rectangle nested as ONE payload item among many.
-     Caption: "The SBoD contains the SBOM."
+     Caption: "The SBOD contains the SBOM."
      viewBox: 0 0 1760 540 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 540" font-family="Aptos, Inter, sans-serif">
-  <!-- Outer SBoD envelope -->
+  <!-- Outer SBOD envelope -->
   <g transform="translate(80,40)">
     <rect x="0" y="0" width="1100" height="460" rx="14" fill="white" stroke="#257DDC" stroke-width="2.5"/>
     <!-- Inner accent border -->
@@ -19,7 +19,7 @@
     </g>
 
     <!-- Title -->
-    <text x="32" y="48" font-size="22" font-weight="700" fill="#1D65B4">SBoD — Software Bill of Delivery</text>
+    <text x="32" y="48" font-size="22" font-weight="700" fill="#1D65B4">SBOD — Software Bill of Delivery</text>
     <text x="32" y="74" font-size="14" fill="#6B7280">signed once · travels intact · compliance-native</text>
 
     <!-- Identity chip -->
@@ -61,7 +61,7 @@
 
   <!-- RIGHT SIDE: caption + verb chain -->
   <g transform="translate(1240,80)">
-    <text x="0" y="20" font-size="14" font-weight="700" letter-spacing="1.2" fill="#257DDC">SBOM ⊂ SBoD</text>
+    <text x="0" y="20" font-size="14" font-weight="700" letter-spacing="1.2" fill="#257DDC">SBOM ⊂ SBOD</text>
     <text x="0" y="60" font-size="22" font-weight="700" fill="#000">Built.</text>
     <text x="0" y="98" font-size="22" font-weight="700" fill="#000">Signed.</text>
     <text x="0" y="136" font-size="22" font-weight="700" fill="#000">Transported.</text>
@@ -72,6 +72,6 @@
 
     <line x1="0" y1="290" x2="380" y2="290" stroke="#E5E7EB" stroke-width="1"/>
     <text x="0" y="320" font-size="13" fill="#6B7280">SBOM = inventory.</text>
-    <text x="0" y="340" font-size="13" fill="#6B7280">SBoD = the delivery.</text>
+    <text x="0" y="340" font-size="13" fill="#6B7280">SBOD = the delivery.</text>
   </g>
 </svg>

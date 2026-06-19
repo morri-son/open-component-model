@@ -595,23 +595,23 @@ def build():
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
                  x_px=-91, y_px=440, max_w_px=1890, max_h_px=602)
 
-    # ---- SLIDE 4a — THE SHIFT, SBoD (text-only) -----------------------------
+    # ---- SLIDE 4a — THE SHIFT, SBOD (text-only) -----------------------------
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "THE SHIFT")
-    set_text(s, 2, "SBOM lists. SBoD delivers.")
+    set_text(s, 2, "SBOM lists. SBOD delivers.")
     set_blue_box_bullets(s, 10, [
         "An SBOM tells you what's in your software. It was built for inventory.",
-        "A Software Bill of Delivery (SBoD) tells you what you delivered, "
+        "A Software Bill of Delivery (SBOD) tells you what you delivered, "
         "how to verify, transport, and operate it. "
         "It was built for delivery.",
-        "The SBoD contains the SBOM. OCM doesn't replace your SBOM tooling — "
+        "The SBOD contains the SBOM. OCM doesn't replace your SBOM tooling — "
         "it gives the SBOM an envelope that's compliance-native, signed once, "
         "and travels intact across any boundary.",
     ])
 
     # ---- SLIDE 4b — THE SHIFT (diagram only) --------------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBoD")
+    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD")
     set_text(s, 2, "An envelope, not a list.")
     diagram = first_existing(
         DIAGRAMS_DIR / "04-sbom-inside-sbod.svg",
@@ -631,7 +631,7 @@ def build():
     set_text(s, 2, "OCM doesn't replace your tools. It gives them an envelope to compose around.")
     set_text(s, 10, "SIGNING")
     set_text(s, 11, "Keyless (Sigstore) or key-based (your PKI) signs one "
-                     "artifact at a time. OCM gives them the complete SBoD "
+                     "artifact at a time. OCM gives them the complete SBOD "
                      "to sign — one signature covers every artifact in the "
                      "delivery, by digest.")
     set_text(s, 12, "TRANSPORT")
@@ -712,7 +712,7 @@ def build():
         ("source-of-truth.svg", "One source of truth",
          "Rebuild any landscape from a single signed descriptor."),
         ("report-analytics.svg", "Automated compliance reporting",
-         "Reports composed from SBoD metadata — no spreadsheet drift."),
+         "Reports composed from SBOD metadata — no spreadsheet drift."),
     ]
     for i, (icon, label, body) in enumerate(tiles):
         # Tile placeholders alternate label/body: idx 20+2i = label, 21+2i = body
@@ -728,11 +728,11 @@ def build():
     set_text(s, 1, "TRUSTED IN PRODUCTION")
     set_text(s, 2, "Aligned with NeoNephos.")
     # Plain layout has a body placeholder at idx=10. We want neither text nor
-    # an empty container; the ALL-CAPS labels and logo rows below replace it.
+    # an empty container; the logo rows below replace it. Section label
+    # ("ADOPTED BY ENTERPRISES…") removed: the eyebrow + title already frame
+    # the slide; an extra label on top of the logos read as redundant chrome.
+    # Reclaimed vertical space goes to larger logos and a higher first row.
     delete_placeholder(s, 10)
-    # Top section label + logos (clickable — links survive PowerPoint and
-    # PDF export; captions name the project under each logo).
-    add_label_at(s, 510, "ADOPTED BY ENTERPRISES SHIPPING INTO REGULATED ENVIRONMENTS AND THE OPEN-SOURCE ECOSYSTEM")
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
          "https://neonephos.org", "NeoNephos"),
@@ -742,7 +742,7 @@ def build():
          "https://www.bwi.de", "BWI"),
         (ASSETS_DIR / "adopters" / "sap-ns2" / "sap-ns2-getlogovector.png",
          "https://sapns2.com", "SAP NS2"),
-    ], y_px=580, max_logo_w_px=260, max_logo_h_px=72, caption_pt=20)
+    ], y_px=550, max_logo_w_px=320, max_logo_h_px=96, caption_pt=20)
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
          "https://gardener.cloud", "Gardener"),
@@ -752,7 +752,7 @@ def build():
          "https://open-control-plane.io", "OpenControlPlane"),
         (ASSETS_DIR / "adopters" / "platform-mesh" / "platform-mesh-horizontal-color.svg",
          "https://platform-mesh.io", "Platform Mesh"),
-    ], y_px=830, max_logo_w_px=260, max_logo_h_px=72, caption_pt=20)
+    ], y_px=790, max_logo_w_px=320, max_logo_h_px=96, caption_pt=20)
 
     # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
     s = prs.slides.add_slide(layouts["CTA"])
@@ -838,36 +838,34 @@ def add_source_line(slide, y_px: int, text: str):
 
 # Glossary on the appendix slide. Term → expansion. Two-column layout, term
 # in brand-blue bold, expansion in black on the same line. Sized so the full
-# list fits within the slide body area without overflow.
+# list fits within the slide body area without overflow. Entries sorted
+# alphabetically (case-insensitive) so the audience can scan them as a
+# reference, not a curated narrative — the order of introduction across the
+# deck is incidental once the slide is in front of them.
 GLOSSARY_ENTRIES: list[tuple[str, str]] = [
-    # Regulatory frameworks
+    ("BSI C5",    "Bundesamt für Sicherheit in der Informationstechnik — Cloud Computing Compliance Criteria Catalogue."),
+    ("BTP",       "SAP Business Technology Platform."),
     ("CRA",       "Cyber Resilience Act — EU regulation on cybersecurity for products with digital elements."),
     ("DORA",      "Digital Operational Resilience Act — EU regulation for ICT risk in financial services."),
-    ("NIS2",      "Network and Information Security Directive 2 — EU baseline for cybersecurity of essential entities."),
     ("FedRAMP",   "Federal Risk and Authorization Management Program — US standardised cloud security assessment."),
     ("FISMA",     "Federal Information Security Modernization Act — US federal information security mandate."),
-    ("BSI C5",    "Bundesamt für Sicherheit in der Informationstechnik — Cloud Computing Compliance Criteria Catalogue."),
-    ("SecNumCloud", "French cloud security qualification scheme operated by ANSSI."),
-    # Standards / technology
+    ("Grype",     "Open-source vulnerability scanner for container images and filesystems (Anchore)."),
+    ("Helm",      "Package manager for Kubernetes; reference artifact type for OCM."),
+    ("LoB",       "Line of Business — SAP organisational unit owning a product portfolio."),
+    ("NeoNephos", "European foundation for sovereign cloud open-source projects, hosted under the Linux Foundation."),
+    ("NIS2",      "Network and Information Security Directive 2 — EU baseline for cybersecurity of essential entities."),
+    ("OCI",       "Open Container Initiative — open standards for container image format and distribution."),
     ("OCM",       "Open Component Model — vendor-neutral specification for signed, transportable software components."),
     ("ODG",       "Open Delivery Gear — OCM-native compliance automation engine and dashboard."),
-    ("OCI",       "Open Container Initiative — open standards for container image format and distribution."),
+    ("OSS",       "Open Source Software."),
+    ("PKI",       "Public Key Infrastructure — framework for managing certificates and signing keys."),
+    ("SBOD",      "Software Bill of Delivery — the OCM component descriptor, signed and traceable. Containing all artifacts and metadata for delivery and deployment."),
     ("SBOM",      "Software Bill of Materials — inventory of components and dependencies inside a software artifact."),
-    ("SBoD",      "Signed Bill of Delivery — OCM's signed envelope describing what was actually delivered, where, and by whom."),
+    ("SecNumCloud", "French cloud security qualification scheme operated by ANSSI."),
+    ("Sigstore",  "Open-source project for keyless software signing using OIDC identities."),
     ("SPDX",      "Software Package Data Exchange — ISO/IEC 5962 standard format for SBOM data."),
     ("SWID",      "Software Identification Tags — ISO/IEC 19770-2 standard for software inventory."),
-    # Crypto / signing
-    ("PKI",       "Public Key Infrastructure — framework for managing certificates and signing keys."),
-    ("Sigstore",  "Open-source project for keyless software signing using OIDC identities."),
-    # SAP-internal context
-    ("LoB",       "Line of Business — SAP organisational unit owning a product portfolio."),
-    ("BTP",       "SAP Business Technology Platform."),
-    # Ecosystem / open source
-    ("OSS",       "Open Source Software."),
-    ("NeoNephos", "European foundation for sovereign cloud open-source projects, hosted under the Linux Foundation."),
-    ("Grype",     "Open-source vulnerability scanner for container images and filesystems (Anchore)."),
     ("Trivy",     "Open-source security scanner for containers, IaC, and code (Aqua Security)."),
-    ("Helm",      "Package manager for Kubernetes; reference artifact type for OCM."),
 ]
 
 
@@ -917,15 +915,17 @@ def add_glossary_grid(slide, entries: list[tuple[str, str]],
 def add_appendix_glossary_slide(prs, layouts):
     """Last visible slide: abbreviations and acronyms used in the deck.
 
-    Plain layout with eyebrow + title in the master, body placeholder
-    deleted in favour of a custom two-column term/definition grid. Lives
-    after the CTA slide so it's reachable as a reference but not part of
-    the main flow."""
-    s = prs.slides.add_slide(layouts["Plain"])
+    Plain / Compact layout (1-line title) with eyebrow + title in the master,
+    body placeholder deleted in favour of a custom two-column term/definition
+    grid that starts at the same y-coordinate the Compact layout reserves for
+    its body placeholder (y=520) so the grid never bleeds into the title.
+    Lives after the CTA slide so it's reachable as a reference but not part
+    of the main flow."""
+    s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "APPENDIX — ABBREVIATIONS")
     set_text(s, 2, "Quick reference for the acronyms used in this deck.")
     delete_placeholder(s, 10)
-    add_glossary_grid(s, GLOSSARY_ENTRIES, y_top_px=360)
+    add_glossary_grid(s, GLOSSARY_ENTRIES, y_top_px=520)
 
 
 def add_hidden_trademark_slide(prs, layouts):
@@ -971,8 +971,6 @@ def add_hidden_trademark_slide(prs, layouts):
         "Trivy, Grype, Sigstore, Helm, OCI, Kubernetes, kro, Flux, Argo CD — "
         "third-party trademarks named for technical reference; ownership "
         "remains with their respective projects and organisations.",
-        "Full sourcing record: assets/adopters/LICENSING.md in the OCM "
-        "marketing repository.",
     ])
 
 
