@@ -9,15 +9,17 @@
      Sovereign-Cloud icon mirrors the slide-5 (Pack/Sign/Transport/Deploy) cloud-lock motif. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 560" font-family="Aptos, Inter, system-ui, sans-serif">
   <defs>
-    <!-- Per-cluster arrow heads, color-keyed -->
+    <!-- Per-cluster arrow heads. All three keyed to the same light-black
+         (#374151) so spokes read as a single neutral connective layer; the
+         strokes themselves keep solid/dashed differentiation per cluster. -->
     <marker id="ah-artifact" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-      <polygon points="0 0, 8 4, 0 8" fill="#257DDC"/>
+      <polygon points="0 0, 8 4, 0 8" fill="#374151"/>
     </marker>
     <marker id="ah-regulator" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-      <polygon points="0 0, 8 4, 0 8" fill="#1D65B4"/>
+      <polygon points="0 0, 8 4, 0 8" fill="#374151"/>
     </marker>
     <marker id="ah-boundary" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-      <polygon points="0 0, 8 4, 0 8" fill="#0A1530"/>
+      <polygon points="0 0, 8 4, 0 8" fill="#374151"/>
     </marker>
     <!-- Reusable EU-flag glyph: blue field + 12 yellow stars (simplified as dots in a ring). -->
     <g id="flag-eu">
@@ -84,18 +86,18 @@
     </g>
     <style>
       .eyebrow      { font-size: 13px; font-weight: 700; letter-spacing: 1.4px; fill: #6B7280; }
-      .pill-stroke  { fill: #FFFFFF; stroke: #257DDC; stroke-width: 1.5; }
-      .pill-text    { font-size: 14px; font-weight: 700; fill: #257DDC; }
-      .pill-stroke-soft { fill: #FFFFFF; stroke: #257DDC; stroke-width: 1.5; stroke-dasharray: 4 3; }
+      .pill-stroke  { fill: #FFFFFF; stroke: #1D65B4; stroke-width: 1.5; }
+      .pill-text    { font-size: 14px; font-weight: 700; fill: #1D65B4; }
+      .pill-stroke-soft { fill: #FFFFFF; stroke: #1D65B4; stroke-width: 1.5; stroke-dasharray: 4 3; }
       .pill-text-soft   { font-size: 13px; font-weight: 600; fill: #1D65B4; font-style: italic; }
       .reg-stroke   { fill: #FFFFFF; stroke: #1D65B4; stroke-width: 1.5; }
       .reg-text     { font-size: 14px; font-weight: 700; fill: #1D65B4; }
-      .bd-fill      { fill: #F3F4F6; stroke: #0A1530; stroke-width: 1.5; }
+      .bd-fill      { fill: #FFFFFF; stroke: #1D65B4; stroke-width: 1.5; }
       .bd-text      { font-size: 15px; font-weight: 700; fill: #0A1530; }
-      .spoke-art    { stroke: #257DDC;  stroke-width: 1.75; fill: none; }
-      .spoke-art-soft { stroke: #257DDC;  stroke-width: 1.5;  fill: none; stroke-dasharray: 4 3; }
-      .spoke-reg    { stroke: #1D65B4;  stroke-width: 1.75; fill: none; stroke-dasharray: 6 4; }
-      .spoke-bnd    { stroke: #0A1530;  stroke-width: 2;    fill: none; }
+      .spoke-art    { stroke: #374151; stroke-width: 1.5; fill: none; }
+      .spoke-art-soft { stroke: #374151; stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; }
+      .spoke-reg    { stroke: #374151; stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
+      .spoke-bnd    { stroke: #374151; stroke-width: 1.75; fill: none; }
       .footer       { font-size: 12px; font-weight: 500; font-style: italic; fill: #1D65B4; letter-spacing: 0.2px; }
     </style>
   </defs>
@@ -118,20 +120,30 @@
          slide coords: (880, 250). -->
     <circle cx="78" cy="30" r="104" fill="#257DDC" fill-opacity="0.06"/>
     <circle cx="78" cy="30" r="88"  fill="#257DDC" fill-opacity="0.10"/>
-    <!-- OCM-component icon: e-ticket mini-with-version, leaner aspect.
+    <!-- OCM-component icon: single rounded box. The version stub is no
+         longer a separate rect — instead, a faint grey fill (#F3F4F6)
+         occupies the stub area inside the same box, separated from the
+         name area by a hairline divider in #E5E7EB. One enclosing stroke
+         around the whole shape so it reads as one component, with the
+         version visually demoted (sub-region, not a torn ticket stub).
          Icon spans x=0..156, y=0..60; visually centred on the hub circles
-         at hub-local (78, 30). Stub is wider (56px) so the v1.0.0 text
-         no longer bleeds into the perforation/edge. -->
+         at hub-local (78, 30). -->
     <g>
-      <!-- ticket main body (left part) -->
+      <!-- Faint grey fill in the stub area (100..156). Drawn first so the
+           outer stroke (next) overlays its right/top/bottom edges cleanly. -->
+      <rect x="100" y="0" width="56" height="60" rx="0"
+            fill="#F3F4F6" stroke="none"/>
+      <!-- Single enclosing rect: white-on-grey is achieved by the stub
+           fill above peeking through; this rect just paints the body area
+           white and carries the unified outer stroke. -->
       <rect x="0" y="0" width="100" height="60" rx="10"
-            fill="#FFFFFF" stroke="#1D65B4" stroke-width="2.2"/>
-      <!-- perforation between body and stub -->
-      <line x1="100" y1="8" x2="100" y2="52" stroke="#1D65B4"
-            stroke-width="1.8" stroke-dasharray="5 3"/>
-      <!-- ticket stub (right part) — widened so the version text fits -->
-      <rect x="100" y="0" width="56" height="60" rx="10"
-            fill="#E8F0FF" stroke="#1D65B4" stroke-width="2.2"/>
+            fill="#FFFFFF" stroke="none"/>
+      <!-- Outer stroke spanning the full 156-wide envelope. -->
+      <rect x="0" y="0" width="156" height="60" rx="10"
+            fill="none" stroke="#1D65B4" stroke-width="2.2"/>
+      <!-- Hairline divider between name area and version sub-region. -->
+      <line x1="100" y1="6" x2="100" y2="54" stroke="#E5E7EB"
+            stroke-width="1.2"/>
       <!-- lock badge on the body, centred vertically -->
       <circle cx="24" cy="30" r="14" fill="#1D65B4"/>
       <g fill="none" stroke="#FFFFFF" stroke-width="1.6"
@@ -196,87 +208,79 @@
   </g>
 
   <!-- =======================================================================
-       CLUSTER 2 — COMPLIANCE FRAMEWORKS   (RIGHT, pulled in close to hub)
-       Badges 180 wide, column x = 1360. Left edge = 1360. Hub right ~ 928.
+       CLUSTER 2 — DEPLOYMENT BOUNDARIES   (RIGHT, pulled in close to hub)
+       Tiles 180 x 70, all at the same scale. Sovereign-cloud sets the
+       width (its label "Sovereign Cloud" is the longest); EU/US match it
+       so the column reads as one rhythm. Column at x=1380.
        ======================================================================= -->
   <g>
-    <text x="1450" y="38" text-anchor="middle" class="eyebrow">EVERY COMPLIANCE FRAMEWORK</text>
-    <line x1="1340" y1="50" x2="1560" y2="50" stroke="#1D65B4" stroke-width="2"/>
+    <text x="1470" y="38" text-anchor="middle" class="eyebrow">EVERY DEPLOYMENT BOUNDARY</text>
+    <line x1="1380" y1="50" x2="1560" y2="50" stroke="#1D65B4" stroke-width="2"/>
 
-    <!-- DORA -->
-    <g transform="translate(1360,80)">
-      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
-      <circle cx="22" cy="20" r="8" fill="#003399"/>
-      <circle cx="22" cy="20" r="2.6" fill="#FFCC00"/>
-      <text class="reg-text" x="105" y="25" text-anchor="middle">DORA</text>
+    <!-- EU tile: flag(36) + label, group centred inside the 180-wide tile.
+         Group width ≈ flag(36) + gap(12) + "EU"(~26) = 74; start x = (180-74)/2 = 53. -->
+    <g transform="translate(1380,80)">
+      <rect class="bd-fill" x="0" y="0" width="180" height="70" rx="10"/>
+      <g transform="translate(53,23)"><use href="#flag-eu"/></g>
+      <text class="bd-text" x="103" y="42">EU</text>
     </g>
-    <!-- NIS2 -->
-    <g transform="translate(1360,200)">
-      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
-      <circle cx="22" cy="20" r="8" fill="#003399"/>
-      <circle cx="22" cy="20" r="2.6" fill="#FFCC00"/>
-      <text class="reg-text" x="105" y="25" text-anchor="middle">NIS2</text>
+    <!-- US tile: same centring rule as EU -->
+    <g transform="translate(1380,200)">
+      <rect class="bd-fill" x="0" y="0" width="180" height="70" rx="10"/>
+      <g transform="translate(53,23)"><use href="#flag-us"/></g>
+      <text class="bd-text" x="103" y="42">US</text>
     </g>
-    <!-- CRA -->
-    <g transform="translate(1360,320)">
-      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
-      <circle cx="22" cy="20" r="8" fill="#003399"/>
-      <circle cx="22" cy="20" r="2.6" fill="#FFCC00"/>
-      <text class="reg-text" x="105" y="25" text-anchor="middle">CRA</text>
+    <!-- Sovereign Cloud tile: cloud-lock(60w) on left, two-line label
+         centred to its right. -->
+    <g transform="translate(1380,320)">
+      <rect class="bd-fill" x="0" y="0" width="180" height="70" rx="10"/>
+      <g transform="translate(14,20)"><use href="#cloud-lock"/></g>
+      <text class="bd-text" x="120" y="32">Sovereign</text>
+      <text class="bd-text" x="120" y="52">Cloud</text>
     </g>
 
-    <!-- Spokes: regulatory frameworks flow INTO the hub. All endpoints lie
-         ON the hub's outer target circle (centre 880,250 r=104) so arrowheads
-         land exactly at its perimeter. Three angles fan above/at/below
-         horizontal: 30° / 0° / -30° from the right side of the circle. -->
-    <path class="spoke-reg" d="M1358 100 C 1220 130, 1080 180, 970.07 198" marker-end="url(#ah-regulator)"/>
-    <path class="spoke-reg" d="M1358 220 C 1220 220, 1080 240, 984 250"    marker-end="url(#ah-regulator)"/>
-    <path class="spoke-reg" d="M1358 340 C 1220 340, 1080 320, 970.07 302" marker-end="url(#ah-regulator)"/>
+    <!-- Spokes: hub → boundary tiles. Starts on hub outer circle (880,250 r=104)
+         at angles -30°/0°/+30°. Endpoints at each tile's left edge (x=1380)
+         on the tile's vertical centre line. Pfeile zeigen NACH AUSSEN. -->
+    <path class="spoke-bnd" d="M970.07 198 C 1080 180, 1220 130, 1378 115" marker-end="url(#ah-boundary)"/>
+    <path class="spoke-bnd" d="M984 250    C 1080 240, 1220 230, 1378 235" marker-end="url(#ah-boundary)"/>
+    <path class="spoke-bnd" d="M970.07 302 C 1080 320, 1220 340, 1378 355" marker-end="url(#ah-boundary)"/>
   </g>
 
   <!-- =======================================================================
-       CLUSTER 3 — DEPLOYMENT BOUNDARIES   (BOTTOM, pulled in close to hub)
-       Tiles 220 x 70. Top y = 380. Centred in x: tile centres at 490, 880, 1270.
+       CLUSTER 3 — COMPLIANCE FRAMEWORKS   (BOTTOM, pulled away from hub for
+       breathing room; eyebrow lives ABOVE the pills in the conventional
+       header position). Frameworks flow UPWARD into the hub — they are
+       the central force, not a side cluster.
        ======================================================================= -->
   <g>
-    <text x="880" y="505" text-anchor="middle" class="eyebrow">EVERY DEPLOYMENT BOUNDARY</text>
-    <line x1="750" y1="513" x2="1010" y2="513" stroke="#257DDC" stroke-width="2"/>
+    <text x="880" y="430" text-anchor="middle" class="eyebrow">EVERY COMPLIANCE FRAMEWORK</text>
+    <line x1="750" y1="438" x2="1010" y2="438" stroke="#1D65B4" stroke-width="2"/>
 
-    <!-- EU tile: flag + label centred as a group inside the 220-wide tile.
-         Group (flag 36 + gap 12 + label width). With "EU" ≈26px wide, group ≈74px;
-         start group at x = (220-74)/2 ≈ 73. Flag y=23 centres against tile mid (y=35). -->
-    <g transform="translate(380,380)">
-      <rect class="bd-fill" x="0" y="0" width="220" height="70" rx="10"/>
-      <rect x="0" y="0" width="220" height="3" fill="#0A1530"/>
-      <g transform="translate(73,23)"><use href="#flag-eu"/></g>
-      <text class="bd-text" x="123" y="42">EU</text>
+    <!-- DORA pill: centre x=490, top y=455. Bullet indicators removed —
+         the eyebrow already names the cluster, the pill itself just labels
+         the framework. Text now centred at pill mid (x=90). -->
+    <g transform="translate(400,455)">
+      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
+      <text class="reg-text" x="90" y="25" text-anchor="middle">DORA</text>
     </g>
-    <!-- US tile: same centring rule as EU -->
-    <g transform="translate(770,380)">
-      <rect class="bd-fill" x="0" y="0" width="220" height="70" rx="10"/>
-      <rect x="0" y="0" width="220" height="3" fill="#0A1530"/>
-      <g transform="translate(73,23)"><use href="#flag-us"/></g>
-      <text class="bd-text" x="123" y="42">US</text>
+    <!-- NIS2 pill: centre x=880 -->
+    <g transform="translate(790,455)">
+      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
+      <text class="reg-text" x="90" y="25" text-anchor="middle">NIS2</text>
     </g>
-    <!-- Sovereign Cloud tile: brand-blue cloud-lock motif (mirror of slide 5),
-         centred horizontally. Group width: cloud(60) + gap(14) + label-block ~110.
-         With label centred under cloud, easier: cloud on left, two-line label right. -->
-    <g transform="translate(1160,380)">
-      <rect class="bd-fill" x="0" y="0" width="220" height="70" rx="10"/>
-      <rect x="0" y="0" width="220" height="3" fill="#0A1530"/>
-      <!-- Cloud-lock glyph, centred vertically (~y=20 puts cloud-mid at tile-mid 35). -->
-      <g transform="translate(28,20)"><use href="#cloud-lock"/></g>
-      <text class="bd-text" x="100" y="32">Sovereign</text>
-      <text class="bd-text" x="100" y="52">Cloud</text>
+    <!-- CRA pill: centre x=1270 -->
+    <g transform="translate(1180,455)">
+      <rect class="reg-stroke" x="0.75" y="0.75" width="178.5" height="38.5" rx="20" ry="20"/>
+      <text class="reg-text" x="90" y="25" text-anchor="middle">CRA</text>
     </g>
 
-    <!-- Spokes: hub → boundary tiles. Arrow STARTS lie ON the hub's outer
-         target circle (centre 880,250 r=104), so the arrows visually emanate
-         from the circle, not from the icon. Endpoints land just above each
-         tile's top edge (y=378). Three angles fan: 225° / 270° / 315°. -->
-    <path class="spoke-bnd" d="M806.46 323.54 C 740 340, 600 365, 492 378" marker-end="url(#ah-boundary)"/>
-    <path class="spoke-bnd" d="M880 354    L 880 378"                       marker-end="url(#ah-boundary)"/>
-    <path class="spoke-bnd" d="M953.54 323.54 C 1020 340, 1160 365, 1268 378" marker-end="url(#ah-boundary)"/>
+    <!-- Spokes: frameworks → hub. Endpoints on hub outer circle (880,250
+         r=104) at angles 225°/270°/315°. Starts at each pill's top edge
+         centre (y=455). -->
+    <path class="spoke-reg" d="M490 455 C 600 410, 740 360, 806.46 323.54" marker-end="url(#ah-regulator)"/>
+    <path class="spoke-reg" d="M880 455 C 880 420, 880 380, 880 354"        marker-end="url(#ah-regulator)"/>
+    <path class="spoke-reg" d="M1270 455 C 1160 410, 1020 360, 953.54 323.54" marker-end="url(#ah-regulator)"/>
   </g>
 
   <!-- =======================================================================

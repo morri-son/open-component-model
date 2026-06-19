@@ -617,17 +617,20 @@ def layout_tiles() -> bytes:
         # Top rule (brand blue)
         shapes.append(make_rect(f"Tile{i+1} Rule", next_id, x, y, tile_w, 3, "0F6BFF"))
         next_id += 1
-        # Tile label placeholder
+        # Tile label placeholder — sits to the RIGHT of the icon (icon-on-left
+        # variant). Icon occupies x..x+48 of the tile padding zone (added
+        # inline at build time, not by the layout). Label starts at x+24+48+16
+        # = x+88, vertically centred against the 48-tall icon row at y+24.
         shapes.append(make_textbox(
-            f"Tile{i+1} Label", next_id, x + 24, y + 88, tile_w - 48, 32,
+            f"Tile{i+1} Label", next_id, x + 88, y + 24, tile_w - 88 - 24, 48,
             placeholder_type="body", placeholder_idx=20 + i * 2,
             default_text=f"Tile {i+1} label",
-            size_pt=16, bold=True, color_hex="0F6BFF",
+            size_pt=18, bold=True, color_hex="0F6BFF",
         ))
         next_id += 1
-        # Tile body placeholder
+        # Tile body placeholder — full tile width below the icon/label row.
         shapes.append(make_textbox(
-            f"Tile{i+1} Body", next_id, x + 24, y + 124, tile_w - 48, tile_h - 140,
+            f"Tile{i+1} Body", next_id, x + 24, y + 96, tile_w - 48, tile_h - 116,
             placeholder_type="body", placeholder_idx=21 + i * 2,
             default_text="One short sentence describing this tile.",
             size_pt=18, color_hex="000000",

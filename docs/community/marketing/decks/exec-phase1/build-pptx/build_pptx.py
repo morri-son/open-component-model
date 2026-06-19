@@ -102,6 +102,32 @@ def rasterize_svg(svg_path: Path, target_w_px: int) -> Path:
     return out
 
 
+def rasterize_svg_recolored(svg_path: Path, target_w_px: int,
+                            color_hex: str) -> Path:
+    """Rasterize a `currentColor`-based SVG (Tabler icon family) with an
+    explicit stroke/fill colour. rsvg-convert defaults `currentColor` to
+    black; we patch a copy of the SVG so the icon paints in the brand
+    palette instead. Cached per (file, width, colour)."""
+    if not svg_path.exists():
+        raise FileNotFoundError(svg_path)
+    colour = color_hex.lstrip("#").upper()
+    out = RASTER_DIR / f"{svg_path.stem}_{target_w_px}_{colour}.png"
+    if out.exists() and out.stat().st_mtime >= svg_path.stat().st_mtime:
+        return out
+    src = svg_path.read_text(encoding="utf-8")
+    # Tabler icons declare stroke="currentColor" on the root <svg>; patching
+    # the literal token covers both stroke and fill uses.
+    patched = src.replace("currentColor", f"#{colour}")
+    tmp = RASTER_DIR / f"{svg_path.stem}_{colour}.svg"
+    tmp.write_text(patched, encoding="utf-8")
+    subprocess.run(
+        ["rsvg-convert", "--width", str(target_w_px), "--keep-aspect-ratio",
+         str(tmp), "-o", str(out)],
+        check=True, capture_output=True,
+    )
+    return out
+
+
 def first_existing(*candidates: Path) -> Path | None:
     for c in candidates:
         if c.exists():
@@ -353,15 +379,17 @@ def add_diagram(slide, svg_path: Path | None,
 
 
 def add_tile_icon(slide, tile_x_px: int, tile_y_px: int, icon_name: str):
-    """Place an icon at the top-left of a tile."""
+    """Place a brand-blue icon at the top-left of a tile, sitting in the
+    same header row as the (right-side) tile label. 48x48 to balance with
+    the 18pt bold label baseline; both share the row from y+24 to y+72."""
     icon_path = ICONS_DIR / icon_name
     if not icon_path.exists():
         return
-    png = rasterize_svg(icon_path, target_w_px=72)
+    png = rasterize_svg_recolored(icon_path, target_w_px=96, color_hex="0F6BFF")
     slide.shapes.add_picture(
         str(png),
         px(tile_x_px + 24), px(tile_y_px + 24),
-        width=px(40), height=px(40),
+        width=px(48), height=px(48),
     )
 
 
@@ -572,9 +600,9 @@ def build():
     set_text(s, 1, "THE SHIFT")
     set_text(s, 2, "SBOM lists. SBoD delivers.")
     set_blue_box_bullets(s, 10, [
-        "An SBOM (Software Bill of Materials) tells you what's in your software. It was built for inventory.",
+        "An SBOM tells you what's in your software. It was built for inventory.",
         "A Software Bill of Delivery (SBoD) tells you what you delivered, "
-        "how to verify it, how to transport it, and how to operate it. "
+        "how to verify, transport, and operate it. "
         "It was built for delivery.",
         "The SBoD contains the SBOM. OCM doesn't replace your SBOM tooling — "
         "it gives the SBOM an envelope that's compliance-native, signed once, "
@@ -740,6 +768,7 @@ def build():
     # Marked show="0" so it doesn't appear in slideshow mode but is visible
     # when editing and survives PDF export. Lives at the back of the deck for
     # legal/audit completeness; the speaker need never present it.
+    add_appendix_glossary_slide(prs, layouts)
     add_hidden_trademark_slide(prs, layouts)
 
     prs.save(str(OUTPUT_PPTX))
@@ -805,6 +834,98 @@ def add_source_line(slide, y_px: int, text: str):
     r.font.name = "Aptos"
     r.font.size = Pt(13)
     r.font.color.rgb = C.GREY_MID
+
+
+# Glossary on the appendix slide. Term → expansion. Two-column layout, term
+# in brand-blue bold, expansion in black on the same line. Sized so the full
+# list fits within the slide body area without overflow.
+GLOSSARY_ENTRIES: list[tuple[str, str]] = [
+    # Regulatory frameworks
+    ("CRA",       "Cyber Resilience Act — EU regulation on cybersecurity for products with digital elements."),
+    ("DORA",      "Digital Operational Resilience Act — EU regulation for ICT risk in financial services."),
+    ("NIS2",      "Network and Information Security Directive 2 — EU baseline for cybersecurity of essential entities."),
+    ("FedRAMP",   "Federal Risk and Authorization Management Program — US standardised cloud security assessment."),
+    ("FISMA",     "Federal Information Security Modernization Act — US federal information security mandate."),
+    ("BSI C5",    "Bundesamt für Sicherheit in der Informationstechnik — Cloud Computing Compliance Criteria Catalogue."),
+    ("SecNumCloud", "French cloud security qualification scheme operated by ANSSI."),
+    # Standards / technology
+    ("OCM",       "Open Component Model — vendor-neutral specification for signed, transportable software components."),
+    ("ODG",       "Open Delivery Gear — OCM-native compliance automation engine and dashboard."),
+    ("OCI",       "Open Container Initiative — open standards for container image format and distribution."),
+    ("SBOM",      "Software Bill of Materials — inventory of components and dependencies inside a software artifact."),
+    ("SBoD",      "Signed Bill of Delivery — OCM's signed envelope describing what was actually delivered, where, and by whom."),
+    ("SPDX",      "Software Package Data Exchange — ISO/IEC 5962 standard format for SBOM data."),
+    ("SWID",      "Software Identification Tags — ISO/IEC 19770-2 standard for software inventory."),
+    # Crypto / signing
+    ("PKI",       "Public Key Infrastructure — framework for managing certificates and signing keys."),
+    ("Sigstore",  "Open-source project for keyless software signing using OIDC identities."),
+    # SAP-internal context
+    ("LoB",       "Line of Business — SAP organisational unit owning a product portfolio."),
+    ("BTP",       "SAP Business Technology Platform."),
+    # Ecosystem / open source
+    ("OSS",       "Open Source Software."),
+    ("NeoNephos", "European foundation for sovereign cloud open-source projects, hosted under the Linux Foundation."),
+    ("Grype",     "Open-source vulnerability scanner for container images and filesystems (Anchore)."),
+    ("Trivy",     "Open-source security scanner for containers, IaC, and code (Aqua Security)."),
+    ("Helm",      "Package manager for Kubernetes; reference artifact type for OCM."),
+]
+
+
+def add_glossary_grid(slide, entries: list[tuple[str, str]],
+                      y_top_px: int = 360):
+    """Two-column grid of term / definition pairs.
+
+    Term in brand-blue bold, definition in black on the same line, separated
+    by an em-dash. Two columns side-by-side, entries flowing top-to-bottom
+    in column 1 then column 2. Sized for ~22 entries on a 1920x1080 slide.
+    """
+    n = len(entries)
+    per_col = (n + 1) // 2
+    col_gap_px = 60
+    col_w_px = (SLIDE_W_PX - 240 - col_gap_px) // 2
+    row_h_px = 40
+    col_h_px = per_col * row_h_px
+
+    for col in range(2):
+        col_x = 120 + col * (col_w_px + col_gap_px)
+        col_entries = entries[col * per_col : (col + 1) * per_col]
+        if not col_entries:
+            continue
+        tb = slide.shapes.add_textbox(px(col_x), px(y_top_px),
+                                       px(col_w_px), px(col_h_px))
+        tf = tb.text_frame
+        tf.margin_left = tf.margin_right = 0
+        tf.margin_top = tf.margin_bottom = 0
+        tf.word_wrap = True
+        for i, (term, definition) in enumerate(col_entries):
+            p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+            p.space_before = Pt(2)
+            p.space_after = Pt(6)
+            r1 = p.add_run()
+            r1.text = term
+            r1.font.name = "Aptos"
+            r1.font.size = Pt(14)
+            r1.font.bold = True
+            r1.font.color.rgb = C.BLUE
+            r2 = p.add_run()
+            r2.text = f"  —  {definition}"
+            r2.font.name = "Aptos"
+            r2.font.size = Pt(13)
+            r2.font.color.rgb = C.BLACK
+
+
+def add_appendix_glossary_slide(prs, layouts):
+    """Last visible slide: abbreviations and acronyms used in the deck.
+
+    Plain layout with eyebrow + title in the master, body placeholder
+    deleted in favour of a custom two-column term/definition grid. Lives
+    after the CTA slide so it's reachable as a reference but not part of
+    the main flow."""
+    s = prs.slides.add_slide(layouts["Plain"])
+    set_text(s, 1, "APPENDIX — ABBREVIATIONS")
+    set_text(s, 2, "Quick reference for the acronyms used in this deck.")
+    delete_placeholder(s, 10)
+    add_glossary_grid(s, GLOSSARY_ENTRIES, y_top_px=360)
 
 
 def add_hidden_trademark_slide(prs, layouts):

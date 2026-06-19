@@ -50,7 +50,7 @@
       <line class="icon" x1="30" y1="30" x2="30" y2="60"/>
     </g>
     <text x="32" y="170" class="step-label">PACK</text>
-    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Describe and bundle</tspan><tspan x="32" dy="36">your software into a</tspan><tspan x="32" dy="36">component descriptor.</tspan><tspan x="32" dy="36">One source of truth.</tspan></text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bundle your software</tspan><tspan x="32" dy="36">One source of truth.</tspan></text>
   </g>
 
   <!-- Arrow 1 -->
@@ -68,7 +68,7 @@
       <path class="icon" d="M 19 32 L 27 40 L 41 24"/>
     </g>
     <text x="32" y="170" class="step-label">SIGN</text>
-    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">One signature covers</tspan><tspan x="32" dy="36">every artifact by digest.</tspan><tspan x="32" dy="36">RSA · GPG · Sigstore</tspan><tspan x="32" dy="36">keyless.</tspan></text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">One signature covers</tspan><tspan x="32" dy="36">all artifacts.</tspan></text>
   </g>
 
   <!-- Arrow 2 -->
@@ -88,7 +88,7 @@
       <path class="icon" d="M 30 7 C 42 19 42 45 30 57"/>
     </g>
     <text x="32" y="170" class="step-label">TRANSPORT</text>
-    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Across any boundary.</tspan><tspan x="32" dy="36">Registry to registry, or</tspan><tspan x="32" dy="36">to archive — signatures</tspan><tspan x="32" dy="36">travel intact.</tspan></text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Across any boundary.</tspan><tspan x="32" dy="36">Even air-gapped.</tspan></text>
   </g>
 
   <!-- Arrow 3 -->
@@ -100,16 +100,21 @@
       <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
     </g>
     <rect width="360" height="4" class="step-rule"/>
-    <!-- Deploy icon: rocket -->
+    <!-- Deploy icon: rocket — rotated 45° clockwise (icon takes flight up/right
+         instead of straight up). Rotation pivot is the rocket's visual centre
+         (~30, 33) inside the local 60x60 icon viewport, so the rocket stays
+         within the header strip after the rotation. -->
     <g transform="translate(32, 36)">
+      <g transform="rotate(45 30 33)">
       <path class="icon" d="M 30 7 C 38 7 42 17 42 27 L 42 48 C 42 50 40 52 38 52 L 22 52 C 20 52 18 50 18 48 L 18 27 C 18 17 22 7 30 7 Z"/>
       <circle class="icon" cx="30" cy="24" r="5" fill="#FFFFFF"/>
       <path class="icon" d="M 18 40 L 8 50 L 8 56 L 18 52 Z"/>
       <path class="icon" d="M 42 40 L 52 50 L 52 56 L 42 52 Z"/>
       <path class="icon" d="M 25 52 L 27 60 L 30 56 L 33 60 L 35 52"/>
+      </g>
     </g>
     <text x="32" y="170" class="step-label">DEPLOY</text>
-    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bring your own GitOps</tspan><tspan x="32" dy="36">(Argo · Flux) and</tspan><tspan x="32" dy="36">use OCM's Kubernetes</tspan><tspan x="32" dy="36">controllers.</tspan></text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Bring your own GitOps.</tspan><tspan x="32" dy="36">Use OCM's K8s Controllers</tspan></text>
   </g>
 
   <!-- Big arrow to target -->
