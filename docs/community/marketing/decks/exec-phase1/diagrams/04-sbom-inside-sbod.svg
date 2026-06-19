@@ -48,6 +48,4 @@
   <text x="830" y="452" class="label-sat">Lifecycle metadata</text>
   <text x="830" y="478" class="desc" font-size="14">Transport, deployment, day-2 operations — everything the destination needs.</text>
 
-  <!-- Caption -->
-  <text x="800" y="650" text-anchor="middle" class="caption">SBOM lists. SBOD delivers.</text>
 </svg>

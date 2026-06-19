@@ -39,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -130,7 +131,7 @@ def srgb(hex_color: str):
     return el
 
 
-def text_pr(size_pt=None, bold=None, color_hex=None, font="Aptos",
+def text_pr(size_pt=None, bold=None, color_hex=None, font="Inter",
             all_caps=False, letter_spacing_pt=None):
     """Make <a:rPr ...> with common attributes."""
     rPr = etree.Element(qa("rPr"))
@@ -154,7 +155,7 @@ def text_pr(size_pt=None, bold=None, color_hex=None, font="Aptos",
 
 def make_textbox(name, idx, x, y, w, h, *, placeholder_type=None,
                  placeholder_idx=None, default_text="",
-                 size_pt=18, bold=False, color_hex="000000", font="Aptos",
+                 size_pt=18, bold=False, color_hex="000000", font="Inter",
                  all_caps=False, letter_spacing_pt=None,
                  anchor="t", algn=None, line_spacing_pct=None,
                  no_autofit=False):
@@ -313,12 +314,12 @@ def build_theme_xml() -> bytes:
     </a:clrScheme>
     <a:fontScheme name="OCM">
       <a:majorFont>
-        <a:latin typeface="Aptos"/>
+        <a:latin typeface="Inter Display"/>
         <a:ea typeface=""/>
         <a:cs typeface=""/>
       </a:majorFont>
       <a:minorFont>
-        <a:latin typeface="Aptos"/>
+        <a:latin typeface="Inter"/>
         <a:ea typeface=""/>
         <a:cs typeface=""/>
       </a:minorFont>
@@ -378,7 +379,7 @@ LAYOUT_HEADER = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 def wrap_layout(layout_type: str, layout_name: str, sp_tree_xml: str,
                  bg_hex: str = "FFFFFF") -> bytes:
     """Wrap a sequence of <p:sp>... in the boilerplate of a slideLayout."""
-    return f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    raw = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="{A}" xmlns:r="{R}" xmlns:p="{P}"
              type="{layout_type}" preserve="1" userDrawn="1">
   <p:cSld name="{layout_name}">
@@ -407,14 +408,70 @@ def wrap_layout(layout_type: str, layout_name: str, sp_tree_xml: str,
   </p:cSld>
   <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
 </p:sldLayout>'''.encode("utf-8")
+    # Canonicalize: collapse the per-<p:sp> xmlns redeclarations that
+    # lxml's per-element tostring leaves embedded in sp_tree_xml. Without
+    # this step a slideLayout5 hits 84 xmlns: declarations and PowerPoint
+    # flags it for repair.
+    return canonicalize_xml(raw)
 
 
 def serialize(el) -> str:
-    return etree.tostring(el, pretty_print=False).decode("utf-8")
+    # Re-parse the element under a stable nsmap so lxml uses canonical p:/a:/r:
+    # prefixes instead of inventing ns0:/ns1:/... per top-level shape. PowerPoint
+    # parses both fine, but the auto-prefix variant trips its consistency check
+    # and triggers the "file needs repair" dialog on every open.
+    raw = etree.tostring(el, pretty_print=False)
+    reparsed = etree.fromstring(raw)
+    canonical = etree.Element(reparsed.tag, nsmap=NSMAP)
+    for k, v in reparsed.attrib.items():
+        canonical.set(k, v)
+    for child in reparsed:
+        canonical.append(child)
+    canonical.text = reparsed.text
+    return etree.tostring(canonical, pretty_print=False).decode("utf-8")
 
 
 def shapes_xml(*shapes) -> str:
     return "\n".join(serialize(sh) for sh in shapes)
+
+
+def canonicalize_xml(xml_bytes: bytes) -> bytes:
+    """Re-parse a complete OOXML document and re-emit it with namespace
+    declarations only at the document root.
+
+    Concatenating string-serialised lxml elements (as wrap_layout does) means
+    every <p:sp> child carries its own xmlns:p / xmlns:a / xmlns:r declarations.
+    PowerPoint-for-Mac's parser flags this as malformed and triggers the
+    "file is damaged, repair?" dialog.
+
+    lxml preserves redundant nsmaps it sees on parse, even when they're
+    identical to the parent's. We walk the tree manually and rebuild every
+    element with no nsmap of its own — children inherit the root's
+    declarations and re-serialization emits a single root-level xmlns block."""
+    src = etree.fromstring(xml_bytes)
+
+    def _clone(node):
+        if not isinstance(node.tag, str):
+            # Comment / PI — pass through.
+            return node
+        new = etree.Element(node.tag)
+        for k, v in node.attrib.items():
+            new.set(k, v)
+        new.text = node.text
+        new.tail = node.tail
+        for child in node:
+            new.append(_clone(child))
+        return new
+
+    new_root = etree.Element(src.tag, nsmap=NSMAP)
+    for k, v in src.attrib.items():
+        new_root.set(k, v)
+    new_root.text = src.text
+    for child in src:
+        new_root.append(_clone(child))
+
+    return (b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            + etree.tostring(new_root, pretty_print=False))
 
 
 # -- Layout 1: Hero -----------------------------------------------------------
@@ -445,7 +502,7 @@ def layout_hero() -> bytes:
         placeholder_type="title", placeholder_idx=1,
         default_text="Secure Delivery for",
         size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
-        font="Aptos Display",
+        font="Inter Display",
         no_autofit=True,
     ))
     shapes.append(make_textbox(
@@ -453,7 +510,7 @@ def layout_hero() -> bytes:
         placeholder_type="body", placeholder_idx=2,
         default_text="Sovereign Clouds",
         size_pt=115, bold=True, color_hex="5CD6FF", algn="l",
-        font="Aptos Display",
+        font="Inter Display",
         no_autofit=True,
     ))
     shapes.append(make_textbox(
@@ -493,7 +550,7 @@ def layout_cta() -> bytes:
         placeholder_type="title", placeholder_idx=1,
         default_text="Call to action",
         size_pt=56, bold=True, color_hex="FFFFFF",
-        font="Aptos Display",
+        font="Inter Display",
     ))
     shapes.append(make_textbox(
         "CTA Body", 11, 96, 460, 1700, 400,
@@ -522,7 +579,7 @@ def layout_three_column() -> bytes:
         placeholder_type="title", placeholder_idx=2,
         default_text="Section title goes here.",
         size_pt=64, bold=True, color_hex="000000",
-        font="Aptos Display", line_spacing_pct=0.9,
+        font="Inter Display", line_spacing_pct=0.9,
     ))
     # Three columns
     margin_x = 120
@@ -568,20 +625,29 @@ def layout_three_column() -> bytes:
 # -- Layout 4: Content / Diagram ---------------------------------------------
 
 def layout_diagram() -> bytes:
+    """Diagram-first layout. Eyebrow + title sit high (variant C from the
+    layout test) so the diagram gets the bulk of the slide. Title slot is
+    short (80px ≈ one line at 64pt) — diagram-slide titles are short by
+    convention ("One identity, every boundary.", "Trust travels with the
+    component.") so we don't need the 2-line slot the text-heavy Plain
+    layouts reserve. Slimming it lets the diagram start 40px earlier.
+
+    Geometry (1920×1080 canvas):
+      - Eyebrow   y= 75  h= 48   (28pt, brand-blue, ALL-CAPS)
+      - Title     y=128  h= 80   (64pt, 1 line; 2-line titles overflow into the diagram)
+      - Diagram   y=240  h=780   (1800 wide, 60px gutter both sides)
+    """
     shapes = [
-        make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
+        make_textbox("Eyebrow", 10, 120, 75, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
                      default_text="EYEBROW", size_pt=28, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
-        make_textbox("Title", 11, 120, 308, 1680, 120,
+        make_textbox("Title", 11, 120, 128, 1680, 80,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display", line_spacing_pct=0.9),
-        # Diagram area pulled close under the title and enlarged so detail
-        # inside the diagram is legible from the back of the room. Margins
-        # tightened (60px sides, ~20px from bottom) per user feedback.
-        _picture_placeholder("Diagram", 12, 60, 460, 1800, 600, ph_idx=10),
+                     font="Inter Display", line_spacing_pct=0.9),
+        _picture_placeholder("Diagram", 12, 60, 240, 1800, 780, ph_idx=10),
         _footer_shape(13),
     ]
     return wrap_layout("obj", "Content / Diagram", shapes_xml(*shapes))
@@ -599,7 +665,7 @@ def layout_tiles() -> bytes:
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display", line_spacing_pct=0.9),
+                     font="Inter Display", line_spacing_pct=0.9),
     ]
     # 3x2 grid
     x0, y0 = 120, 520
@@ -655,7 +721,7 @@ def layout_two_column() -> bytes:
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display", line_spacing_pct=0.9),
+                     font="Inter Display", line_spacing_pct=0.9),
         make_textbox("Left Body", 12, 120, 520, 820, 460,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Left column body.",
@@ -678,7 +744,7 @@ def layout_section() -> bytes:
                      default_text="Section",
                      size_pt=72, bold=True, color_hex="FFFFFF",
                      anchor="ctr", algn="ctr",
-                     font="Aptos Display"),
+                     font="Inter Display"),
     ]
     return wrap_layout("secHead", "Section Divider", shapes_xml(*shapes),
                         bg_hex="0F6BFF")
@@ -698,7 +764,7 @@ def layout_plain() -> bytes:
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display", line_spacing_pct=0.9),
+                     font="Inter Display", line_spacing_pct=0.9),
         make_textbox("Body", 12, 120, 580, 1680, 400,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Body text.",
@@ -721,7 +787,7 @@ def layout_plain_compact() -> bytes:
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
                      size_pt=64, bold=True, color_hex="000000",
-                     font="Aptos Display", line_spacing_pct=0.9),
+                     font="Inter Display", line_spacing_pct=0.9),
         make_textbox("Body", 12, 120, 520, 1680, 460,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Body text.",
@@ -773,6 +839,141 @@ def _picture_placeholder(name, idx, x, y, w, h, *, ph_idx=10):
 
 
 _picture_placeholder.__name__ = "_picture_placeholder"
+
+
+# -----------------------------------------------------------------------------
+# Embedded fonts (Inter)
+# -----------------------------------------------------------------------------
+
+# Resolve user font dir: TTFs were placed under ~/Library/Fonts/Inter-*.ttf
+# during setup. Each <p:embeddedFont> entry maps a typeface name to up to
+# four style variants (regular, bold, italic, boldItalic). Inter Display is
+# the headline-tuned cut used for hero/section titles via the theme's
+# majorFont.
+USER_FONT_DIR = Path.home() / "Library" / "Fonts"
+
+EMBEDDED_FONTS = [
+    # (typeface name, {style: TTF filename})
+    ("Inter", {
+        "regular":     "Inter-Regular.ttf",
+        "bold":        "Inter-Bold.ttf",
+        "italic":      "Inter-Italic.ttf",
+        "boldItalic":  "Inter-BoldItalic.ttf",
+    }),
+    ("Inter Display", {
+        "regular":    "InterDisplay-Regular.ttf",
+        "bold":       "InterDisplay-Bold.ttf",
+        "italic":     "InterDisplay-Italic.ttf",
+        "boldItalic": "InterDisplay-BoldItalic.ttf",
+    }),
+]
+
+
+def embed_fonts(archive: dict[str, bytes]) -> None:
+    """Embed Inter / Inter Display TTFs into the .potx so PowerPoint renders
+    them on every machine, regardless of local installation. Modifies
+    `archive` in place: adds ppt/fonts/font*.fntdata parts, registers them
+    in presentation.xml.rels, and inserts <p:embeddedFontLst> into
+    presentation.xml.
+
+    The font byte stream stored in font*.fntdata is the raw TTF/OTF — no
+    obfuscation, no header, no compression. PowerPoint Mac/Windows both
+    accept this; the older "ObfuscatedFont" encoding is an Office-2007 era
+    quirk that's optional and skipped here for simplicity.
+    """
+    if not USER_FONT_DIR.exists():
+        print(f"[embed_fonts] {USER_FONT_DIR} not found — skipping embed.")
+        return
+
+    # Flatten the (font, style) → file mapping into a numbered list of parts.
+    parts = []  # [(part_path, ttf_path, font_idx, style)]
+    for font_idx, (typeface, styles) in enumerate(EMBEDDED_FONTS, start=1):
+        for style, filename in styles.items():
+            ttf_path = USER_FONT_DIR / filename
+            if not ttf_path.exists():
+                print(f"[embed_fonts] missing {ttf_path} — skipping {typeface} {style}")
+                continue
+            part_idx = len(parts) + 1
+            parts.append({
+                "part": f"ppt/fonts/font{part_idx}.fntdata",
+                "ttf":  ttf_path,
+                "font_idx": font_idx,
+                "typeface": typeface,
+                "style": style,
+                "rid": None,  # filled in below once we know rId numbers
+            })
+
+    if not parts:
+        print("[embed_fonts] no font files found — skipping.")
+        return
+
+    # 1. Add the font part data to the archive.
+    for p in parts:
+        archive[p["part"]] = p["ttf"].read_bytes()
+
+    # 2. Append relationships to presentation.xml.rels — pick rId numbers
+    #    above whatever's already in the file so we don't collide.
+    rels_key = "ppt/_rels/presentation.xml.rels"
+    rels_xml = archive[rels_key].decode("utf-8")
+    existing_ids = re.findall(r'Id="rId(\d+)"', rels_xml)
+    next_rid = max((int(i) for i in existing_ids), default=0) + 1
+    rel_inserts = []
+    for p in parts:
+        p["rid"] = f"rId{next_rid}"
+        rel_inserts.append(
+            f'<Relationship Id="{p["rid"]}" '
+            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/font" '
+            f'Target="fonts/font{parts.index(p) + 1}.fntdata"/>'
+        )
+        next_rid += 1
+    rels_xml = rels_xml.replace(
+        "</Relationships>",
+        "".join(rel_inserts) + "</Relationships>",
+    )
+    archive[rels_key] = rels_xml.encode("utf-8")
+
+    # 3. Build <p:embeddedFontLst> grouping parts by typeface.
+    by_font = {}
+    for p in parts:
+        by_font.setdefault(p["font_idx"], {"typeface": p["typeface"],
+                                              "styles": {}})
+        by_font[p["font_idx"]]["styles"][p["style"]] = p["rid"]
+
+    embedded_xml = "<p:embeddedFontLst>"
+    for font_idx in sorted(by_font.keys()):
+        info = by_font[font_idx]
+        embedded_xml += "<p:embeddedFont>"
+        embedded_xml += (
+            f'<p:font typeface="{info["typeface"]}" '
+            f'panose="020F0502020204030204" pitchFamily="34" charset="0"/>'
+        )
+        for style in ("regular", "bold", "italic", "boldItalic"):
+            if style in info["styles"]:
+                embedded_xml += (
+                    f'<p:{style} r:id="{info["styles"][style]}"/>'
+                )
+        embedded_xml += "</p:embeddedFont>"
+    embedded_xml += "</p:embeddedFontLst>"
+
+    # 4. Inject embeddedFontLst into presentation.xml. The schema places it
+    #    just before <p:defaultTextStyle>; if that element isn't present we
+    #    drop it just before the closing </p:presentation>.
+    pres_xml = archive["ppt/presentation.xml"].decode("utf-8")
+    # Remove any prior embeddedFontLst (idempotent rebuild).
+    pres_xml = re.sub(r'<p:embeddedFontLst>.*?</p:embeddedFontLst>',
+                       "", pres_xml, flags=re.DOTALL)
+    if "<p:defaultTextStyle" in pres_xml:
+        pres_xml = pres_xml.replace("<p:defaultTextStyle",
+                                      embedded_xml + "<p:defaultTextStyle",
+                                      1)
+    else:
+        pres_xml = pres_xml.replace("</p:presentation>",
+                                      embedded_xml + "</p:presentation>", 1)
+    archive["ppt/presentation.xml"] = pres_xml.encode("utf-8")
+
+    print(f"[embed_fonts] embedded {len(parts)} font parts "
+          f"({sum(len(v['styles']) for v in by_font.values())} styles "
+          f"across {len(by_font)} typefaces)")
 
 
 # -----------------------------------------------------------------------------
@@ -870,6 +1071,35 @@ def build():
     content_types_xml = build_content_types_xml(len(LAYOUTS))
     out_archive_data["[Content_Types].xml"] = content_types_xml.encode("utf-8")
 
+    # 2f. Strip macOS-generated printerSettings. python-pptx on macOS embeds an
+    #    Apple plist (instead of a Windows DEVMODE) in printerSettings1.bin —
+    #    PowerPoint considers this format corrupt and triggers a repair dialog
+    #    on every open. Verified by diff against PowerPoint's repaired file:
+    #    repair removes printerSettings1.bin, its Relationship, and the
+    #    Default Extension="bin" content-type — and only that. Removing them
+    #    here pre-emptively eliminates the repair dialog.
+    for key in list(out_archive_data.keys()):
+        if "printerSettings" in key:
+            del out_archive_data[key]
+    prs_rels_key = "ppt/_rels/presentation.xml.rels"
+    if prs_rels_key in out_archive_data:
+        rels_xml = out_archive_data[prs_rels_key].decode("utf-8")
+        rels_xml = re.sub(
+            r'<Relationship[^/]*/officeDocument/2006/relationships/printerSettings[^/]*/>', "",
+            rels_xml,
+        )
+        out_archive_data[prs_rels_key] = rels_xml.encode("utf-8")
+
+    # 2g. Embed Inter font files so the deck renders identically on machines
+    #     where Inter is not installed (Windows users who only have Calibri,
+    #     fresh macOS without manual font install). PowerPoint stores embedded
+    #     fonts as ppt/fonts/font*.fntdata (raw TTF/OTF bytes — no special
+    #     wrapper), referenced from <p:embeddedFontLst> in presentation.xml
+    #     with one <p:embeddedFont> per typeface and per-style relationships
+    #     to the part. The Default Extension="fntdata" content-type maps the
+    #     part to application/x-fontdata.
+    embed_fonts(out_archive_data)
+
     # 3. Write the final .potx archive.
     OUTPUT_POTX.unlink(missing_ok=True)
     with zipfile.ZipFile(OUTPUT_POTX, "w", zipfile.ZIP_DEFLATED) as out:
@@ -888,10 +1118,10 @@ def build_content_types_xml(n_layouts: int) -> str:
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
-  <Default Extension="bin" ContentType="application/vnd.openxmlformats-officedocument.presentationml.printerSettings"/>
   <Default Extension="jpeg" ContentType="image/jpeg"/>
   <Default Extension="jpg" ContentType="image/jpeg"/>
   <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="fntdata" ContentType="application/x-fontdata"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.template.main+xml"/>
   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
   {layout_overrides}

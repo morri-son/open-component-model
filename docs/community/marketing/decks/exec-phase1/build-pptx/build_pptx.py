@@ -28,6 +28,8 @@ from tempfile import TemporaryDirectory
 from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+
+from icon_strokes import STROKE_THIN, STROKE_REGULAR, STROKE_BOLD
 from pptx.util import Emu, Pt
 
 
@@ -103,22 +105,66 @@ def rasterize_svg(svg_path: Path, target_w_px: int) -> Path:
 
 
 def rasterize_svg_recolored(svg_path: Path, target_w_px: int,
-                            color_hex: str) -> Path:
+                            color_hex: str,
+                            stroke_width: float | None = None) -> Path:
     """Rasterize a `currentColor`-based SVG (Tabler icon family) with an
-    explicit stroke/fill colour. rsvg-convert defaults `currentColor` to
-    black; we patch a copy of the SVG so the icon paints in the brand
-    palette instead. Cached per (file, width, colour)."""
+    explicit stroke/fill colour.
+
+    Resolution order:
+
+      1.  If a prebuilt PNG exists under `diagrams/icons/prebuilt/`
+          matching the requested icon × colour × stroke combination,
+          return that path directly. Those files are produced by
+          `prebuild_icons.py` and constitute the deck's permanent
+          icon-asset library — same bytes the build embeds, same
+          name a hand-editor finds in Finder.
+
+      2.  Otherwise fall back to on-the-fly rasterisation under
+          build-pptx/_raster/. This path is taken for one-off icons
+          that aren't on the prebuild manifest, and produces an
+          equivalent PNG.
+
+    rsvg-convert defaults `currentColor` to black; we patch a copy of
+    the SVG so the icon paints in the brand palette instead. Cached
+    per (file, width, colour, stroke).
+    """
     if not svg_path.exists():
         raise FileNotFoundError(svg_path)
+
+    # 1. Prebuilt asset shortcut --------------------------------------
     colour = color_hex.lstrip("#").upper()
-    out = RASTER_DIR / f"{svg_path.stem}_{target_w_px}_{colour}.png"
+    colour_name = {"0F6BFF": "brand-blue", "FFFFFF": "white"}.get(colour)
+    if colour_name is not None and stroke_width is not None:
+        prebuilt_dir = svg_path.parent / "prebuilt"
+        # Stroke tag mirrors prebuild_icons.py: integers keep ".0".
+        if float(stroke_width).is_integer():
+            stroke_tag = f"{int(stroke_width)}.0"
+        else:
+            stroke_tag = f"{stroke_width:g}"
+        prebuilt_png = prebuilt_dir / f"{svg_path.stem}-stroke-{stroke_tag}-{colour_name}.png"
+        if prebuilt_png.exists():
+            return prebuilt_png
+
+    # 2. Fallback: rasterise on the fly into _raster/ -----------------
+    sw_tag = f"_sw{stroke_width:g}".replace(".", "p") if stroke_width is not None else ""
+    out = RASTER_DIR / f"{svg_path.stem}_{target_w_px}_{colour}{sw_tag}.png"
     if out.exists() and out.stat().st_mtime >= svg_path.stat().st_mtime:
         return out
     src = svg_path.read_text(encoding="utf-8")
     # Tabler icons declare stroke="currentColor" on the root <svg>; patching
     # the literal token covers both stroke and fill uses.
     patched = src.replace("currentColor", f"#{colour}")
-    tmp = RASTER_DIR / f"{svg_path.stem}_{colour}.svg"
+    if stroke_width is not None:
+        # Replace stroke-width="2" (or whatever Tabler ships) with the
+        # requested override. We only touch the root-svg attribute — child
+        # paths inherit, so this lightens every stroke in the icon.
+        import re as _re
+        patched = _re.sub(
+            r'stroke-width="[^"]*"',
+            f'stroke-width="{stroke_width:g}"',
+            patched,
+        )
+    tmp = RASTER_DIR / f"{svg_path.stem}_{colour}{sw_tag}.svg"
     tmp.write_text(patched, encoding="utf-8")
     subprocess.run(
         ["rsvg-convert", "--width", str(target_w_px), "--keep-aspect-ratio",
@@ -356,11 +402,18 @@ def add_brand_row(slide):
 def add_diagram(slide, svg_path: Path | None,
                  x_px: int, y_px: int,
                  max_w_px: int, max_h_px: int):
-    """Rasterize a diagram SVG and place it. Caller controls the bounding box.
+    """Rasterize a diagram SVG and centre it inside (x, y, max_w, max_h).
 
-    Also drops the layout's empty picture placeholder (idx=10 on the Diagram
-    layout) — otherwise PowerPoint shows a dotted outline + 'Insert picture'
-    prompt next to our embedded picture.
+    The SVG keeps its intrinsic aspect ratio. If it's wider-than-slot, the
+    width fills `max_w_px` and the height is whatever falls out, centred
+    vertically in the slot. If it's taller-than-slot, the height fills
+    `max_h_px` and the width is centred horizontally. Either way the
+    diagram never overflows the slot, and the unused slot half is even
+    margins instead of slot-top dead space.
+
+    Also drops the layout's empty picture placeholder (idx=10 on the
+    Diagram layout) — otherwise PowerPoint shows a dotted outline +
+    'Insert picture' prompt next to our embedded picture.
     """
     if svg_path is None or not svg_path.exists():
         return
@@ -375,7 +428,9 @@ def add_diagram(slide, svg_path: Path | None,
         ratio = px(max_h_px) / pic.height
         pic.height = px(max_h_px)
         pic.width = int(pic.width * ratio)
+    # Centre horizontally and vertically inside the slot.
     pic.left = px(x_px) + (px(max_w_px) - pic.width) // 2
+    pic.top  = px(y_px) + (px(max_h_px) - pic.height) // 2
 
 
 def add_tile_icon(slide, tile_x_px: int, tile_y_px: int, icon_name: str):
@@ -593,7 +648,17 @@ def build():
     set_text(s, 1, "THE ANSWER")
     set_text(s, 2, "Meet OCM. One identity, every boundary.")
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
-                 x_px=-91, y_px=440, max_w_px=1890, max_h_px=602)
+                 x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+
+    # ---- SLIDE 3' — SAME, BUT NATIVE PPT SHAPES -----------------------------
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "THE ANSWER  (NATIVE)")
+    set_text(s, 2, "Meet OCM. One identity, every boundary.")
+    delete_placeholder(s, 10)
+    from slide_3_native import add_hub_and_spoke_native_diagram
+    add_hub_and_spoke_native_diagram(s, x=60, y=240, w=1800, h=780,
+                                      icons_dir=ICONS_DIR,
+                                      rasterize_recolored=rasterize_svg_recolored)
 
     # ---- SLIDE 4a — THE SHIFT, SBOD (text-only) -----------------------------
     s = prs.slides.add_slide(layouts["Plain / Compact"])
@@ -609,18 +674,46 @@ def build():
         "and travels intact across any boundary.",
     ])
 
-    # ---- SLIDE 4b — THE SHIFT (diagram only) --------------------------------
+    # ---- SLIDE 4b — THE SHIFT (diagram only, ORIGINAL SVG) -------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD")
-    set_text(s, 2, "An envelope, not a list.")
+    set_text(s, 2, "SBOM lists. SBOD delivers.")
     diagram = first_existing(
         DIAGRAMS_DIR / "04-sbom-inside-sbod.svg",
         DIAGRAMS_DIR / "04-sbom-vs-sbod.svg",
     )
     if diagram:
-        # Slide 4b diagram positioned per user spec 2026-06-17:
-        # 39.09 × 17.59 cm at x=5.15cm, y=10.99cm.
-        add_diagram(s, diagram, x_px=195, y_px=415, max_w_px=1478, max_h_px=665)
+        add_diagram(s, diagram, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+
+    # ---- SLIDE 4b' — SAME, BUT NATIVE PPT SHAPES ----------------------------
+    # Side-by-side review version. The native one reframes content (SBOM is
+    # one of five elements, not the centrepiece) AND swaps the rendering
+    # technique (autoshapes + textboxes + recoloured icons instead of a
+    # rasterised SVG). User wants both visible to compare.
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD  (NATIVE A)")
+    set_text(s, 2, "SBOM lists. SBOD delivers.")
+    delete_placeholder(s, 10)
+    from slide_4b_native import add_sbod_native_diagram
+    add_sbod_native_diagram(s, x=60, y=240, w=1800, h=780,
+                             icons_dir=ICONS_DIR,
+                             rasterize_recolored=rasterize_svg_recolored,
+                             icon_stroke=STROKE_THIN)
+
+    # ---- SLIDE 4b'' — NATIVE VARIANT B (vertical artifact list + brace) -----
+    # Parallel native variant of the SBOM-inside-SBOD slide. Lifts the identity
+    # to a header above the artifact list, drops SBOM to one row of five, and
+    # uses a curly brace + lock to show that "one digest covers all". Lives
+    # alongside Variant A so the user can review them side-by-side.
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD  (NATIVE B)")
+    set_text(s, 2, "SBOM lists. SBOD delivers.")
+    delete_placeholder(s, 10)
+    from slide_4b_native_v2 import add_sbom_inside_sbod_native_v2
+    add_sbom_inside_sbod_native_v2(s, x=60, y=240, w=1800, h=780,
+                                    icons_dir=ICONS_DIR,
+                                    rasterize_recolored=rasterize_svg_recolored,
+                                    icon_stroke=STROKE_THIN)
 
     # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
     # Disarms three "we already have this" objections on one slide:
@@ -628,23 +721,17 @@ def build():
     # then "what OCM adds" — OCM doesn't replace, it composes around them.
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "HOW OCM COMPOSES")
-    set_text(s, 2, "OCM doesn't replace your tools. It gives them an envelope to compose around.")
+    set_text(s, 2, "Composes around your existing stack.")
     set_text(s, 10, "SIGNING")
-    set_text(s, 11, "Keyless (Sigstore) or key-based (your PKI) signs one "
-                     "artifact at a time. OCM gives them the complete SBOD "
-                     "to sign — one signature covers every artifact in the "
-                     "delivery, by digest.")
+    set_text(s, 11, "Your tools sign artifacts.\n"
+                     "OCM signs the whole release — one signature, every digest.")
     set_text(s, 12, "TRANSPORT")
-    set_text(s, 13, "S3, OCI and Helm registries — each stores artifacts "
-                     "differently. OCM transports a signed envelope of "
-                     "artifacts across any boundary: registry to registry, "
-                     "registry to air-gapped archive. The signature travels "
-                     "intact.")
+    set_text(s, 13, "Registries differ by type and location.\n"
+                     "OCM moves the release across them all.")
     set_text(s, 14, "COMPLIANCE")
-    set_text(s, 15, "Trivy, Grype, your SBOM tools — each scans in isolation. "
-                     "OCM (via Open Delivery Gear) correlates every finding "
-                     "by component identity. Compliance is a system output, "
-                     "not a quarterly project.")
+    set_text(s, 15, "Your scanners see one artifact at a time.\n"
+                     "OCM correlates findings to the release. "
+                     "Compliance becomes continuous.")
 
     # ---- SLIDE 6 — OCM IN ONE PICTURE (was slide 5) -------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
@@ -654,7 +741,18 @@ def build():
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy-v2.svg",
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy.svg",
     )
-    add_diagram(s, diagram6, x_px=80, y_px=460, max_w_px=1760, max_h_px=560)
+    add_diagram(s, diagram6, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+
+    # ---- SLIDE 6' — SAME, BUT NATIVE PPT SHAPES -----------------------------
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "OCM IN ONE PICTURE  (NATIVE)")
+    set_text(s, 2, "Pack · Sign · Transport · Deploy")
+    delete_placeholder(s, 10)
+    from slide_6_native import add_pack_sign_transport_deploy_native
+    add_pack_sign_transport_deploy_native(s, x=60, y=240, w=1800, h=780,
+                                           icons_dir=ICONS_DIR,
+                                           rasterize_recolored=rasterize_svg_recolored,
+                                           icon_stroke=STROKE_THIN)
 
     # ---- SLIDE 7a — SOVEREIGN-READY (text-only, was 6a) --------------------
     s = prs.slides.add_slide(layouts["Plain / Compact"])
@@ -676,10 +774,20 @@ def build():
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
-    # Diagram positioned per user spec 2026-06-17:
-    # 40.22 × 17.6 cm at x=3.72cm, y=10.25cm.
+    # Diagram fills the standard diagram slot (x=60 y=240, 1800×780).
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
-                 x_px=141, y_px=387, max_w_px=1519, max_h_px=665)
+                 x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+
+    # ---- SLIDE 7b' — SAME, BUT NATIVE PPT SHAPES ----------------------------
+    s = prs.slides.add_slide(layouts["Content / Diagram"])
+    set_text(s, 1, "SOVEREIGN-READY — AIR-GAP  (NATIVE)")
+    set_text(s, 2, "Trust travels with the component.")
+    delete_placeholder(s, 10)
+    from slide_7b_native import add_sovereign_airgap_native
+    add_sovereign_airgap_native(s, x=60, y=240, w=1800, h=780,
+                                 icons_dir=ICONS_DIR,
+                                 rasterize_recolored=rasterize_svg_recolored,
+                                 icon_stroke=STROKE_THIN)
 
     # ---- SLIDE 8 — SCAN / Compliance-native (was 7) ------------------------
     s = prs.slides.add_slide(layouts["Plain"])
