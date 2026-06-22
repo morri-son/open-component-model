@@ -56,7 +56,7 @@ WHITE      = RGBColor(0xFF, 0xFF, 0xFF)
 
 
 def _styled_run(p, text, *, size_pt, bold=False, color=BLACK,
-                font="Inter", italic=False, all_caps=False,
+                font="Aptos", italic=False, all_caps=False,
                 letter_spacing=None):
     """Add a run with the OCM type system applied."""
     from lxml import etree
@@ -180,7 +180,7 @@ def add_sbod_native_diagram(slide, *, x=60, y=240, w=1800, h=780,
                        outer_w - 2 * header_pad_x, 50)
     p = tf.paragraphs[0]
     _styled_run(p, "SOFTWARE BILL OF DELIVERY (SBOD)",
-                size_pt=22, bold=True, color=BLUE,
+                size_pt=25, bold=True, color=BLUE,
                 all_caps=True, letter_spacing="120")
 
     tf = _add_textbox(slide,
@@ -245,7 +245,7 @@ def add_sbod_native_diagram(slide, *, x=60, y=240, w=1800, h=780,
                            anchor="ctr")
         p = tf.paragraphs[0]
         _styled_run(p, headline,
-                    size_pt=18, bold=True, color=BLUE_MID,
+                    size_pt=21, bold=True, color=BLUE_MID,
                     all_caps=True, letter_spacing="80")
 
         # Subtext (1-2 lines) below the headline+icon row.
@@ -255,8 +255,8 @@ def add_sbod_native_diagram(slide, *, x=60, y=240, w=1800, h=780,
                            bw - 2 * icon_pad, sub_h)
         p = tf.paragraphs[0]
         p.line_spacing = 1.2
-        _styled_run(p, sub1, size_pt=15, color=BLACK)
+        _styled_run(p, sub1, size_pt=17, color=BLACK)
         if sub2:
             p2 = tf.add_paragraph()
             p2.line_spacing = 1.2
-            _styled_run(p2, sub2, size_pt=15, color=BLACK)
+            _styled_run(p2, sub2, size_pt=17, color=BLACK)

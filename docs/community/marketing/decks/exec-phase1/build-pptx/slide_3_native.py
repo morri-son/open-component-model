@@ -99,12 +99,12 @@ HUB_CY = 250.0
 # glyphs read fine; rendered into a 1800×780 PowerPoint slot at scale ~1.0
 # the same numbers come out 9-10pt in PowerPoint, which is unreadable for
 # a presentation. Use these constants instead.
-SZ_EYEBROW         = 11   # "EVERY ARTIFACT TYPE" / "EVERY DEPLOYMENT BOUNDARY" / "EVERY COMPLIANCE FRAMEWORK"
-SZ_PILL_LABEL      = 12   # artifact-pills, compliance-pills (bold)
-SZ_PILL_LABEL_SOFT = 11   # the "any artifact type" italic soft pill
-SZ_TILE_LABEL      = 14   # boundary tiles ("EU", "US", "Sovereign Cloud")
-SZ_FOOTER_NOTE     = 11   # "plus FedRAMP/FISMA, BSI C5..." italic line
-SZ_VERSION_STUB    =  9   # "v1.0.0" badge — intentionally small (it's part of the icon)
+SZ_EYEBROW         = 13   # "EVERY ARTIFACT TYPE" / "EVERY DEPLOYMENT BOUNDARY" / "EVERY COMPLIANCE FRAMEWORK"
+SZ_PILL_LABEL      = 16   # artifact-pills, compliance-pills (bold)
+SZ_PILL_LABEL_SOFT = 13   # the "any artifact type" italic soft pill
+SZ_TILE_LABEL      = 16   # boundary tiles ("EU", "US", "Sovereign Cloud")
+SZ_FOOTER_NOTE     = 13   # "plus FedRAMP/FISMA, BSI C5..." italic line
+SZ_VERSION_STUB    =  10   # "v1.0.0" badge — intentionally small (it's part of the icon)
 
 
 # --- nsmap helpers ---------------------------------------------------------
@@ -121,7 +121,7 @@ def _qn(tag: str) -> str:
 # Generic primitives
 # ---------------------------------------------------------------------------
 def _styled_run(p, text, *, size_pt, bold=False, color=BLACK,
-                font="Inter", italic=False, all_caps=False,
+                font="Aptos", italic=False, all_caps=False,
                 letter_spacing=None):
     """Add a run with the OCM type system applied."""
     r = p.add_run()

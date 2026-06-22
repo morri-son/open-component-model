@@ -66,7 +66,7 @@ BLACK      = RGBColor(0x00, 0x00, 0x00)
 
 
 def _styled_run(p, text, *, size_pt, bold=False, color=BLACK,
-                font="Inter", italic=False, all_caps=False,
+                font="Aptos", italic=False, all_caps=False,
                 letter_spacing=None):
     """Add a run with the OCM type system applied."""
     r = p.add_run()
@@ -197,7 +197,7 @@ def add_sbom_inside_sbod_native_v2(slide, *, x=60, y=240, w=1800, h=780,
                        align=PP_ALIGN.CENTER)
     p = tf.paragraphs[0]
     _styled_run(p, "github.com/acme/webshop:v1.0.0",
-                size_pt=22, bold=True, color=BLUE_MID,
+                size_pt=25, bold=True, color=BLUE_MID,
                 font="Consolas")
 
     # Identity line 2 — regular sans, smaller, grey.
@@ -210,7 +210,7 @@ def add_sbom_inside_sbod_native_v2(slide, *, x=60, y=240, w=1800, h=780,
                        align=PP_ALIGN.CENTER)
     p = tf.paragraphs[0]
     _styled_run(p, "Location-independent. Same identity, every registry.",
-                size_pt=15, color=GREY_MID)
+                size_pt=17, color=GREY_MID)
 
     # ------------------------------------------------------------- Artifact list
     # The list + brace + signature copy form one composition. Centre it
@@ -276,10 +276,10 @@ def add_sbom_inside_sbod_native_v2(slide, *, x=60, y=240, w=1800, h=780,
         tf = _add_textbox(slide, text_x, row_y, text_w, row_h,
                            anchor="ctr")
         p = tf.paragraphs[0]
-        _styled_run(p, label, size_pt=18, bold=True, color=DARK_GREY)
+        _styled_run(p, label, size_pt=21, bold=True, color=DARK_GREY)
         if secondary:
-            _styled_run(p, "  ·  ", size_pt=18, color=GREY_MID)
-            _styled_run(p, secondary, size_pt=15, color=GREY_MID,
+            _styled_run(p, "  ·  ", size_pt=21, color=GREY_MID)
+            _styled_run(p, secondary, size_pt=17, color=GREY_MID,
                         italic=True)
 
     # ---------------------------------------------------------------- Brace
@@ -310,7 +310,7 @@ def add_sbom_inside_sbod_native_v2(slide, *, x=60, y=240, w=1800, h=780,
     tf = _add_textbox(slide, sig_x, eyebrow_y, sig_w, 24)
     p = tf.paragraphs[0]
     _styled_run(p, "SIGNATURE",
-                size_pt=13, bold=True, color=BLUE,
+                size_pt=15, bold=True, color=BLUE,
                 all_caps=True, letter_spacing="160")
 
     # Caption "One digest covers all."
@@ -318,4 +318,4 @@ def add_sbom_inside_sbod_native_v2(slide, *, x=60, y=240, w=1800, h=780,
     tf = _add_textbox(slide, sig_x, cap_y, sig_w, 36)
     p = tf.paragraphs[0]
     _styled_run(p, "One digest covers all.",
-                size_pt=18, bold=True, color=BLUE_MID)
+                size_pt=21, bold=True, color=BLUE_MID)

@@ -2,19 +2,19 @@
 
 **Audience.** External decision-makers — CIOs, CTOs, heads of platform engineering, security or compliance leads at customers, partners, regulated-industry buyers. People who decide whether their organisation invests time in OCM, not the engineers who'll implement it.
 
-**Talk length.** ~13 minutes. Q&A is its own thing — keep the talk tight so questions have room.
+**Talk length.** ~12 minutes. Q&A is its own thing — keep the talk tight so questions have room.
 
 **Tone.** Honest, grounded, not preachy. You believe the thing because it's been built and used; that confidence carries — you don't need to oversell. Treat the audience as smart peers; never explain the obvious. No marketing inflation ("revolutionary", "industry-leading"). State what's true; let it land.
 
 **Open with energy, close with an ask.** The middle is allowed to be a calm explanation.
 
-**Cuts.** Slides marked `(NATIVE)`, `(NATIVE A)`, `(NATIVE B)` are PowerPoint-native versions of the same content as their preceding diagram slide — for hand-edit comfort, not for the talk. Pick **one** of each pair and hide the others before presenting. The cadence below assumes you keep one diagram slide per topic.
+**Slide count.** 13 presented slides + appendix glossary + 2 hidden trademark slides (not presented). Final deck after dropping SBOD variants and NATIVE PPT shape variants.
 
 ---
 
 ## SLIDE 1 — HERO  (00:00 — 00:45, ~45 sec)
 
-**On screen.** "Your supply chain has Sovereign Clouds." (or whatever the noun-line resolves to in your build).
+**On screen.** "Your supply chain has / blind spots." (Gradient on "blind spots".) Subtitle: "Three minutes from now, you'll know what they are."
 
 **Speaker notes.**
 
@@ -32,7 +32,7 @@ Move on. Don't dwell on the brand row.
 
 ## SLIDE 2 — WHY NOW  (00:45 — 02:15, ~90 sec)
 
-**On screen.** Three columns: Sovereignty pressure / Compliance is operational / Air-gap is the new normal. (Adjust to whatever your final WHY NOW columns say.)
+**On screen.** Three columns: SOVEREIGNTY PRESSURE / REGULATION TIGHTENING / SUPPLY-CHAIN ATTACKS ARE REAL. Subtitle: "Sovereignty is no longer optional."
 
 **Speaker notes.**
 
@@ -40,17 +40,11 @@ Don't read the columns. Frame them.
 
 > "Three things are converging right now, and they're not going away."
 
-**Point at column 1.** Sovereignty.
+**Column 1 — Sovereignty pressure.** "The law draws boundaries — by jurisdiction, by sector, by air-gap. Software must be deliverable inside each one. If your delivery model can't survive 'no callback to source' inside a regulated environment, you're not in those markets anymore."
 
-> "Sovereign-cloud isn't a marketing term anymore. DORA, NIS2, the EU sovereign-cloud rules — these are operational requirements with deadlines. If your software can't be delivered into a regulated environment with an audit trail, you have a 2027 problem, not a 2030 one."
+**Column 2 — Regulation tightening.** "EU DORA, NIS2, CRA — all want provable supply-chain control. Not 'best effort'. Provable. Machine-readable evidence, at the artifact level, traceable end-to-end."
 
-**Point at column 2.** Compliance.
-
-> "Compliance used to be a quarterly project — a team of people producing reports for auditors. That model is breaking. Auditors want continuous evidence now, machine-readable, at the artifact level. Spreadsheets don't scale to that."
-
-**Point at column 3.** Air-gap.
-
-> "And air-gapped delivery — sovereign environments, regulated industries, defence — used to be an edge case. It's the centre of gravity in the markets we work in now. If your delivery model can't survive 'no callback to source', you're not in those markets."
+**Column 3 — Supply-chain attacks.** "SolarWinds. xz. log4shell. These weren't theoretical risks — they were live in production. The lesson the industry took: signatures must survive the journey, or compliance is theatre."
 
 > "This is what's pushing the industry toward something different. Not faster pipelines. Different mechanics."
 
@@ -78,9 +72,9 @@ That's the headline. Move on.
 
 ---
 
-## SLIDE 4a — THE SHIFT  (03:30 — 04:30, ~60 sec)
+## SLIDE 4 — THE SHIFT  (03:30 — 04:30, ~60 sec)
 
-**On screen.** Title: THE SHIFT. Subtitle: "SBOM lists. SBOD delivers."
+**On screen.** Title: THE SHIFT. Subtitle: "SBOM lists. SBOD delivers." Three bullets.
 
 **Speaker notes.**
 
@@ -88,25 +82,25 @@ This slide does the conceptual work the rest of the deck builds on. Slow down he
 
 > "There's a category shift happening in how we think about delivery. SBOMs — Software Bills of Materials — were designed for inventory. They tell you what's inside a piece of software. That's useful, but it's not enough."
 
-> "What you actually deliver is everything around the SBOM — the container images, the Helm chart, the configuration, the manifest of how to deploy it. We call that the SBOD. Software Bill of Delivery."
+> "A Software Bill of Delivery — SBOD — tells you what you actually delivered. How to verify it, how to transport it, how to operate it. The container images, the Helm chart, the configuration, the manifest of how to deploy."
 
 > "An SBOM lists. An SBOD delivers. The SBOM lives inside the SBOD."
 
-Read the bullets only if the audience is reading them. Otherwise paraphrase the through-line:
+Read the third bullet only if the audience is reading it. Otherwise paraphrase:
 
-> "The point is: OCM doesn't replace your SBOM tooling. It gives the SBOM an envelope — signed once, transports intact, audit-ready at every hop."
+> "The point is: OCM doesn't replace your SBOM tooling. It gives the SBOM an envelope."
 
 ---
 
-## SLIDE 4b — THE SHIFT, SBOM INSIDE SBOD  (04:30 — 05:00, ~30 sec)
+## SLIDE 5 — THE SHIFT, SBOM INSIDE SBOD  (04:30 — 05:00, ~30 sec)
 
-**On screen.** SBOM-inside-SBOD diagram. Pick **one** of: original SVG, NATIVE A, or NATIVE B variant — depending on what reads best in your room.
+**On screen.** SBOD diagram: artifact list (Docker images, Helm charts, K8s manifests, config files, SBOM) on the left, signature bracket on the right with "One digest covers all." Component identity (`github.com/acme/webshop:v1.0.0`) at the top.
 
 **Speaker notes.**
 
 The diagram is the point. Don't talk over it.
 
-> "Visually: this is what an SBOD contains. The container image, the chart, the config files, the SBOM itself. One signed envelope. One identity. Everything you delivered."
+> "Visually: this is what an SBOD contains. Container images, charts, manifests, configs, the SBOM itself. One signed envelope. One identity at the top. Everything you delivered."
 
 Pause. Let people look.
 
@@ -114,9 +108,9 @@ Pause. Let people look.
 
 ---
 
-## SLIDE 5 — HOW OCM COMPOSES  (05:00 — 06:30, ~90 sec)
+## SLIDE 6 — HOW OCM COMPOSES  (05:00 — 06:30, ~90 sec)
 
-**On screen.** Three columns: SIGNING / TRANSPORT / COMPLIANCE. Each says "your tools today" then "what OCM adds".
+**On screen.** Three columns: SIGNING / TRANSPORT / COMPLIANCE. Each is two lines — "what you have today" then "what OCM adds".
 
 **Speaker notes.**
 
@@ -126,21 +120,21 @@ This is the objection-handling slide. Almost everyone in the room is thinking "w
 
 > "OCM doesn't replace any of that. OCM composes around what you already have."
 
-**Walk through the columns. One sentence each.**
+**Walk through the columns. One sentence each. The slide gives you setup; you deliver the punchline.**
 
-> "Signing: your tools sign individual artifacts. OCM signs the whole release. One signature, every digest. So the signature you check at the destination is one check, not twelve."
+> "Signing: you sign artifacts today. OCM signs the release as a whole — one signature, every digest. So the signature you check at the destination is one check, not twelve."
 
-> "Transport: your registries are heterogeneous — different vendors, different locations, sometimes air-gapped archives. OCM moves the release across all of them. The identity stays."
+> "Transport: your registries differ — by vendor, by location, sometimes air-gapped archives. OCM moves the release across all of them. The identity stays."
 
-> "Compliance: your scanners look at one artifact at a time. OCM correlates findings to the release as a whole. Compliance becomes continuous — not a project that starts every quarter."
+> "Compliance: your scanners look at one artifact at a time. OCM correlates findings to the release. Compliance becomes continuous — not a project that starts every quarter."
 
 > "Same tools. New connective tissue."
 
 ---
 
-## SLIDE 6 — OCM IN ONE PICTURE  (06:30 — 08:00, ~90 sec)
+## SLIDE 7 — OCM IN ONE PICTURE  (06:30 — 08:00, ~90 sec)
 
-**On screen.** Pack · Sign · Transport · Deploy → Sovereign Cloud diagram. Pick the SVG variant or the NATIVE variant — only present one.
+**On screen.** Pack · Sign · Transport · Deploy → Sovereign Cloud diagram.
 
 **Speaker notes.**
 
@@ -148,21 +142,21 @@ Big diagram, four verbs, this is the demo replacement.
 
 > "Here's the whole flow on one slide. Four verbs."
 
-**Point at PACK.** "Pack. You bundle whatever your software actually needs — the image, the chart, the config — into one named, versioned component. We call this the SBOD."
+**Point at PACK.** "Pack. You bundle whatever your software actually needs — the image, the chart, the config — into one named, versioned component. One source of truth."
 
 **Point at SIGN.** "Sign. One signature covers every artifact in the bundle. By digest. So if anything changes, the signature breaks."
 
 **Point at TRANSPORT.** "Transport. The component moves across registry boundaries. Cloud to cloud, region to region, even into an air-gapped archive — without the signature breaking."
 
-**Point at DEPLOY.** "Deploy. At the destination, the receiver verifies the signature, unpacks the bundle, deploys it. No callback upstream. No phone-home. Self-contained."
+**Point at DEPLOY.** "Deploy. At the destination, the receiver verifies the signature, unpacks the bundle, deploys it. GitOps or OCM K8s controllers — your choice. No callback upstream."
 
 > "Pack, sign, transport, deploy. That's OCM in operation."
 
 ---
 
-## SLIDE 7a — SOVEREIGN-READY  (08:00 — 09:00, ~60 sec)
+## SLIDE 8 — SOVEREIGN-READY  (08:00 — 09:00, ~60 sec)
 
-**On screen.** Title: SOVEREIGN-READY. Subtitle: "Trust, but verify." Four bullets about identity / signature / day-2 / self-contained.
+**On screen.** Title: SOVEREIGN-READY. Subtitle: "Trust, but verify." Four bullets, each anchor + characterisation + consequence.
 
 **Speaker notes.**
 
@@ -170,21 +164,21 @@ This is the slide for the regulator-and-CISO conversation.
 
 > "Sovereign-ready isn't a checkbox. It's a property of the delivery model. Four things have to be true."
 
-**Bullet 1.** "Identity is location-independent. The component carries its name regardless of where it lives. Same identity in your dev cluster and in a customer's air-gapped data centre."
+**Bullet 1 — Identity.** "Location-independent. The component carries its name regardless of registry. Same identity in your dev cluster and in a customer's air-gapped data centre."
 
-**Bullet 2.** "Signatures are location-independent. Sign once at source, verify at every hop down to the destination. No callback upstream."
+**Bullet 2 — Signatures.** "Location-independent. Sign once at source, verify anywhere downstream. No callback upstream."
 
-**Bullet 3.** "Day-2 ops happen inside the boundary. Once a component is in the sovereign environment, you subscribe to it and pull upgrades when needed — still no callback upstream."
+**Bullet 3 — Day-2 ops.** "Inside the boundary. Once a component is in the sovereign environment, subscribe to it, pull upgrades, scale across regions. Still no callback."
 
-**Bullet 4.** "On transfer, the component carries every artifact it needs. Completely self-contained."
+**Bullet 4 — Transfer.** "Self-contained. Every artifact travels with the component. The destination needs nothing more."
 
 > "Trust, but verify. The component is the trust boundary — not the registry, not the network."
 
 ---
 
-## SLIDE 7b — SOVEREIGN-READY — AIR-GAP  (09:00 — 10:00, ~60 sec)
+## SLIDE 9 — SOVEREIGN-READY — AIR-GAP  (09:00 — 10:00, ~60 sec)
 
-**On screen.** Air-gap diagram with source side, trust boundary, target side, transport arrow.
+**On screen.** Air-gap diagram. Source side (left), trust boundary (middle), sovereign target (right). Local registry / K8s cluster / Auditor as three green checks on the destination side.
 
 **Speaker notes.**
 
@@ -200,23 +194,25 @@ Reinforce the previous slide visually.
 
 ---
 
-## SLIDE 8 — SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR  (10:00 — 10:45, ~45 sec)
+## SLIDE 10 — SCAN  (10:00 — 10:45, ~45 sec)
 
-**On screen.** Title: SCAN. Subtitle: "Compliance as a system property — not a quarterly retrofit." Bullets about Open Delivery Gear, the dashboard, continuous scans, contextual rescoring, evidence by component identity.
+**On screen.** Title: SCAN. Subtitle: "Compliance as a system property — not a quarterly retrofit." Five bullets, the first introduces ODG.
 
 **Speaker notes.**
 
 Brief stop here. Don't go deep — this is the "and there's tooling around it" slide.
 
-> "There's an open-source compliance engine that runs on top of OCM. It's called Open Delivery Gear. It scans every component continuously, even after release, and correlates findings by component identity."
+> "There's an open-source compliance engine that runs on top of OCM. It's called Open Delivery Gear — ODG. Built on the same primitives as the rest of OCM."
 
-> "What that means in practice: when CVE-something-2026 drops at 11pm, you don't ask 'which of our products is affected'. You query the OCM coordinate system, you get a list, and you see the rescored risk for each one."
+> "ODG scans every component continuously, even after release, and correlates findings by component identity. Auditors get evidence, not spreadsheets."
+
+> "What that means in practice: when CVE-something-2026 drops at 11pm, you don't ask 'which of our products is affected'. You query the OCM coordinate system, you get a list, and you see the rescored risk for each one — patch what matters, not the noise."
 
 > "Compliance becomes a property of the system. Not a Q3 deliverable."
 
 ---
 
-## SLIDE 9 — WHAT OCM UNLOCKS  (10:45 — 11:30, ~45 sec)
+## SLIDE 11 — WHAT OCM UNLOCKS  (10:45 — 11:30, ~45 sec)
 
 **On screen.** Six tiles: Code signing across stacks · Air-gapped delivery · K8s-native deployment · Async security scans · One source of truth · Automated compliance reporting.
 
@@ -230,23 +226,25 @@ Don't read the tiles. The audience can read.
 
 ---
 
-## SLIDE 10 — TRUSTED IN PRODUCTION  (11:30 — 12:00, ~30 sec)
+## SLIDE 12 — TRUSTED IN PRODUCTION  (11:30 — 12:00, ~30 sec)
 
-**On screen.** Adopter logos: NeoNephos, SAP, BWI, SAP NS2, Gardener, Konfidence, OpenControlPlane, Platform Mesh.
+**On screen.** Title: "SAP stewards. NeoNephos governs. / Production-grade. Sovereign-ready." Two-tier logo wall: top row BWI + SAP NS2 (production adopters), bottom row Gardener + Kyma + OpenControlPlane + Platform Mesh (peer projects). NeoNephos logo at the footer with "Aligned with".
 
 **Speaker notes.**
 
-Ground the credibility. Be honest about scale; don't oversell.
+Ground the credibility. Be honest about scale; don't oversell. The title carries four claims — let it speak; you fill in the colour.
 
-> "OCM isn't a research project. Gardener — SAP's open-source Kubernetes orchestrator — has used OCM in production for over five years. It's how Gardener delivers landscape components across cloud providers and into sovereign environments."
+> "OCM isn't a research project. SAP stewards the engineering investment. NeoNephos — the foundation — governs the standard. The result is in production today."
 
-> "It's been adopted by SAP, by BWI — Germany's federal IT service — by SAP NS2 for regulated US workloads, and by a growing peer ecosystem: Konfidence, OpenControlPlane, Platform Mesh. Aligned with the NeoNephos Foundation, which now governs it."
+**Point at the top row.** "BWI is Germany's federal IT service. SAP NS2 handles regulated US workloads. Both run on OCM. That's the production proof."
 
-> "Open source. Production-grade. Industry-aligned."
+**Point at the bottom row.** "And a peer ecosystem has converged around the model. Gardener — SAP's open-source Kubernetes orchestrator, in production for over five years. Kyma. OpenControlPlane. Platform Mesh. Each does something different; each builds on the OCM primitive."
+
+> "Aligned with NeoNephos. Open source. Production-grade."
 
 ---
 
-## SLIDE 11 — CTA  (12:00 — 12:45, ~45 sec)
+## SLIDE 13 — CTA  (12:00 — 12:45, ~45 sec)
 
 **On screen.** "Start delivering with confidence." Three action lines: Try it / Build with us / Talk to us.
 
@@ -270,36 +268,36 @@ Close with an ask. Plain language.
 
 ## TIMING TOTAL
 
-| Slide | Duration |
-|---|---|
-| 1 — Hero | 0:45 |
-| 2 — WHY NOW | 1:30 |
-| 3 — THE ANSWER | 1:15 |
-| 4a — THE SHIFT | 1:00 |
-| 4b — SBOM IN SBOD | 0:30 |
-| 5 — HOW OCM COMPOSES | 1:30 |
-| 6 — OCM IN ONE PICTURE | 1:30 |
-| 7a — SOVEREIGN-READY | 1:00 |
-| 7b — AIR-GAP | 1:00 |
-| 8 — SCAN | 0:45 |
-| 9 — WHAT OCM UNLOCKS | 0:45 |
-| 10 — TRUSTED IN PRODUCTION | 0:30 |
-| 11 — CTA | 0:45 |
-| **Total** | **12:45** |
+| Slide | Topic | Duration |
+|---|---|---|
+| 1 | Hero — Your supply chain has blind spots | 0:45 |
+| 2 | WHY NOW | 1:30 |
+| 3 | THE ANSWER — hub-and-spoke | 1:15 |
+| 4 | THE SHIFT (bullets) | 1:00 |
+| 5 | SBOM INSIDE SBOD (diagram) | 0:30 |
+| 6 | HOW OCM COMPOSES | 1:30 |
+| 7 | OCM IN ONE PICTURE | 1:30 |
+| 8 | SOVEREIGN-READY (bullets) | 1:00 |
+| 9 | AIR-GAP (diagram) | 1:00 |
+| 10 | SCAN | 0:45 |
+| 11 | WHAT OCM UNLOCKS | 0:45 |
+| 12 | TRUSTED IN PRODUCTION | 0:30 |
+| 13 | CTA | 0:45 |
+| **Total** | | **12:45** |
 
-Buffer: 15-20 seconds you can spend on a question or pause; if the audience is engaged, slides 5 and 6 absorb extra time naturally.
+Buffer: 15-20 seconds you can spend on a question or pause; if the audience is engaged, slides 6 and 7 absorb extra time naturally. The two appendix slides (glossary, trademarks) don't run in the show.
 
 ---
 
 ## Q&A PREP — questions that come up
 
-- **"Is this another SBOM standard?"** → No. OCM is about delivery. SBOMs are inputs to it. SPDX, CycloneDX — both fit inside an OCM component. (slide 4a)
-- **"Do I throw away my container registry?"** → No. OCM sits on top. Your OCI registry stores the same images. (slide 5)
-- **"Is it Sigstore-compatible?"** → Yes. Sigstore is a first-class signing backend. Classical RSA also supported. (slide 5 / 6)
-- **"Who pays for it?"** → It's open source under NeoNephos governance. SAP funds the core engineering. Production use is free. (slide 10)
-- **"What's the lock-in?"** → Open standard, open spec, open implementation. Nothing proprietary. The point of standardising is to *prevent* lock-in. (slide 10 / 11)
+- **"Is this another SBOM standard?"** → No. OCM is about delivery. SBOMs are inputs to it. SPDX, CycloneDX — both fit inside an OCM component. (slide 4)
+- **"Do I throw away my container registry?"** → No. OCM sits on top. Your OCI registry stores the same images. (slide 6)
+- **"Is it Sigstore-compatible?"** → Yes. Sigstore is a first-class signing backend. Classical RSA also supported. (slide 6 / 7)
+- **"Who pays for it?"** → It's open source under NeoNephos governance. SAP funds the core engineering. Production use is free. (slide 12)
+- **"What's the lock-in?"** → Open standard, open spec, open implementation. Nothing proprietary. The point of standardising is to *prevent* lock-in. (slide 12 / 13)
 - **"How does this compare to [Tanzu Application Catalog / Backstage / etc.]?"** → Different layer. OCM is the delivery format; tools like that are catalogs and developer portals on top. They can — and do — read OCM components. (no slide; off-prompt)
-- **"How long to adopt?"** → A team can pack one component in an afternoon. Org-wide standardisation is a quarter to a year, depending on scope. (slide 11)
+- **"How long to adopt?"** → A team can pack one component in an afternoon. Org-wide standardisation is a quarter to a year, depending on scope. (slide 13)
 
 ---
 
@@ -309,3 +307,12 @@ Buffer: 15-20 seconds you can spend on a question or pause; if the audience is e
 - **Spec details.** Component descriptors, resource access types, plugin system. Architect material.
 - **Code.** Not in this deck.
 - **Roadmap dates.** Unless asked. The deck makes the case for OCM today; promises about Q3 next year are a different conversation.
+
+---
+
+## DELIVERY NOTES
+
+- **The four-claim title on slide 12 is your credibility moment.** "SAP stewards. NeoNephos governs. Production-grade. Sovereign-ready." — four stop-sentences, each carrying one of the four credibility axes the slide proves. Let the slide speak for two seconds before you fill in the colour with BWI / SAP NS2 / Gardener.
+- **Slide 4 (THE SHIFT) is the conceptual fulcrum.** If you only have five minutes total, deliver slide 1, slide 4, slide 7, and slide 13. Skip everything else. The SBOM-vs-SBOD distinction is the new vocabulary OCM introduces; without it, the rest of the deck doesn't pay off.
+- **Slide 6 (HOW OCM COMPOSES) carries the objection-handling.** Pre-empt "we already have this" before the Q&A — slide 6 is built for it.
+- **Stop-sentence rhythm.** Hero, slide 12 title, CTA — all use the "stop. stop. stop." stop-sentence rhythm. Honour the pauses; don't rush them.

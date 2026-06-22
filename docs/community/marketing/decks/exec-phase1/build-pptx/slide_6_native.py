@@ -69,7 +69,7 @@ WHITE      = RGBColor(0xFF, 0xFF, 0xFF)
 # -----------------------------------------------------------------------------
 
 def _styled_run(p, text, *, size_pt, bold=False, color=BLACK,
-                font="Inter", italic=False, all_caps=False,
+                font="Aptos", italic=False, all_caps=False,
                 letter_spacing=None):
     """Add a run with the OCM type system applied."""
     r = p.add_run()
@@ -601,7 +601,7 @@ def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
         # looser than the SVG render at 0.6 SVG-units; Inter's metrics
         # already include enough tracking.
         _styled_run(p, label,
-                    size_pt=26, bold=True, color=BLUE_MID)
+                    size_pt=30, bold=True, color=BLUE_MID)
 
         # --- Body sub-text (2 lines) ---------------------------------------
         body_x = card_x + s(32)
@@ -613,10 +613,10 @@ def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
         p.line_spacing = 1.25
         # 26 px @ 96 dpi ≈ 19.5 pt → use 19 pt to leave room for the
         # second line on tighter slot heights.
-        _styled_run(p, sub1, size_pt=19, color=DARK_GREY)
+        _styled_run(p, sub1, size_pt=22, color=DARK_GREY)
         p2 = tf.add_paragraph()
         p2.line_spacing = 1.25
-        _styled_run(p2, sub2, size_pt=19, color=DARK_GREY)
+        _styled_run(p2, sub2, size_pt=22, color=DARK_GREY)
 
     # ---- Inter-card arrows (3) at SVG y=270, x = 380→406, 790→816,
     #      1200→1226. These sit in the 30-px gaps between cards. ---------
@@ -674,11 +674,11 @@ def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.CENTER
     _styled_run(p, "SOVEREIGN",
-                size_pt=26, bold=True, color=BLUE_MID)
+                size_pt=30, bold=True, color=BLUE_MID)
     p2 = tf.add_paragraph()
     p2.alignment = PP_ALIGN.CENTER
     _styled_run(p2, "CLOUD",
-                size_pt=26, bold=True, color=BLUE_MID)
+                size_pt=30, bold=True, color=BLUE_MID)
 
     # Caption: "Verify at destination." / "No callback upstream." — dark
     # grey, 26 px SVG → ~19 pt, centred under the label block.
@@ -692,8 +692,8 @@ def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.CENTER
     p.line_spacing = 1.25
-    _styled_run(p, "Verify at destination.", size_pt=19, color=DARK_GREY)
+    _styled_run(p, "Verify at destination.", size_pt=22, color=DARK_GREY)
     p2 = tf.add_paragraph()
     p2.alignment = PP_ALIGN.CENTER
     p2.line_spacing = 1.25
-    _styled_run(p2, "No callback upstream.", size_pt=19, color=DARK_GREY)
+    _styled_run(p2, "No callback upstream.", size_pt=22, color=DARK_GREY)

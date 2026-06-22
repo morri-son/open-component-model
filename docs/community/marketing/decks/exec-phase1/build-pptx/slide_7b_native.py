@@ -77,7 +77,7 @@ WHITE      = RGBColor(0xFF, 0xFF, 0xFF)
 
 
 def _styled_run(p, text, *, size_pt, bold=False, color=BLACK,
-                font="Inter", italic=False, all_caps=False,
+                font="Aptos", italic=False, all_caps=False,
                 letter_spacing=None):
     """Add a run with the OCM type system applied."""
     r = p.add_run()
@@ -252,12 +252,12 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
     #   headline top = svg_y(78) - 38 = 140
     tf = _add_textbox(slide, _sx(80), _sy(116), _sw(420), _sh(32))
     _styled_run(tf.paragraphs[0], "SOURCE",
-                size_pt=14, bold=True, color=GREY_MID,
+                size_pt=16, bold=True, color=GREY_MID,
                 all_caps=True, letter_spacing="300")
 
     tf = _add_textbox(slide, _sx(80), _sy(140), _sw(420), _sh(48))
     _styled_run(tf.paragraphs[0], "Pack · Sign",
-                size_pt=22, bold=True, color=BLUE_MID)
+                size_pt=25, bold=True, color=BLUE_MID)
 
     # Public-registry pillar — rounded rect 320×200 at SVG (80, 240).
     pillar_x, pillar_y, pillar_w, pillar_h = 80, 240, 320, 200
@@ -280,12 +280,12 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
                       _sx(pillar_x + 100), _sy(pillar_y + 28),
                       _sw(220), _sh(28))
     _styled_run(tf.paragraphs[0], "Public registry",
-                size_pt=14, bold=True, color=BLUE_MID)
+                size_pt=16, bold=True, color=BLUE_MID)
     tf = _add_textbox(slide,
                       _sx(pillar_x + 100), _sy(pillar_y + 56),
                       _sw(220), _sh(24))
     _styled_run(tf.paragraphs[0], "Build artifacts live here.",
-                size_pt=10, color=GREY_MID)
+                size_pt=12, color=GREY_MID)
 
     # Source-side component glyph at SVG (95, 350) — 290×70 footprint.
     # We need uniform scale for the glyph itself so the visual proportions
@@ -318,7 +318,7 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
                       _sw(240), _sh(28),
                       align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0], "TRUST BOUNDARY",
-                size_pt=10, bold=True, color=BLUE,
+                size_pt=12, bold=True, color=BLUE,
                 all_caps=True, letter_spacing="300")
 
     # ------------------------------------------------------------------
@@ -327,11 +327,11 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
     # SVG group translate(900,100). Eyebrow + headline mirror source side.
     tf = _add_textbox(slide, _sx(900), _sy(116), _sw(600), _sh(32))
     _styled_run(tf.paragraphs[0], "SOVEREIGN TARGET",
-                size_pt=14, bold=True, color=BLUE,
+                size_pt=16, bold=True, color=BLUE,
                 all_caps=True, letter_spacing="300")
     tf = _add_textbox(slide, _sx(900), _sy(140), _sw(600), _sh(48))
     _styled_run(tf.paragraphs[0], "Verify · Deploy",
-                size_pt=22, bold=True, color=BLUE_MID)
+                size_pt=25, bold=True, color=BLUE_MID)
 
     # Air-gapped container — rounded rect 600×480 at SVG (900, 240),
     # dashed brand-blue stroke.
@@ -347,7 +347,7 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
                       _sx(cont_x + 20), _sy(cont_y + 20),
                       _sw(200), _sh(24))
     _styled_run(tf.paragraphs[0], "AIR-GAPPED",
-                size_pt=9, bold=True, color=BLUE,
+                size_pt=10, bold=True, color=BLUE,
                 all_caps=True, letter_spacing="300")
 
     # Receiving component glyph — IDENTICAL preset to source side.
@@ -389,13 +389,13 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
                       _sw(540), _sh(30),
                       align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0], "Trust, but verify.",
-                size_pt=14, bold=True, color=BLUE_MID)
+                size_pt=16, bold=True, color=BLUE_MID)
     tf = _add_textbox(slide,
                       _sx(cont_x + 30), _sy(594),
                       _sw(540), _sh(28),
                       align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0], "No callback to source. Day-2 ops included.",
-                size_pt=11, color=GREY_MID)
+                size_pt=13, color=GREY_MID)
 
     # Bottom accent: light-blue rounded rect with letter-spaced caption.
     # SVG: x=60 + container origin 900 = 960; y=400 + 240 = 640;
@@ -411,7 +411,7 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
                       anchor="ctr", align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0],
                 "SAME IDENTITY · SAME SIGNATURE · ANY LOCATION",
-                size_pt=10, bold=True, color=BLUE_MID,
+                size_pt=12, bold=True, color=BLUE_MID,
                 all_caps=True, letter_spacing="200")
 
     # ------------------------------------------------------------------
@@ -439,7 +439,7 @@ def add_sovereign_airgap_native(slide, *, x, y, w, h,
                       _sw(350), _sh(40),
                       align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0], "TRANSPORT",
-                size_pt=18, bold=True, color=BLUE_MID,
+                size_pt=21, bold=True, color=BLUE_MID,
                 all_caps=True, letter_spacing="400")
 
 
@@ -499,14 +499,14 @@ def _draw_glyph_in_slot(slide, gx, gy, *, sx, sy, sw, sh,
                       sx(gx + 62), sy(gy + 40),
                       sw(158), sh(20))
     _styled_run(tf.paragraphs[0], "signed component",
-                size_pt=9, color=GREY_MID)
+                size_pt=10, color=GREY_MID)
     # Version on stub, centred.
     tf = _add_textbox(slide,
                       sx(gx + 220), sy(gy + 25),
                       sw(70), sh(22),
                       anchor="ctr", align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0], "v1.0.0",
-                size_pt=10, bold=True, color=BLUE_MID,
+                size_pt=12, bold=True, color=BLUE_MID,
                 letter_spacing="100")
 
 
@@ -534,7 +534,7 @@ def _draw_tile_in_slot(slide, tx, ty, *, icon_file, label,
                       sw(170), sh(22),
                       align=PP_ALIGN.CENTER)
     _styled_run(tf.paragraphs[0], label,
-                size_pt=11, bold=True, color=BLUE_MID)
+                size_pt=13, bold=True, color=BLUE_MID)
     # Check-badge centred horizontally near tile bottom.
     _draw_check_badge_in_slot(slide, tx + 85, ty + 100,
                                sx=sx, sy=sy, sw=sw, sh=sh)

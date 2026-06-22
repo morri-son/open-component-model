@@ -478,8 +478,10 @@ def add_logo_row(slide, logos: list, y_px: int,
             r.font.name = "Aptos"
             r.font.size = Pt(caption_pt)
             r.font.color.rgb = C.GREY_MID
-            if url:
-                r.hyperlink.address = url
+            # Caption is plain descriptive text (e.g. "Managed Kubernetes"),
+            # not a link — the logo above carries the URL via pic.click_action.
+            # Earlier iterations had captions duplicate the logo name and act
+            # as hyperlinks; both were dropped (see slide 10a comment).
 
 
 # -----------------------------------------------------------------------------
@@ -528,19 +530,20 @@ def build():
         sys.exit(f"template missing expected layouts: {missing}")
 
     # ---- SLIDE 1 — HERO (internal-sponsor, observation-frame) --------------
-    # Hero opens with a concrete observation about the SAP-internal status quo:
-    # every LoB rebuilds delivery mechanics separately. Subtitle resolves the
+    # Hero opens with two parallel stop-sentences: a concrete observation about
+    # the SAP-internal status quo (every LoB delivers independently) and the
+    # punchline (and does so every release cycle). Subtitle resolves the
     # observation: each LoB still ships its own artifacts — what changes is
     # that they ship "on the same model" (shared concept, shared vocabulary,
     # shared signing/transport/compliance mechanics), not on parallel
     # bespoke pipelines.
     s = prs.slides.add_slide(layouts["Hero"])
     add_banner_full_bleed(s, THEME_DIR / "OCM-Banner.png")
-    set_text(s, 1, "Every LoB rebuilds", color=C.WHITE)
-    set_split_gradient_title(s, 2, prefix="", noun="the same delivery stack.")
+    set_text(s, 1, "Every LoB ships.", color=C.WHITE)
+    set_gradient_title(s, 2, "Separately, every time.", align_left=True)
     set_text(s, 3,
              "OCM is the shared standard. Each LoB still ships — "
-             "but on the same model.",
+             "on the same model.",
              color=C.CYAN)
     set_text(s, 4,
              "Open Component Model — open source, NeoNephos Foundation. "
@@ -549,24 +552,23 @@ def build():
     add_brand_row(s)
 
     # ---- SLIDE 2 — WHY NOW (internal lens) ---------------------------------
+    # Three columns, each parallel [observation. consequence-if-no-action.] form.
+    # Columns 2 and 3 imply action by stating the cost of inaction; column 1
+    # was reworded to follow the same pattern — "biggest contributor shapes
+    # the standard" makes the implicit point that staying biggest is an active
+    # choice, not a given.
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "WHY NOW")
     set_text(s, 2, "Compliance and sovereignty are given.\nOur strategic position is a choice.")
-    set_text(s, 10, "ECOSYSTEM VELOCITY IS REAL")
-    set_text(s, 11, "OCM-shaped abstractions are landing in adjacent OSS "
-                     "projects. NeoNephos is operationalizing. The peer "
-                     "ecosystem (Gardener, Kyma, OpenControlPlane, Konfidence, "
-                     "Hyperspace, RBSC, CSI) shares the primitive.")
-    set_text(s, 12, "THE WINDOW IS CLOSING")
-    set_text(s, 13, "Adoption is consolidating. NeoNephos governance, CRA "
-                     "enforcement, sovereign-cloud market formation — the "
-                     "rails are being laid now. Late entrants pay migration "
-                     "cost; early stewards keep optionality.")
-    set_text(s, 14, "DISINVESTMENT HAS A COST")
-    set_text(s, 15, "Walking away costs more than staying. Each LoB that "
-                     "builds its own retrofit pays the cost OCM was supposed "
-                     "to amortize. Competitors who keep investing get the "
-                     "standard built around their preferences. SAP doesn't.")
+    set_text(s, 10, "ECOSYSTEM VELOCITY")
+    set_text(s, 11, "The peer ecosystem is converging.\n"
+                     "The biggest contributor shapes the standard.")
+    set_text(s, 12, "THE WINDOW")
+    set_text(s, 13, "The rails are being laid now.\n"
+                     "Late entrants pay migration cost.")
+    set_text(s, 14, "DISINVESTMENT COST")
+    set_text(s, 15, "Walking away costs more than staying.\n"
+                     "The standard gets shaped without us.")
 
     # ---- SLIDE 3 — MEET OCM (hub-and-spoke diagram, Option 3 reframe) -------
     # Diagram positioned per user spec 2026-06-17: 50.02 × 15.93 cm,
@@ -577,33 +579,12 @@ def build():
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
                  x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 3' — SAME, BUT NATIVE PPT SHAPES -----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE ANSWER  (NATIVE)")
-    set_text(s, 2, "Meet OCM. One identity, every boundary.")
-    delete_placeholder(s, 10)
-    from slide_3_native import add_hub_and_spoke_native_diagram
-    add_hub_and_spoke_native_diagram(s, x=60, y=240, w=1800, h=780,
-                                      icons_dir=ICONS_DIR,
-                                      rasterize_recolored=rasterize_svg_recolored)
-
-    # ---- SLIDE 4a — THE SHIFT, SBOD (text-only, internal-sponsor footer) ---
-    s = prs.slides.add_slide(layouts["Plain / Compact"])
-    set_text(s, 1, "THE SHIFT")
-    set_text(s, 2, "SBOM lists. SBOD delivers.")
-    set_blue_box_bullets(s, 10, [
-        "An SBOM tells you what's in your software. It was built for inventory.",
-        "A Software Bill of Delivery (SBOD) tells you what you delivered, "
-        "how to verify, transport, and operate it. "
-        "It was built for delivery.",
-        "The SBOD contains the SBOM. OCM doesn't replace your SBOM tooling — "
-        "it gives the SBOM an envelope that's compliance-native, signed once, "
-        "and travels intact across any boundary.",
-        "SBOD is the category SAP led the definition of — now standardised "
-        "through NeoNephos governance.",
-    ])
-
-    # ---- SLIDE 4b — THE SHIFT (diagram only, ORIGINAL SVG) -------------------
+    # ---- SLIDE 4a — THE SHIFT (diagram, Option A) --------------------------
+    # Hand-editing in PowerPoint settled on this ordering: SBOD diagram first
+    # (shows the picture), bullets after (explains it). The two SBOD diagram
+    # variants from earlier iterations (5-tile grid and 3-property layout)
+    # were dropped — only the artifact-list + signature-bracket layout
+    # remains, because it shows SBOM as one line in a list.
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD")
     set_text(s, 2, "SBOM lists. SBOD delivers.")
@@ -614,47 +595,40 @@ def build():
     if diagram:
         add_diagram(s, diagram, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 4b' — SAME, BUT NATIVE PPT SHAPES ----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD  (NATIVE A)")
+    # ---- SLIDE 4b — THE SHIFT, SBOD (text-only, internal-sponsor) ----------
+    s = prs.slides.add_slide(layouts["Plain / Compact"])
+    set_text(s, 1, "THE SHIFT")
     set_text(s, 2, "SBOM lists. SBOD delivers.")
-    delete_placeholder(s, 10)
-    from slide_4b_native import add_sbod_native_diagram
-    add_sbod_native_diagram(s, x=60, y=240, w=1800, h=780,
-                             icons_dir=ICONS_DIR,
-                             rasterize_recolored=rasterize_svg_recolored,
-                             icon_stroke=STROKE_THIN)
-
-    # ---- SLIDE 4b'' — NATIVE VARIANT B (vertical artifact list + brace) -----
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD  (NATIVE B)")
-    set_text(s, 2, "SBOM lists. SBOD delivers.")
-    delete_placeholder(s, 10)
-    from slide_4b_native_v2 import add_sbom_inside_sbod_native_v2
-    add_sbom_inside_sbod_native_v2(s, x=60, y=240, w=1800, h=780,
-                                    icons_dir=ICONS_DIR,
-                                    rasterize_recolored=rasterize_svg_recolored,
-                                    icon_stroke=STROKE_THIN)
+    set_blue_box_bullets(s, 10, [
+        "SBOM — what's inside your software. Built for inventory.",
+        "A Software Bill of Delivery (SBOD) — what you delivered, "
+        "how to verify, transport, operate. Built for delivery.",
+        "SBOD contains SBOM. OCM doesn't replace your SBOM tooling — "
+        "OCM gives the SBOM an envelope.",
+        "SBOD is the category SAP defined. "
+        "Now standardised through NeoNephos.",
+    ])
 
     # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
-    # Disarms three "we already have this" objections on one slide:
-    # signing, transport, compliance. Each column says "what you have today"
-    # then "what OCM adds" — OCM doesn't replace, it composes around them.
+    # Two-line columns: [status quo today] / [OCM contribution]. Each column
+    # disarms a "we already have this" objection: signing, transport,
+    # compliance. The earlier multi-clause version had its punchlines
+    # consumed by the slide; the speaker now delivers them verbally.
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "HOW OCM COMPOSES")
     set_text(s, 2, "Composes around your existing stack.")
     set_text(s, 10, "SIGNING")
-    set_text(s, 11, "Your tools sign artifacts.\n"
-                     "OCM signs the whole release — one signature, every digest.")
+    set_text(s, 11, "You sign artifacts.\nOCM signs the release.")
     set_text(s, 12, "TRANSPORT")
-    set_text(s, 13, "Registries differ by type and location.\n"
-                     "OCM moves the release across them all.")
+    set_text(s, 13, "Your registries differ.\nOCM moves the release across them.")
     set_text(s, 14, "COMPLIANCE")
     set_text(s, 15, "Your scanners see one artifact at a time.\n"
-                     "OCM correlates findings to the release. "
-                     "Compliance becomes continuous.")
+                     "OCM correlates findings to the release.")
 
-    # ---- SLIDE 6 — OCM IN ONE PICTURE (was slide 5) -------------------------
+    # ---- SLIDE 6 — OCM IN ONE PICTURE --------------------------------------
+    # Pack · Sign · Transport · Deploy → Sovereign Cloud. The DEPLOY tile's
+    # second line was rewritten "OCM K8s Controllers." (with period, no
+    # imperative) so all four tiles read with the same grammatical rhythm.
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "OCM IN ONE PICTURE")
     set_text(s, 2, "Pack · Sign · Transport · Deploy")
@@ -664,65 +638,46 @@ def build():
     )
     add_diagram(s, diagram6, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 6' — SAME, BUT NATIVE PPT SHAPES -----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "OCM IN ONE PICTURE  (NATIVE)")
-    set_text(s, 2, "Pack · Sign · Transport · Deploy")
-    delete_placeholder(s, 10)
-    from slide_6_native import add_pack_sign_transport_deploy_native
-    add_pack_sign_transport_deploy_native(s, x=60, y=240, w=1800, h=780,
-                                           icons_dir=ICONS_DIR,
-                                           rasterize_recolored=rasterize_svg_recolored,
-                                           icon_stroke=STROKE_THIN)
-
-    # ---- SLIDE 7a — SOVEREIGN-READY (text-only, was 6a) --------------------
+    # ---- SLIDE 7a — SOVEREIGN-READY (text-only, anchor + halfsentence) -----
+    # Internal-sponsor format: anchor word + characterisation half-sentence +
+    # consequence half-sentence. Shorter than exec, longer than a one-liner,
+    # carries enough for hand-out reading while still leaving punchlines for
+    # the speaker.
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "SOVEREIGN-READY")
     set_text(s, 2, "Trust, but verify.")
     set_blue_box_bullets(s, 10, [
-        "Identity is location-independent. A component carries its name "
-        "regardless where it lives.",
-        "Signatures are location-independent. Sign once at source, verify at "
-        "all hops up to the destination. No callback upstream.",
-        "Day-2 ops happen inside the boundary. Subscribe to a component and "
-        "pull upgrades when needed. Again, no callback upstream.",
-        "On transfer into a sovereign environment, a component can carry every "
-        "artifact it needs along with it. Completely self-contained.",
+        "Identity — location-independent. "
+        "The component carries its name regardless of registry.",
+        "Signatures — location-independent. "
+        "Sign once at source, verify anywhere downstream. No callback upstream.",
+        "Day-2 ops — happen inside the boundary. "
+        "Subscribe, pull upgrades, scale across regions. Still no callback.",
+        "Transfer — self-contained. "
+        "Every artifact travels with the component.",
     ])
 
-    # ---- SLIDE 7b — SOVEREIGN-READY (diagram only, was 6b) -----------------
+    # ---- SLIDE 7b — SOVEREIGN-READY (diagram only) -------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
-    # Diagram positioned per user spec 2026-06-17:
-    # 40.22 × 17.6 cm at x=3.72cm, y=10.25cm.
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
                  x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 7b' — SAME, BUT NATIVE PPT SHAPES ----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "SOVEREIGN-READY — AIR-GAP  (NATIVE)")
-    set_text(s, 2, "Trust travels with the component.")
-    delete_placeholder(s, 10)
-    from slide_7b_native import add_sovereign_airgap_native
-    add_sovereign_airgap_native(s, x=60, y=240, w=1800, h=780,
-                                 icons_dir=ICONS_DIR,
-                                 rasterize_recolored=rasterize_svg_recolored,
-                                 icon_stroke=STROKE_THIN)
-
-    # ---- SLIDE 8 — SCAN / Compliance-native (internal sub-bullet added) ----
+    # ---- SLIDE 8 — SCAN (shortened eyebrow, 4 bullets) ---------------------
+    # Eyebrow was "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR" — too
+    # long, doubled with the subtitle. Trimmed to just "SCAN" (parallel to the
+    # PACK/SIGN/TRANSPORT/DEPLOY verb chain on slide 6, positioning Scan as
+    # the 5th step). Internal audience knows ODG, so the definition bullet is
+    # dropped — the four substantive bullets remain.
     s = prs.slides.add_slide(layouts["Plain"])
-    set_text(s, 1, "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR")
+    set_text(s, 1, "SCAN")
     set_text(s, 2, "Compliance as a system property —\nnot a quarterly retrofit.")
     set_blue_box_bullets(s, 10, [
-        "Open Delivery Gear (ODG) is the OCM compliance automation engine.",
-        "The Compliance Dashboard is your entry point: every component, "
-        "every finding in one view.",
-        "Continuous scans run asynchronously — even after release.",
-        "Findings get rescored against contextual risk. Your team only patches "
-        "what actually matters.",
-        "Every compliance signal correlates by component identity. Auditors "
-        "get evidence, not spreadsheets.",
+        "The Compliance Dashboard — every component, every finding, one view.",
+        "Continuous scans — asynchronous, even post-release.",
+        "Contextual rescoring — patch what matters, not the noise.",
+        "Identity-correlated evidence — auditors get answers, not spreadsheets.",
     ])
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS FOR SAP (tiles, internal outcomes) -----
@@ -737,14 +692,14 @@ def build():
          "Report from one shared primitive —\n"
          "ODG correlates all findings."),
         ("git-merge.svg", "Integration after acquisition",
-         "Let's be efficient:\n"
-         "Delivery schemes converge on one mechanism."),
+         "Acquired companies\n"
+         "converge onto one model."),
         ("radar.svg", "Cross-LoB security correlation",
          "Blast radius is one query —\n"
          "answered via the OCM coordinate system."),
         ("source-of-truth.svg", "One source of truth",
          "One signed descriptor per delivery.\n"
-         "Rebuild any landscape easily."),
+         "Rebuild any landscape."),
         ("heart-handshake.svg", "Ecosystem stewardship",
          "SAP investment compounds with\n"
          "the open-peer ecosystem."),
@@ -757,30 +712,27 @@ def build():
         add_tile_icon(s, x, y, icon)
 
     # ---- SLIDE 10a — WHERE OCM IS SHIPPING — OPEN ECOSYSTEM ---------------
-    # Internal-sponsor: open-peer wall, logo-based (matches the external
-    # deck's slide-10 pattern). Logos are clickable; the URL line below
-    # carries the references through PDF export and print.
+    # Internal-sponsor: open-peer wall, logo-based. Captions changed from
+    # logo-name duplication to substantive characterisations (drawn from
+    # each project's own homepage tagline) so the slide teaches what each
+    # project does, not just names them. Logos are clickable; the captions
+    # are now plain grey labels, not hyperlinks.
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "WHERE OCM IS SHIPPING — OPEN ECOSYSTEM")
     set_text(s, 2, "Peer in the open ecosystem.")
     delete_placeholder(s, 10)
-    # Section label ("OPEN PEER PROJECTS BUILDING ON OCM") removed — the
-    # eyebrow + title already frame the slide; an extra label between title
-    # and logos read as redundant chrome. Reclaimed space goes to bigger
-    # logos and a higher first row.
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
-         "https://gardener.cloud", "Gardener"),
+         "https://gardener.cloud", "Managed Kubernetes"),
         (ASSETS_DIR / "adopters" / "kyma" / "kyma-icon-color.svg",
-         "https://kyma-project.io", "Kyma"),
+         "https://kyma-project.io", "Cloud-native runtime"),
         (ASSETS_DIR / "adopters" / "open-control-plane" / "opencontrolplane-icon-color.svg",
-         "https://open-control-plane.io", "OpenControlPlane"),
+         "https://open-control-plane.io", "Control-plane framework"),
         (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
-         "https://konfidence.cloud", "Konfidence"),
+         "https://konfidence.cloud", "Reproducible delivery"),
     ], y_px=560, max_logo_w_px=360, max_logo_h_px=120, caption_pt=20)
-    # "Aligned with [NeoNephos logo]" — replaces the prior "And forthcoming…"
-    # caption + URL footer. Single, larger, clickable NeoNephos logo carries
-    # the alignment claim without needing an explicit URL line.
+    # "Aligned with [NeoNephos logo]" — single, larger, clickable NeoNephos
+    # logo carries the alignment claim.
     add_centred_proof_with_logo(
         s, 820,
         "Aligned with ",
@@ -790,22 +742,18 @@ def build():
         logo_caption="NeoNephos")
 
     # ---- SLIDE 10b — WHERE OCM IS SHIPPING — SAP -------------------------
-    # Internal-only delivery infrastructure converging on OCM. Just the
-    # bullet list — the rhetorical "stewardship is leverage" closing
-    # previously sat here, but slide 2 already states the thesis (Velocity /
-    # Window / Disinvestment) and slide 11 CTA is the actual closing
-    # surface. Removing the duplicate keeps this slide a clean adoption map.
+    # Internal-only delivery infrastructure converging on OCM. Bullets shortened
+    # to parallel "Name — short characterisation" form so the slide reads as
+    # proof ("running on five platforms already") rather than a teaching map.
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "WHERE OCM IS SHIPPING — SAP")
     set_text(s, 2, "Backbone of internal SAP delivery.")
     set_blue_box_bullets(s, 10, [
-        "Hyperspace — hosts the internal Dev Portal, lifecycle processes, "
-        "and delivery of SAP products.",
-        "Release-Based Shipment Channel (RBSC) — SAP delivery infrastructure for customer shipments.",
-        "Common Service Infrastructure (CSI) — the largest "
-        "internal-services footprint shared across SAP.",
-        "Steampunk — SAP BTP PaaS for ABAP Development. ",
-        "Greenhouse — Cloud operations platform designed to streamline the management of distributed infrastructure.",
+        "Hyperspace — internal Dev Portal & product delivery.",
+        "Release-Based Shipment Channel (RBSC) — customer shipment channel.",
+        "Common Service Infrastructure (CSI) — shared internal services platform.",
+        "Steampunk — ABAP Development PaaS.",
+        "Greenhouse — Cloud ops platform.",
     ])
 
     # ---- SLIDE 11 — CTA (sponsor / scale / standardize) -------------------
@@ -813,7 +761,7 @@ def build():
     set_text(s, 1, "Sponsor. Scale. Standardize.", color=C.WHITE)
     set_action_path_lines(s, 2, [
         ("Sponsor",     "Allocate engineering capacity to OCM stewardship in your LoB."),
-        ("Scale",       "Pack one regulated component delivery as an OCM component this quarter."),
+        ("Scale",       "Pack one regulated component as an OCM component this quarter."),
         ("Standardize", "Bring your LoB into the OCM steering conversation — SAP Slack #sap-tech-ocm."),
     ])
     add_brand_row(s)

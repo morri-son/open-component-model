@@ -559,8 +559,9 @@ def add_logo_row(slide, logos: list, y_px: int,
             r.font.name = "Aptos"
             r.font.size = Pt(caption_pt)
             r.font.color.rgb = C.GREY_MID
-            if url:
-                r.hyperlink.address = url
+            # Caption is plain descriptive text — the logo above carries the
+            # URL via pic.click_action. Earlier iterations let captions act
+            # as hyperlinks; dropped so captions read as labels, not links.
 
 
 # -----------------------------------------------------------------------------
@@ -627,13 +628,15 @@ def build():
     add_brand_row(s)
 
     # ---- SLIDE 2 — WHY NOW (V1, sovereignty-led) ----------------------------
+    # Column 1 (SOVEREIGNTY PRESSURE) shortened: the original full-clause
+    # description was reading like a definition (the audience reads the slide
+    # instead of listening). Now two short sentences.
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "WHY NOW")
     set_text(s, 2, "Sovereignty is no longer optional")
     set_text(s, 10, "SOVEREIGNTY PRESSURE")
-    set_text(s, 11, "Wherever the law puts the boundary — by jurisdiction, "
-                     "sector, or air-gap — software must be deliverable, "
-                     "verifiable, and operable inside it.")
+    set_text(s, 11, "The law draws boundaries — jurisdiction, sector, air-gap.\n"
+                     "Software must be deliverable inside each one.")
     set_text(s, 12, "REGULATION TIGHTENING")
     set_text(s, 13, "EU DORA · NIS2 · CRA. Provable supply-chain control, "
                      "not best effort.")
@@ -649,32 +652,30 @@ def build():
     set_text(s, 2, "Meet OCM. One identity, every boundary.")
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
                  x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
-
-    # ---- SLIDE 3' — SAME, BUT NATIVE PPT SHAPES -----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE ANSWER  (NATIVE)")
-    set_text(s, 2, "Meet OCM. One identity, every boundary.")
-    delete_placeholder(s, 10)
-    from slide_3_native import add_hub_and_spoke_native_diagram
-    add_hub_and_spoke_native_diagram(s, x=60, y=240, w=1800, h=780,
-                                      icons_dir=ICONS_DIR,
-                                      rasterize_recolored=rasterize_svg_recolored)
+    # Earlier iterations carried a NATIVE PPT shapes variant side-by-side
+    # for review; PowerPoint review settled on the raster SVG, native dropped.
 
     # ---- SLIDE 4a — THE SHIFT, SBOD (text-only) -----------------------------
+    # Three bullets (the fourth — "SBOD is the category SAP defined" — was
+    # dropped for the external deck; vendor-neutral NeoNephos governance is
+    # the credibility anchor for cold-start audiences, not SAP authorship).
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "THE SHIFT")
     set_text(s, 2, "SBOM lists. SBOD delivers.")
     set_blue_box_bullets(s, 10, [
-        "An SBOM tells you what's in your software. It was built for inventory.",
-        "A Software Bill of Delivery (SBOD) tells you what you delivered, "
-        "how to verify, transport, and operate it. "
-        "It was built for delivery.",
-        "The SBOD contains the SBOM. OCM doesn't replace your SBOM tooling — "
-        "it gives the SBOM an envelope that's compliance-native, signed once, "
-        "and travels intact across any boundary.",
+        "SBOM — what's inside your software. Built for inventory.",
+        "A Software Bill of Delivery (SBOD) — what you delivered, "
+        "how to verify, transport, operate. Built for delivery.",
+        "SBOD contains SBOM. OCM doesn't replace your SBOM tooling — "
+        "OCM gives the SBOM an envelope.",
     ])
 
-    # ---- SLIDE 4b — THE SHIFT (diagram only, ORIGINAL SVG) -------------------
+    # ---- SLIDE 4b — THE SHIFT (diagram, Option A only) ---------------------
+    # SBOD diagram. Earlier iterations carried three variants (raster + two
+    # native versions); PowerPoint reviews settled on the artifact-list +
+    # signature-bracket layout (Option A) so the picture shows SBOM as one
+    # line in a list — making the title claim ("SBOM lists, SBOD delivers")
+    # visible in the diagram instead of restated in words.
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD")
     set_text(s, 2, "SBOM lists. SBOD delivers.")
@@ -685,55 +686,24 @@ def build():
     if diagram:
         add_diagram(s, diagram, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 4b' — SAME, BUT NATIVE PPT SHAPES ----------------------------
-    # Side-by-side review version. The native one reframes content (SBOM is
-    # one of five elements, not the centrepiece) AND swaps the rendering
-    # technique (autoshapes + textboxes + recoloured icons instead of a
-    # rasterised SVG). User wants both visible to compare.
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD  (NATIVE A)")
-    set_text(s, 2, "SBOM lists. SBOD delivers.")
-    delete_placeholder(s, 10)
-    from slide_4b_native import add_sbod_native_diagram
-    add_sbod_native_diagram(s, x=60, y=240, w=1800, h=780,
-                             icons_dir=ICONS_DIR,
-                             rasterize_recolored=rasterize_svg_recolored,
-                             icon_stroke=STROKE_THIN)
-
-    # ---- SLIDE 4b'' — NATIVE VARIANT B (vertical artifact list + brace) -----
-    # Parallel native variant of the SBOM-inside-SBOD slide. Lifts the identity
-    # to a header above the artifact list, drops SBOM to one row of five, and
-    # uses a curly brace + lock to show that "one digest covers all". Lives
-    # alongside Variant A so the user can review them side-by-side.
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "THE SHIFT — SBOM INSIDE SBOD  (NATIVE B)")
-    set_text(s, 2, "SBOM lists. SBOD delivers.")
-    delete_placeholder(s, 10)
-    from slide_4b_native_v2 import add_sbom_inside_sbod_native_v2
-    add_sbom_inside_sbod_native_v2(s, x=60, y=240, w=1800, h=780,
-                                    icons_dir=ICONS_DIR,
-                                    rasterize_recolored=rasterize_svg_recolored,
-                                    icon_stroke=STROKE_THIN)
-
     # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
-    # Disarms three "we already have this" objections on one slide:
-    # signing, transport, compliance. Each column says "what you have today"
-    # then "what OCM adds" — OCM doesn't replace, it composes around them.
+    # Two-line columns: [status quo today] / [OCM contribution]. Cold-start
+    # audience explicitly benefits from the parallel structure — they read
+    # the differential ("OCM does X *instead of / on top of* Y") in one
+    # glance. Earlier multi-clause version was too long; punchlines like
+    # "one signature, every digest" are now delivered verbally by the speaker.
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "HOW OCM COMPOSES")
     set_text(s, 2, "Composes around your existing stack.")
     set_text(s, 10, "SIGNING")
-    set_text(s, 11, "Your tools sign artifacts.\n"
-                     "OCM signs the whole release — one signature, every digest.")
+    set_text(s, 11, "You sign artifacts.\nOCM signs the release.")
     set_text(s, 12, "TRANSPORT")
-    set_text(s, 13, "Registries differ by type and location.\n"
-                     "OCM moves the release across them all.")
+    set_text(s, 13, "Your registries differ.\nOCM moves the release across them.")
     set_text(s, 14, "COMPLIANCE")
     set_text(s, 15, "Your scanners see one artifact at a time.\n"
-                     "OCM correlates findings to the release. "
-                     "Compliance becomes continuous.")
+                     "OCM correlates findings to the release.")
 
-    # ---- SLIDE 6 — OCM IN ONE PICTURE (was slide 5) -------------------------
+    # ---- SLIDE 6 — OCM IN ONE PICTURE --------------------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "OCM IN ONE PICTURE")
     set_text(s, 2, "Pack · Sign · Transport · Deploy")
@@ -743,65 +713,47 @@ def build():
     )
     add_diagram(s, diagram6, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 6' — SAME, BUT NATIVE PPT SHAPES -----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "OCM IN ONE PICTURE  (NATIVE)")
-    set_text(s, 2, "Pack · Sign · Transport · Deploy")
-    delete_placeholder(s, 10)
-    from slide_6_native import add_pack_sign_transport_deploy_native
-    add_pack_sign_transport_deploy_native(s, x=60, y=240, w=1800, h=780,
-                                           icons_dir=ICONS_DIR,
-                                           rasterize_recolored=rasterize_svg_recolored,
-                                           icon_stroke=STROKE_THIN)
-
-    # ---- SLIDE 7a — SOVEREIGN-READY (text-only, was 6a) --------------------
+    # ---- SLIDE 7a — SOVEREIGN-READY (text-only) ----------------------------
+    # Anchor + characterisation + consequence — cold-start audience needs the
+    # third clause to ground unfamiliar terms (location-independent, day-2 ops,
+    # boundary). Internal-deck format is more compressed because sponsors know
+    # the vocabulary.
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "SOVEREIGN-READY")
     set_text(s, 2, "Trust, but verify.")
     set_blue_box_bullets(s, 10, [
-        "Identity is location-independent. A component carries its name "
-        "regardless of which registry it lives in.",
-        "Signatures are location-independent. Sign once at source; verify at "
-        "the destination, or at any hop in between, with no callback upstream.",
-        "Day-2 ops happen inside the boundary. Subscribe to the component and "
-        "pull upgrades on your schedule, scale across regions, all without "
-        "reaching back upstream.",
-        "On transfer into a sovereign environment, a component can carry every "
-        "artifact it needs along with it. The destination needs nothing more.",
+        "Identity — location-independent. "
+        "The component carries its name regardless of registry.",
+        "Signatures — location-independent. "
+        "Sign once at source, verify anywhere downstream. No callback upstream.",
+        "Day-2 ops — happen inside the boundary. "
+        "Subscribe, pull upgrades, scale across regions. Still no callback.",
+        "Transfer — self-contained. "
+        "Every artifact travels with the component.",
     ])
 
-    # ---- SLIDE 7b — SOVEREIGN-READY (diagram only, was 6b) -----------------
+    # ---- SLIDE 7b — SOVEREIGN-READY (diagram only) -------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
-    # Diagram fills the standard diagram slot (x=60 y=240, 1800×780).
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
                  x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
 
-    # ---- SLIDE 7b' — SAME, BUT NATIVE PPT SHAPES ----------------------------
-    s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "SOVEREIGN-READY — AIR-GAP  (NATIVE)")
-    set_text(s, 2, "Trust travels with the component.")
-    delete_placeholder(s, 10)
-    from slide_7b_native import add_sovereign_airgap_native
-    add_sovereign_airgap_native(s, x=60, y=240, w=1800, h=780,
-                                 icons_dir=ICONS_DIR,
-                                 rasterize_recolored=rasterize_svg_recolored,
-                                 icon_stroke=STROKE_THIN)
-
-    # ---- SLIDE 8 — SCAN / Compliance-native (was 7) ------------------------
+    # ---- SLIDE 8 — SCAN (shortened eyebrow) --------------------------------
+    # Eyebrow was "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR" — trimmed
+    # to just "SCAN" (positions as the 5th step after Pack/Sign/Transport/Deploy
+    # on slide 6). ODG definition stays as bullet 1 because the cold-start
+    # audience doesn't know the product.
     s = prs.slides.add_slide(layouts["Plain"])
-    set_text(s, 1, "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR")
+    set_text(s, 1, "SCAN")
     set_text(s, 2, "Compliance as a system property —\nnot a quarterly retrofit.")
     set_blue_box_bullets(s, 10, [
-        "Open Delivery Gear (ODG) is the OCM compliance automation engine.",
-        "The Compliance Dashboard is your entry point: every component, "
-        "every finding, every signature in one view.",
-        "Continuous scans run asynchronously — even after release.",
-        "Findings get rescored against contextual risk, so your team patches "
-        "what actually matters.",
-        "Every compliance signal correlates by component identity. Auditors "
-        "get evidence, not spreadsheets.",
+        "Open Delivery Gear (ODG) — OCM's compliance automation engine, "
+        "built on the same primitives.",
+        "The Compliance Dashboard — every component, every finding, one view.",
+        "Continuous scans — asynchronous, even post-release.",
+        "Contextual rescoring — patch what matters, not the noise.",
+        "Identity-correlated evidence — auditors get answers, not spreadsheets.",
     ])
 
     # ---- SLIDE 9 — WHAT OCM UNLOCKS (tiles, was 8) -------------------------
@@ -829,38 +781,50 @@ def build():
         x, y = tile_origin(i)
         add_tile_icon(s, x, y, icon)
 
-    # ---- SLIDE 10 — Adopters (two-column logo wall, was 9) ------------------
-    # Plain layout + manual logo rows (not enough placeholders for a logo
-    # wall; cleaner to draw it inline than add a new layout to the template).
+    # ---- SLIDE 10 — TRUSTED IN PRODUCTION (two-tier logo wall) --------------
+    # Title is four parallel stop-sentences: "SAP stewards. NeoNephos governs.
+    # Production-grade. Sovereign-ready." — each carries one of the four
+    # credibility claims the slide needs to land. Logo wall is then structured
+    # in two visually-distinct rows so the audience reads the categorisation
+    # without sub-labels:
+    #   - Top row: production adopters (BWI, SAP NS2) — the "trusted in
+    #     production" half of the title
+    #   - Bottom row: peer projects (Gardener, Kyma, OCP, Platform Mesh) —
+    #     the "aligned" half, with NeoNephos resolving as footer logo
+    # Logos are clickable; no caption-as-hyperlink (the captions are now
+    # absent for top row, name-only for icon-only logos in bottom row).
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "TRUSTED IN PRODUCTION")
-    set_text(s, 2, "Aligned with NeoNephos.")
-    # Plain layout has a body placeholder at idx=10. We want neither text nor
-    # an empty container; the logo rows below replace it. Section label
-    # ("ADOPTED BY ENTERPRISES…") removed: the eyebrow + title already frame
-    # the slide; an extra label on top of the logos read as redundant chrome.
-    # Reclaimed vertical space goes to larger logos and a higher first row.
+    set_text(s, 2, "SAP stewards. NeoNephos governs.\n"
+                    "Production-grade. Sovereign-ready.")
     delete_placeholder(s, 10)
+    # Top row — production adopters (no captions; Wordmark logos carry the name).
     add_logo_row(s, [
-        (ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
-         "https://neonephos.org", "NeoNephos"),
-        (ASSETS_DIR / "adopters" / "sap" / "sap-horizontal-color.svg",
-         "https://www.sap.com", "SAP"),
         (ASSETS_DIR / "adopters" / "bwi" / "bwi-horizontal-color.svg",
-         "https://www.bwi.de", "BWI"),
+         "https://www.bwi.de"),
         (ASSETS_DIR / "adopters" / "sap-ns2" / "sap-ns2-getlogovector.png",
-         "https://sapns2.com", "SAP NS2"),
-    ], y_px=550, max_logo_w_px=320, max_logo_h_px=96, caption_pt=20)
+         "https://sapns2.com"),
+    ], y_px=520, max_logo_w_px=360, max_logo_h_px=110, caption_pt=18)
+    # Bottom row — peer projects. Kyma + OpenControlPlane carry captions
+    # because they are icon-only logos.
     add_logo_row(s, [
         (ASSETS_DIR / "adopters" / "gardener" / "gardener-horizontal-color.svg",
-         "https://gardener.cloud", "Gardener"),
-        (ASSETS_DIR / "adopters" / "konfidence" / "konfidence-horizontal-light.svg",
-         "https://konfidence.cloud", "Konfidence"),
+         "https://gardener.cloud"),
+        (ASSETS_DIR / "adopters" / "kyma" / "kyma-icon-color.svg",
+         "https://kyma-project.io", "Kyma"),
         (ASSETS_DIR / "adopters" / "open-control-plane" / "opencontrolplane-icon-color.svg",
          "https://open-control-plane.io", "OpenControlPlane"),
         (ASSETS_DIR / "adopters" / "platform-mesh" / "platform-mesh-horizontal-color.svg",
-         "https://platform-mesh.io", "Platform Mesh"),
-    ], y_px=790, max_logo_w_px=320, max_logo_h_px=96, caption_pt=20)
+         "https://platform-mesh.io"),
+    ], y_px=720, max_logo_w_px=320, max_logo_h_px=96, caption_pt=18)
+    # NeoNephos resolves the "Aligned with" claim at slide footer.
+    add_centred_proof_with_logo(
+        s, 920,
+        "Aligned with ",
+        ASSETS_DIR / "adopters" / "neonephos" / "neonephos-foundation-horizontal-color.svg",
+        "",
+        logo_url="https://neonephos.org",
+        logo_caption="NeoNephos")
 
     # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
     s = prs.slides.add_slide(layouts["CTA"])
@@ -942,6 +906,82 @@ def add_source_line(slide, y_px: int, text: str):
     r.font.name = "Aptos"
     r.font.size = Pt(13)
     r.font.color.rgb = C.GREY_MID
+
+
+def add_centred_proof_with_logo(slide, y_px: int, text_before: str,
+                                 logo_path: Path, text_after: str,
+                                 logo_h_px: int = 40,
+                                 logo_url: str | None = None,
+                                 logo_caption: str | None = None,
+                                 caption_pt: int = 20):
+    """Centred proof line with an inline image substituted for one word.
+
+    Used on slide 10 (TRUSTED IN PRODUCTION) as "Aligned with [NeoNephos
+    logo]". Renders text_before + <logo> + text_after as three siblings on
+    the same baseline, all horizontally centred as a group. Approximates
+    text widths from character counts (python-pptx has no font-metrics API).
+    Mirrors the helper in build_pptx_internal_sponsor.py — deliberate
+    duplication, both scripts are self-contained.
+    """
+    from pptx.enum.text import PP_ALIGN
+    char_w_px = 11.0
+    GAP_PX = 16
+    tb_before_w_px = int(len(text_before) * char_w_px) + 8
+    tb_after_w_px = int(len(text_after) * char_w_px) + 8
+
+    if logo_path.suffix.lower() == ".svg":
+        img = rasterize_svg(logo_path, target_w_px=600)
+    else:
+        img = logo_path
+    pic = slide.shapes.add_picture(str(img), px(0), px(0))
+    ratio = px(logo_h_px) / pic.height
+    pic.height = px(logo_h_px)
+    pic.width = int(pic.width * ratio)
+    logo_w_px = pic.width / PX
+
+    total_w_px = tb_before_w_px + GAP_PX + logo_w_px + GAP_PX + tb_after_w_px
+    start_x_px = (SLIDE_W_PX - total_w_px) / 2
+
+    logo_y_px = y_px + 2
+    text_y_px = y_px
+
+    tb1 = slide.shapes.add_textbox(px(start_x_px), px(text_y_px),
+                                    px(tb_before_w_px), px(50))
+    tf1 = tb1.text_frame
+    tf1.margin_left = tf1.margin_right = 0
+    tf1.margin_top = tf1.margin_bottom = 0
+    p1 = tf1.paragraphs[0]
+    p1.alignment = PP_ALIGN.RIGHT
+    r1 = p1.add_run()
+    r1.text = text_before
+    r1.font.name = "Aptos"
+    r1.font.size = Pt(20)
+    r1.font.italic = False
+    r1.font.color.rgb = C.BLUE_MID
+
+    pic.left = px(start_x_px + tb_before_w_px + GAP_PX)
+    pic.top = px(logo_y_px)
+    if logo_url:
+        pic.click_action.hyperlink.address = logo_url
+
+    if logo_caption:
+        cap_y = logo_y_px + logo_h_px + 6
+        cap_w = max(int(total_w_px), 200)
+        cap_x = start_x_px + (total_w_px - cap_w) / 2
+        cb = slide.shapes.add_textbox(px(cap_x), px(cap_y), px(cap_w), px(28))
+        cf = cb.text_frame
+        cf.margin_left = cf.margin_right = 0
+        cf.margin_top = cf.margin_bottom = 0
+        cp = cf.paragraphs[0]
+        cp.alignment = PP_ALIGN.CENTER
+        cr = cp.add_run()
+        cr.text = logo_caption
+        cr.font.name = "Aptos"
+        cr.font.size = Pt(caption_pt)
+        cr.font.color.rgb = C.GREY_MID
+        # Caption is descriptive label only; the logo (pic.click_action) carries
+        # the URL. Earlier the caption was also a hyperlink — dropped to match
+        # the captions-are-labels convention adopted in add_logo_row.
 
 
 # Glossary on the appendix slide. Term → expansion. Two-column layout, term

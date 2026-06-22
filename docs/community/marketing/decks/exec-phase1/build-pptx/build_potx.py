@@ -131,7 +131,7 @@ def srgb(hex_color: str):
     return el
 
 
-def text_pr(size_pt=None, bold=None, color_hex=None, font="Inter",
+def text_pr(size_pt=None, bold=None, color_hex=None, font="Aptos",
             all_caps=False, letter_spacing_pt=None):
     """Make <a:rPr ...> with common attributes."""
     rPr = etree.Element(qa("rPr"))
@@ -155,7 +155,7 @@ def text_pr(size_pt=None, bold=None, color_hex=None, font="Inter",
 
 def make_textbox(name, idx, x, y, w, h, *, placeholder_type=None,
                  placeholder_idx=None, default_text="",
-                 size_pt=18, bold=False, color_hex="000000", font="Inter",
+                 size_pt=21, bold=False, color_hex="000000", font="Aptos",
                  all_caps=False, letter_spacing_pt=None,
                  anchor="t", algn=None, line_spacing_pct=None,
                  no_autofit=False):
@@ -314,12 +314,12 @@ def build_theme_xml() -> bytes:
     </a:clrScheme>
     <a:fontScheme name="OCM">
       <a:majorFont>
-        <a:latin typeface="Inter Display"/>
+        <a:latin typeface="Aptos Display"/>
         <a:ea typeface=""/>
         <a:cs typeface=""/>
       </a:majorFont>
       <a:minorFont>
-        <a:latin typeface="Inter"/>
+        <a:latin typeface="Aptos"/>
         <a:ea typeface=""/>
         <a:cs typeface=""/>
       </a:minorFont>
@@ -501,23 +501,23 @@ def layout_hero() -> bytes:
         "Hero Title Line 1", 10, 96, 180, 1700, 160,
         placeholder_type="title", placeholder_idx=1,
         default_text="Secure Delivery for",
-        size_pt=115, bold=True, color_hex="FFFFFF", algn="l",
-        font="Inter Display",
+        size_pt=132, bold=True, color_hex="FFFFFF", algn="l",
+        font="Aptos Display",
         no_autofit=True,
     ))
     shapes.append(make_textbox(
         "Hero Title Line 2", 11, 96, 345, 1700, 160,
         placeholder_type="body", placeholder_idx=2,
         default_text="Sovereign Clouds",
-        size_pt=115, bold=True, color_hex="5CD6FF", algn="l",
-        font="Inter Display",
+        size_pt=132, bold=True, color_hex="5CD6FF", algn="l",
+        font="Aptos Display",
         no_autofit=True,
     ))
     shapes.append(make_textbox(
         "Hero Subtitle", 12, 96, 560, 1700, 90,
         placeholder_type="body", placeholder_idx=3,
         default_text="Subtitle — one sentence describing the deck.",
-        size_pt=30, color_hex="5CD6FF", algn="l",
+        size_pt=35, color_hex="5CD6FF", algn="l",
         line_spacing_pct=1.15,
         no_autofit=True,
     ))
@@ -525,7 +525,7 @@ def layout_hero() -> bytes:
         "Hero Org Line", 13, 96, 690, 1700, 60,
         placeholder_type="body", placeholder_idx=4,
         default_text="Open Component Model — open source, NeoNephos Foundation.",
-        size_pt=24, color_hex="FFFFFF", algn="l",
+        size_pt=28, color_hex="FFFFFF", algn="l",
         no_autofit=True,
     ))
     return wrap_layout("title", "Hero", shapes_xml(*shapes), bg_hex="0A1530")
@@ -549,14 +549,14 @@ def layout_cta() -> bytes:
         "CTA Title", 10, 96, 320, 1700, 100,
         placeholder_type="title", placeholder_idx=1,
         default_text="Call to action",
-        size_pt=56, bold=True, color_hex="FFFFFF",
-        font="Inter Display",
+        size_pt=64, bold=True, color_hex="FFFFFF",
+        font="Aptos Display",
     ))
     shapes.append(make_textbox(
         "CTA Body", 11, 96, 460, 1700, 400,
         placeholder_type="body", placeholder_idx=2,
         default_text="Three-line CTA bullets go here.",
-        size_pt=22, color_hex="FFFFFF",
+        size_pt=25, color_hex="FFFFFF",
     ))
     return wrap_layout("obj", "CTA", shapes_xml(*shapes), bg_hex="0A1530")
 
@@ -570,7 +570,7 @@ def layout_three_column() -> bytes:
         "Eyebrow", 10, 120, 255, 1680, 48,
         placeholder_type="body", placeholder_idx=1,
         default_text="EYEBROW",
-        size_pt=28, bold=True, color_hex="0F6BFF",
+        size_pt=32, bold=True, color_hex="0F6BFF",
         all_caps=True, letter_spacing_pt=1.4,
     ))
     # Title
@@ -578,8 +578,8 @@ def layout_three_column() -> bytes:
         "Title", 11, 120, 308, 1680, 200,
         placeholder_type="title", placeholder_idx=2,
         default_text="Section title goes here.",
-        size_pt=64, bold=True, color_hex="000000",
-        font="Inter Display", line_spacing_pct=0.9,
+        size_pt=74, bold=True, color_hex="000000",
+        font="Aptos Display", line_spacing_pct=0.9,
     ))
     # Three columns
     margin_x = 120
@@ -601,7 +601,7 @@ def layout_three_column() -> bytes:
             f"Col{i+1} Header", next_id, cx, col_y + 16, col_w, 56,
             placeholder_type="body", placeholder_idx=10 + i * 2,
             default_text=f"COLUMN {i+1} HEADER",
-            size_pt=20, bold=True, color_hex="0F6BFF",
+            size_pt=23, bold=True, color_hex="0F6BFF",
             all_caps=True, letter_spacing_pt=1.3,
             no_autofit=True,
         ))
@@ -614,7 +614,7 @@ def layout_three_column() -> bytes:
             f"Col{i+1} Body", next_id, cx, col_y + 84, col_w, 460,
             placeholder_type="body", placeholder_idx=11 + i * 2,
             default_text=f"Column {i+1} body. Replace with one or two short sentences.",
-            size_pt=22, color_hex="000000",
+            size_pt=25, color_hex="000000",
         ))
         next_id += 1
     # Footer
@@ -640,13 +640,13 @@ def layout_diagram() -> bytes:
     shapes = [
         make_textbox("Eyebrow", 10, 120, 75, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=28, bold=True,
+                     default_text="EYEBROW", size_pt=32, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
         make_textbox("Title", 11, 120, 128, 1680, 80,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
-                     size_pt=64, bold=True, color_hex="000000",
-                     font="Inter Display", line_spacing_pct=0.9),
+                     size_pt=74, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
         _picture_placeholder("Diagram", 12, 60, 240, 1800, 780, ph_idx=10),
         _footer_shape(13),
     ]
@@ -659,13 +659,13 @@ def layout_tiles() -> bytes:
     shapes = [
         make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=28, bold=True,
+                     default_text="EYEBROW", size_pt=32, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
         make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
-                     size_pt=64, bold=True, color_hex="000000",
-                     font="Inter Display", line_spacing_pct=0.9),
+                     size_pt=74, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
     ]
     # 3x2 grid
     x0, y0 = 120, 520
@@ -693,7 +693,7 @@ def layout_tiles() -> bytes:
             f"Tile{i+1} Label", next_id, x + 88, y + 24, tile_w - 88 - 24, 48,
             placeholder_type="body", placeholder_idx=20 + i * 2,
             default_text=f"Tile {i+1} label",
-            size_pt=18, bold=True, color_hex="0F6BFF",
+            size_pt=21, bold=True, color_hex="0F6BFF",
             anchor="ctr",
         ))
         next_id += 1
@@ -702,7 +702,7 @@ def layout_tiles() -> bytes:
             f"Tile{i+1} Body", next_id, x + 24, y + 96, tile_w - 48, tile_h - 116,
             placeholder_type="body", placeholder_idx=21 + i * 2,
             default_text="One short sentence describing this tile.",
-            size_pt=18, color_hex="000000",
+            size_pt=21, color_hex="000000",
         ))
         next_id += 1
     shapes.append(_footer_shape(next_id))
@@ -715,21 +715,21 @@ def layout_two_column() -> bytes:
     shapes = [
         make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=28, bold=True,
+                     default_text="EYEBROW", size_pt=32, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
         make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
-                     size_pt=64, bold=True, color_hex="000000",
-                     font="Inter Display", line_spacing_pct=0.9),
+                     size_pt=74, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
         make_textbox("Left Body", 12, 120, 520, 820, 460,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Left column body.",
-                     size_pt=22, color_hex="000000"),
+                     size_pt=25, color_hex="000000"),
         make_textbox("Right Body", 13, 980, 520, 820, 460,
                      placeholder_type="body", placeholder_idx=11,
                      default_text="Right column body.",
-                     size_pt=22, color_hex="000000"),
+                     size_pt=25, color_hex="000000"),
         _footer_shape(14),
     ]
     return wrap_layout("twoObj", "Content / 2-Column", shapes_xml(*shapes))
@@ -742,9 +742,9 @@ def layout_section() -> bytes:
         make_textbox("Section Title", 10, 80, 460, 1760, 200,
                      placeholder_type="title", placeholder_idx=1,
                      default_text="Section",
-                     size_pt=72, bold=True, color_hex="FFFFFF",
+                     size_pt=83, bold=True, color_hex="FFFFFF",
                      anchor="ctr", algn="ctr",
-                     font="Inter Display"),
+                     font="Aptos Display"),
     ]
     return wrap_layout("secHead", "Section Divider", shapes_xml(*shapes),
                         bg_hex="0F6BFF")
@@ -758,17 +758,17 @@ def layout_plain() -> bytes:
     shapes = [
         make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=28, bold=True,
+                     default_text="EYEBROW", size_pt=32, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
         make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
-                     size_pt=64, bold=True, color_hex="000000",
-                     font="Inter Display", line_spacing_pct=0.9),
+                     size_pt=74, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
         make_textbox("Body", 12, 120, 580, 1680, 400,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Body text.",
-                     size_pt=22, color_hex="000000"),
+                     size_pt=25, color_hex="000000"),
         _footer_shape(13),
     ]
     return wrap_layout("obj", "Plain", shapes_xml(*shapes))
@@ -781,17 +781,17 @@ def layout_plain_compact() -> bytes:
     shapes = [
         make_textbox("Eyebrow", 10, 120, 255, 1680, 48,
                      placeholder_type="body", placeholder_idx=1,
-                     default_text="EYEBROW", size_pt=28, bold=True,
+                     default_text="EYEBROW", size_pt=32, bold=True,
                      color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
         make_textbox("Title", 11, 120, 308, 1680, 200,
                      placeholder_type="title", placeholder_idx=2,
                      default_text="Section title goes here.",
-                     size_pt=64, bold=True, color_hex="000000",
-                     font="Inter Display", line_spacing_pct=0.9),
+                     size_pt=74, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
         make_textbox("Body", 12, 120, 520, 1680, 460,
                      placeholder_type="body", placeholder_idx=10,
                      default_text="Body text.",
-                     size_pt=22, color_hex="000000"),
+                     size_pt=25, color_hex="000000"),
         _footer_shape(13),
     ]
     return wrap_layout("obj", "Plain / Compact", shapes_xml(*shapes))
@@ -803,7 +803,7 @@ def _footer_shape(idx):
     return make_textbox(
         "Footer", idx, 120, SLIDE_H_PX - 32, SLIDE_W_PX - 240, 24,
         default_text="OPEN COMPONENT MODEL · OCM.SOFTWARE",
-        size_pt=9, color_hex="6B7280", all_caps=True, letter_spacing_pt=0.5,
+        size_pt=10, color_hex="6B7280", all_caps=True, letter_spacing_pt=0.5,
     )
 
 
@@ -854,13 +854,13 @@ USER_FONT_DIR = Path.home() / "Library" / "Fonts"
 
 EMBEDDED_FONTS = [
     # (typeface name, {style: TTF filename})
-    ("Inter", {
+    ("Aptos", {
         "regular":     "Inter-Regular.ttf",
         "bold":        "Inter-Bold.ttf",
         "italic":      "Inter-Italic.ttf",
         "boldItalic":  "Inter-BoldItalic.ttf",
     }),
-    ("Inter Display", {
+    ("Aptos Display", {
         "regular":    "InterDisplay-Regular.ttf",
         "bold":       "InterDisplay-Bold.ttf",
         "italic":     "InterDisplay-Italic.ttf",
@@ -1090,15 +1090,18 @@ def build():
         )
         out_archive_data[prs_rels_key] = rels_xml.encode("utf-8")
 
-    # 2g. Embed Inter font files so the deck renders identically on machines
-    #     where Inter is not installed (Windows users who only have Calibri,
-    #     fresh macOS without manual font install). PowerPoint stores embedded
-    #     fonts as ppt/fonts/font*.fntdata (raw TTF/OTF bytes — no special
-    #     wrapper), referenced from <p:embeddedFontLst> in presentation.xml
-    #     with one <p:embeddedFont> per typeface and per-style relationships
-    #     to the part. The Default Extension="fntdata" content-type maps the
-    #     part to application/x-fontdata.
-    embed_fonts(out_archive_data)
+    # 2g. (Font embedding intentionally removed.) Aptos is delivered as an
+    #     Office 365 cloud font on Desktop (Win/Mac), Web (browser), and
+    #     mobile — no install required for any current M365 recipient. We
+    #     used to embed Inter via ppt/fonts/font*.fntdata, but Office 365
+    #     Web refuses to open .pptx files with custom-font embeds (a hard
+    #     platform limit, not a format bug). Switching the theme typeface
+    #     to Aptos + dropping the embed gets us identical rendering across
+    #     every PowerPoint surface without the Web-open error.
+    #
+    # If you ever need to re-introduce embedding for offline / non-M365
+    # receivers, call embed_fonts(out_archive_data) here and re-add
+    # `<Default Extension="fntdata" .../>` to build_content_types_xml.
 
     # 3. Write the final .potx archive.
     OUTPUT_POTX.unlink(missing_ok=True)
@@ -1121,7 +1124,6 @@ def build_content_types_xml(n_layouts: int) -> str:
   <Default Extension="jpeg" ContentType="image/jpeg"/>
   <Default Extension="jpg" ContentType="image/jpeg"/>
   <Default Extension="png" ContentType="image/png"/>
-  <Default Extension="fntdata" ContentType="application/x-fontdata"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.template.main+xml"/>
   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
   {layout_overrides}

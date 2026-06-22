@@ -65,11 +65,15 @@ ICONS = [
     "list-search.svg",
     "lock.svg",
     "package.svg",
+    "package-export.svg",
+    "radar.svg",
     "registry.svg",
+    "report-analytics.svg",
     "rocket.svg",
     "shield.svg",
     "shield-check.svg",
     "signature.svg",
+    "source-of-truth.svg",
     "world.svg",
 ]
 
