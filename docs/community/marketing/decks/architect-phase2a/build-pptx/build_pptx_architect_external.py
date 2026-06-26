@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build OCM-Sovereign-Delivery-Architect-External.pptx — 15-slide trunk + appendix.
+Build OCM-Story-Architect-External.pptx — 15-slide trunk + appendix.
 
 Trunk story arc (locked, autonomous-loop handoff §4):
 
@@ -62,7 +62,7 @@ THEME_DIR = DECK_DIR / "theme"
 RASTER_DIR = SCRIPT_DIR / "_raster"
 
 POTX_PATH = DECK_DIR / "OCM-Master.potx"
-OUTPUT_PPTX = DECK_DIR / "OCM-Sovereign-Delivery-Architect-External.pptx"
+OUTPUT_PPTX = DECK_DIR / "OCM-Story-Architect-External.pptx"
 
 RASTER_DIR.mkdir(exist_ok=True)
 

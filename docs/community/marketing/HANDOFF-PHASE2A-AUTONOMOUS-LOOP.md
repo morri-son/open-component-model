@@ -58,7 +58,7 @@ Produce a clean, presentable, technically correct external-architect deck — **
 ```bash
 cd docs/community/marketing/decks/architect-phase2a && \
   rm -rf _verify && mkdir _verify && \
-  soffice --headless --convert-to pdf OCM-Sovereign-Delivery-Architect-External.pptx --outdir _verify && \
+  soffice --headless --convert-to pdf OCM-Story-Architect-External.pptx --outdir _verify && \
   pdftoppm -r 100 _verify/OCM-Sovereign-Delivery-Architect-External.pdf _verify/slide -f 1 -l 15 -png
 ```
 
