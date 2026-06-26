@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build OCM-Sovereign-Delivery-Architect-External.pptx — 15-slide trunk.
+Build OCM-Sovereign-Delivery-Architect-External.pptx — 15-slide trunk + appendix.
 
 Trunk story arc (locked, autonomous-loop handoff §4):
 
@@ -10,18 +10,23 @@ Trunk story arc (locked, autonomous-loop handoff §4):
   4  Positioning   One wrapper. All artifacts. Signed once.
   5  Constructor   What you write. (YAML)
   6  Descriptor    What gets signed and travels. (YAML)
-  7  Overview      Pack · Sign · Transport · Deploy. (reused SVG)
-  8  Pack          Bundle once. Name once.
-  9  Sign          One signature shape. Three trust models.
+  7  Overview      THE FOUR MOVES — Pack · Sign · Transport · Deploy.
+  8  Compose       Service carries resources. Product carries references.
+  9  Sign          Same signed object. Three trust models.
  10  Transport     Three patterns, one command.
  11  Deploy        Repository → Component → Resource → Deployer.
  12  Composition   One product. Three components. One line to upgrade.
- 13  What's sharp  Three honest edges.
- 14  Adoption     Two paths to a first OCM component in production.
- 15  CTA           Build with us.
+ 13  Adoption      Two paths to a first OCM component in production.
+ 14  What's sharp  Three honest edges.
+ 15  CTA           Evaluate · Pilot · Engage.
 
-No warm-ups, no appendix, no hidden trademarks (the user copies trademark
-slides in from the exec deck after the loop completes — handoff §2).
+Appendix (pull-on-demand, not in main render order narration):
+
+ 16  Replication   Alongside the chain. Not within it.
+
+No warm-ups, no appendix mentions in the main 15-slide narration,
+no hidden trademarks (the user copies trademark slides in from the
+exec deck after the loop completes — handoff §2).
 
 Usage:
     .venv/bin/python build_pptx_architect_external.py
@@ -596,6 +601,7 @@ def build():
     build_slide_14_adoption(prs, layouts)        # was 14, now slide 13
     build_slide_13_whats_sharp(prs, layouts)     # was 13, now slide 14
     build_slide_15_cta(prs, layouts)
+    build_slide_16_appendix_replication(prs, layouts)  # appendix, out of main arc
 
     # Embed condensed presenter prompts into the notes pane of each slide.
     for idx, slide in enumerate(prs.slides, start=1):
@@ -745,7 +751,7 @@ def build_slide_3_insight(prs, layouts):
     add_left_bullets(
         s, x_px=120, y_px=540, w_px=940, h_px=420,
         items=[
-            "Coordinates — name and version of the component. "
+            "Component identity — name and version of the component. "
             "Globally unique. Location-agnostic.",
             "Digest — every resource inside the component carries a "
             "content hash. Computed once.",
@@ -771,10 +777,10 @@ def build_slide_4_positioning(prs, layouts):
     set_text(s, 1, "WHERE OCM SITS")
     set_text(s, 2, "One component wraps every artifact, signed once.")
     set_text(s, 10, "ANY FORMAT")
-    set_text(s, 11, "Helm, OCI, SBOM, npm, binaries.\n"
-                     "Each becomes a resource inside the component.")
+    set_text(s, 11, "OCI, Helm, configs, SBOMs, binaries.\n"
+                     "Artifact type is free-form; access types are pluggable.")
     set_text(s, 12, "ANY LOCATION")
-    set_text(s, 13, "Coordinates travel.\n"
+    set_text(s, 13, "Component identity travels.\n"
                      "The component carries its name across registries.")
     set_text(s, 14, "ONE SIGNATURE")
     set_text(s, 15, "Covers every digest in the component.\n"
@@ -913,9 +919,14 @@ def build_slide_7_overview(prs, layouts):
     Reuses the exec-deck SVG. The tile labels inside the SVG ("Bring your
     own GitOps", "K8s Controllers") read as exec-deck legacy in the
     architect context; the eyebrow + footer caption reframe verbally so
-    the speaker doesn't have to apologise for the inherited art."""
+    the speaker doesn't have to apologise for the inherited art.
+
+    Eyebrow is THE FOUR MOVES (not FOUR VERBS): docs frame OCM as a
+    lifecycle, not as a CLI verb list. The CLI verbs you'll actually
+    type are `ocm add cv` / `ocm sign cv` / `ocm transfer cv` / kubectl
+    apply against the Deployer — the speaker notes bridge to that."""
     s = prs.slides.add_slide(layouts["Content / Diagram"])
-    set_text(s, 1, "FOUR VERBS, ONE COMPONENT")
+    set_text(s, 1, "THE FOUR MOVES")
     set_text(s, 2, "Pack · Sign · Transport · Deploy.")
     diagram = (find_diagram("05-pack-sign-transport-deploy-v2.svg")
                 or find_diagram("05-pack-sign-transport-deploy.svg"))
@@ -929,16 +940,22 @@ def build_slide_7_overview(prs, layouts):
 
 
 def build_slide_8_pack(prs, layouts):
-    """8 COMPOSE — Components compose. Leaf vs product/release.
+    """8 COMPOSE — Components compose. Service vs product/release.
 
     Repurposed from Pack to introduce composition before slide 12 needs it.
-    Real architecture: leaf components carry resources; product/release
-    components have no resources of their own — they reference children
+    Real architecture: service components carry resources; product/release
+    components have no resources of their own — they reference services
     by name and version. Two YAML snippets side by side show the shape.
+
+    Terminology aligned to docs (`how-to/model-products.md`): SERVICE
+    component (was "LEAF") carries resources; PRODUCT component composes
+    services by `componentReferences:`. Closing phrase "One release unit,
+    transferable, signable end-to-end" anchors the release noun the deck
+    title rests on.
     """
     s = prs.slides.add_slide(layouts["Content / Diagram Compact"])
     set_text(s, 1, "COMPOSE")
-    set_text(s, 2, "Leaf carries resources. Product carries references.")
+    set_text(s, 2, "Service carries resources. Product carries references.")
     delete_placeholder(s, 10)
 
     # Intro text aligned with title (x=120).
@@ -948,12 +965,12 @@ def build_slide_8_pack(prs, layouts):
     ip.alignment = PP_ALIGN.LEFT
     ip.line_spacing = 1.30
     for text, kind in [
-        ("Leaf components ", "accent"),
+        ("Service components ", "accent"),
         ("carry resources — images, charts, configs, SBOMs.\n", "normal"),
-        ("A product or release component ", "accent"),
+        ("A product component ", "accent"),
         ("composes other components by ", "normal"),
         ("name and version", "accent"),
-        (". One unit, transferable, signable end-to-end.", "normal"),
+        (". One release unit, transferable, signable end-to-end.", "normal"),
     ]:
         r = ip.add_run()
         r.text = text
@@ -970,7 +987,7 @@ def build_slide_8_pack(prs, layouts):
     COM = C.GREY_MID
 
     leaf_yaml = [
-        ("# leaf components — carry the artifacts",          COM),
+        ("# service components — carry the artifacts",       COM),
         ("components:",                                      K),
         ("  - name: acme.org/sovereign/notes",               V),
         ("    version: 1.0.0",                               V),
@@ -988,16 +1005,16 @@ def build_slide_8_pack(prs, layouts):
     ]
     product_yaml = [
         ("# product / release component",                     COM),
-        ("component:",                                        K),
-        ("  name: acme.org/sovereign/product",                V),
-        ("  version: 1.0.0",                                  V),
-        ("  componentReferences:",                            K),
-        ("    - name: notes",                                 V),
-        ("      componentName: acme.org/sovereign/notes",     V),
-        ("      version: 1.0.0",                              V),
-        ("    - name: postgres",                              V),
-        ("      componentName: acme.org/sovereign/postgres",  V),
-        ("      version: 1.0.0",                              V),
+        ("components:",                                        K),
+        ("  - name: acme.org/sovereign/product",                V),
+        ("    version: 1.0.0",                                  V),
+        ("    componentReferences:",                            K),
+        ("      - name: notes",                                 V),
+        ("        componentName: acme.org/sovereign/notes",     V),
+        ("        version: 1.0.0",                              V),
+        ("      - name: postgres",                              V),
+        ("        componentName: acme.org/sovereign/postgres",  V),
+        ("        version: 1.0.0",                              V),
         ("# no resources of its own — pure composition",      COM),
     ]
     # Two side-by-side boxes, leaner widths, arrow between.
@@ -1021,7 +1038,7 @@ def build_slide_8_pack(prs, layouts):
     # Labels above each block.
     ll_tb, ll_tf = add_textbox(s, left_x, box_y - 50, box_w, 36)
     lp = ll_tf.paragraphs[0]; lp.alignment = PP_ALIGN.LEFT
-    lr = lp.add_run(); lr.text = "LEAF"
+    lr = lp.add_run(); lr.text = "SERVICE"
     lr.font.name = "Aptos"; lr.font.size = Pt(22); lr.font.bold = True
     lr.font.color.rgb = C.GREY_MID
 
@@ -1031,7 +1048,7 @@ def build_slide_8_pack(prs, layouts):
     rr.font.name = "Aptos"; rr.font.size = Pt(22); rr.font.bold = True
     rr.font.color.rgb = C.BLUE
 
-    # Composition arrow leaf → product.
+    # Composition arrow service → product.
     arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW,
                                 px(arrow_x), px(arrow_y),
                                 px(arrow_w), px(arrow_h))
@@ -1042,13 +1059,20 @@ def build_slide_8_pack(prs, layouts):
 
 def build_slide_9_sign(prs, layouts):
     """9 SIGN — One signature shape. Three trust models.
-    All three algorithms are GA per project guidance."""
+
+    All three algorithms shown are stable on the same v1alpha1 surface:
+    Plain RSA (bare public-key pinning, no PKI), GPG (OpenPGP keyrings),
+    Sigstore (keyless via OIDC). PEM-encoded RSA exists but is genuinely
+    experimental (CLI prints `experimental` warnings on sign/verify per
+    bindings/go/rsa/signing/handler/handler.go:114,181) — flagged on
+    slide 14, not shown here.
+    """
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "SIGN")
-    set_text(s, 2, "One signature shape. Three trust models.")
+    set_text(s, 2, "Same signed object. Three trust models.")
     set_text(s, 10, "RSA")
-    set_text(s, 11, "Your existing PKI.\n"
-                     "Keys you already rotate.")
+    set_text(s, 11, "Bare public-key pinning.\n"
+                     "The key you already rotate.")
     set_text(s, 12, "GPG")
     set_text(s, 13, "OpenPGP keys.\n"
                      "Familiar trust model, ASCII-armored.")
@@ -1080,10 +1104,21 @@ def build_slide_10_transport(prs, layouts):
 def build_slide_11_deploy(prs, layouts):
     """11 DEPLOY — Four CRs, one chain.
     Title is the architectural statement (not a recap of the cards).
-    Card text is technically precise — what each CR actually contains."""
+    Card text is technically precise — what each CR actually contains.
+
+    Deployer card flags localization: image refs in `values.yaml` and
+    similar templating are resolved from the verified component descriptor
+    at apply time — that is where localization happens in v2, not at
+    transfer time (transfer-concept.md:84 + the controller status.additional
+    mechanism feeding kro/Flux).
+
+    Replication is the fifth controller. It sits alongside the chain, not
+    within it. Moved to appendix slide 16 — it's a Q&A backup, not part
+    of the four-card architectural message.
+    """
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "DEPLOY")
-    set_text(s, 2, "OCM controllers verify and apply. One mirrors.")
+    set_text(s, 2, "OCM controllers verify and apply.")
     delete_placeholder(s, 10)
 
     cr_w = 410
@@ -1097,7 +1132,7 @@ def build_slide_11_deploy(prs, layouts):
         ("Repository",  "Where component versions live."),
         ("Component",   "Pulls one version. Verifies its signature."),
         ("Resource",    "One artifact, by digest."),
-        ("Deployer",    "Applies it to the cluster."),
+        ("Deployer",    "Applies it. Resolves image refs from\nthe verified descriptor."),
     ]
     for i, (title, body) in enumerate(crs):
         x = start_x + i * (cr_w + gap)
@@ -1138,38 +1173,9 @@ def build_slide_11_deploy(prs, layouts):
             arrow.fill.fore_color.rgb = C.BLUE
             arrow.line.fill.background()
 
-    # Replication — fifth controller, sits alongside the chain (not within it).
-    # Per docs: "Instead of delivering content into the cluster, it transfers a
-    # resolved component version from one OCM repository to another."
-    rep_x = (SLIDE_W_PX - cr_w) // 2
-    rep_y = y + cr_h + 60
-    rep_box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                                  px(rep_x), px(rep_y), px(cr_w), px(cr_h))
-    rep_box.fill.solid()
-    rep_box.fill.fore_color.rgb = C.GREY_SOFT
-    rep_box.line.color.rgb = C.BLUE
-    rep_box.line.width = Pt(1.5)
-    rtf = rep_box.text_frame
-    rtf.margin_left = rtf.margin_right = Emu(180000)
-    rtf.margin_top = rtf.margin_bottom = Emu(180000)
-    rtf.vertical_anchor = MSO_ANCHOR.MIDDLE
-    rtf.word_wrap = True
-    rp1 = rtf.paragraphs[0]
-    rp1.alignment = PP_ALIGN.CENTER
-    rr1 = rp1.add_run()
-    rr1.text = "Replication"
-    rr1.font.name = "Aptos"
-    rr1.font.size = Pt(28)
-    rr1.font.bold = True
-    rr1.font.color.rgb = C.BLUE
-    rp2 = rtf.add_paragraph()
-    rp2.alignment = PP_ALIGN.CENTER
-    rp2.space_before = Pt(8)
-    rr2 = rp2.add_run()
-    rr2.text = "Mirrors a version to another repository."
-    rr2.font.name = "Aptos"
-    rr2.font.size = Pt(22)
-    rr2.font.color.rgb = C.BLACK
+    # Replication moved to appendix slide 16 — Q&A backup, not part of
+    # the four-card chain. Speaker keeps it in their back pocket for
+    # cluster-side mirroring questions.
 
     # Punchline moved to speaker notes: "Pluggable at the Deployer tier:
     # built-in for raw manifests; Flux for HelmReleases; Argo for
@@ -1215,12 +1221,16 @@ def build_slide_12_composition(prs, layouts):
         ("  version: 1.0.0",                                          V),
         ("  componentReferences:",                                    K),
         ("    - name: notes",                                         V),
+        ("      componentName: acme.org/sovereign/notes",             V),
         ("      version: 1.0.0",                                      V),
         ("    - name: postgres",                                      V),
+        ("      componentName: acme.org/sovereign/postgres",          V),
         ("      version: 1.0.0",                                      V),
         ("signatures:",                                               K),
         ("  - name: acme-release-key",                                V),
-        ("    value: a4b1c2d3e5f6789abc012345def04691...",            V),
+        ("    signature:",                                            K),
+        ("      algorithm: RSASSA-PSS",                               V),
+        ("      value: a4b1c2d3e5f6789abc012345def04691...",          V),
     ]
     right_yaml = [
         ("component:",                                                K),
@@ -1228,23 +1238,28 @@ def build_slide_12_composition(prs, layouts):
         ("  version: 1.1.0",                                          HIGH),
         ("  componentReferences:",                                    K),
         ("    - name: notes",                                         V),
+        ("      componentName: acme.org/sovereign/notes",             V),
         ("      version: 1.1.0",                                      HIGH),
         ("    - name: postgres",                                      V),
+        ("      componentName: acme.org/sovereign/postgres",          V),
         ("      version: 1.0.0",                                      V),
         ("signatures:",                                               K),
         ("  - name: acme-release-key",                                V),
-        ("    value: 9c2af18b3e7d52914a8c6b0f1d2e8f37...",            HIGH),
+        ("    signature:",                                            K),
+        ("      algorithm: RSASSA-PSS",                               V),
+        ("      value: 9c2af18b3e7d52914a8c6b0f1d2e8f37...",          HIGH),
     ]
-    # 12 lines @ Pt22 @ ls 1.20 ~ 317pt ~ 422px + ~60px padding ~ 482px.
-    # Boxes moved up to box_y=380 since external DAY 1/DAY 2 labels removed;
-    # box_h grown to 520 to fit the new signatures: block with comfortable
-    # bottom padding. Footer sits below at y=960.
-    box_w = 720
-    box_h = 520
+    # 15 lines @ Pt20 @ ls 1.20 ~ 360pt ~ 480px text + ~60px padding ~ 540px.
+    # Box grown to 560 to fit; footer pushed to y=970.
+    # YAML carries componentName: on each reference + algorithm: in the
+    # signature: sub-block per spec — without the mediaType: line, which
+    # adds verification chrome without signal at this altitude.
+    box_w = 740
+    box_h = 560
     box_y = 380
     arrow_w = 120
     arrow_h = 100
-    gap = 30
+    gap = 20
     total_w = 2 * box_w + 2 * gap + arrow_w
     left_x = (SLIDE_W_PX - total_w) // 2
     right_x = left_x + box_w + gap + arrow_w + gap
@@ -1252,9 +1267,9 @@ def build_slide_12_composition(prs, layouts):
     arrow_y = box_y + (box_h - arrow_h) // 2
 
     add_yaml_block(s, x_px=left_x, y_px=box_y, w_px=box_w, h_px=box_h,
-                    yaml_lines=left_yaml, font_size=22)
+                    yaml_lines=left_yaml, font_size=20)
     add_yaml_block(s, x_px=right_x, y_px=box_y, w_px=box_w, h_px=box_h,
-                    yaml_lines=right_yaml, font_size=22)
+                    yaml_lines=right_yaml, font_size=20)
 
     # Arrow with "bump version" label above it. Label sits just above the
     # arrow's vertical center so the eye reads label-then-arrow as one unit.
@@ -1281,7 +1296,7 @@ def build_slide_12_composition(prs, layouts):
     # than chrome. This sentence answers the most common architect challenge
     # to OCM ("how is this different from helm upgrade?") with a property
     # the audience can verify from the diagram above.
-    footer_tb, footer_tf = add_textbox(s, 120, 960, SLIDE_W_PX - 240, 60)
+    footer_tb, footer_tf = add_textbox(s, 120, 970, SLIDE_W_PX - 240, 60)
     fp = footer_tf.paragraphs[0]
     fp.alignment = PP_ALIGN.CENTER
     fr = fp.add_run()
@@ -1294,23 +1309,29 @@ def build_slide_12_composition(prs, layouts):
 def build_slide_13_whats_sharp(prs, layouts):
     """13 WHAT'S SHARP — Three real edges from the docs/repo.
 
-    All three are doc-confirmed limitations a first-time architect will hit:
-      1. Helm/v1 access — not fully resolved at pack time.
-         (transfer-helm-charts.md:70)
-      2. transfer defaults to descriptor-only.
+    All three are doc- and code-confirmed limitations a first-time architect
+    will hit:
+      1. Transfer defaults to descriptor-only.
          (transfer-concept.md:42 — air-gap requires --copy-resources)
-      3. Controllers ship as v1alpha1 — pin minor versions.
+      2. Controllers ship as v1alpha1 — pin minor versions.
          (kubernetes/controller/api/v1alpha1)
+      3. PEM-encoded RSA (X.509 cert chains) is experimental.
+         (bindings/go/rsa/signing/v1alpha1/encoding_policy_pem.go:33 +
+          runtime slog.Warn in handler.go:114,181 — the CLI prints
+          `experimental` warnings on every sign/verify with PEM.)
     """
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "WHAT'S SHARP")
-    set_text(s, 2, "Two honest edges.")
+    set_text(s, 2, "Three honest edges.")
     set_blue_box_bullets(s, 10, [
         "Transfer defaults — copies only the descriptor. "
         "For air-gap, pass --copy-resources so the bytes travel too.",
         "Controllers are v1alpha1 — the CRD surface can move. "
         "Pin minor versions in your platform installs.",
-    ], font_size=28)
+        "PEM-encoded RSA (cert chains) is experimental — the CLI prints "
+        "`experimental` warnings on sign/verify. Plain RSA, GPG, and "
+        "Sigstore are stable on the same v1alpha1 surface; PEM may still shift.",
+    ], font_size=26)
     # Punchline moved to speaker notes: "Honest now beats apologetic
     # later. Plan for the trim edge."
 
@@ -1341,7 +1362,7 @@ def build_slide_14_adoption(prs, layouts):
         ("ON YOUR CLUSTER — CONTROLLERS",
          ["Helm-install the OCM controllers.",
           "Point them at your registry.",
-          "Apply a Component resource — verified and reconciling.",
+          "Deploy a component.",
           "Thirty minutes. One reconciling cluster."]),
     ]
     for i, (header, lines) in enumerate(columns):
@@ -1379,175 +1400,143 @@ def build_slide_14_adoption(prs, layouts):
 
 
 def build_slide_15_cta(prs, layouts):
-    """15 CTA — Mirrors the exec-deck pattern: master layout placeholders
-    only, no custom textboxes. Title is the call to action; body is the
-    three doors."""
+    """15 CTA — Architect-shaped: Evaluate / Pilot / Engage.
+
+    Reshaped from the developer-arc (Try it / Build with us / Talk to us)
+    to mirror the architect's evaluation arc (read the spec → scoped pilot
+    → engage with standard stewardship). Mirrors the exec deck's
+    Pilot/Evaluate/Engage pattern. Layout placeholders only, no custom
+    textboxes."""
     s = prs.slides.add_slide(layouts["CTA"])
     set_text(s, 1, "Ship the release as one unit.", color=C.WHITE)
     set_action_path_lines(s, 2, [
-        ("Try it",        "ocm.software"),
-        ("Build with us", "github.com/open-component-model"),
-        ("Talk to us",    "community channels on the website"),
+        ("Evaluate", "ocm.software · run conformance/scenarios/sovereign"),
+        ("Pilot",    "github.com/open-component-model · one product, one team"),
+        ("Engage",   "community channels on the website · NeoNephos Foundation"),
     ])
     add_brand_row(s)
+
+
+def build_slide_16_appendix_replication(prs, layouts):
+    """16 APPENDIX — Replication (pull-on-demand).
+
+    Out of the main 15-slide arc. Pulled only if the audience asks about
+    cluster-side mirroring or repo-to-repo transfer without the CLI.
+    Visually consistent with slide 11: same four-card chain at the top,
+    plus the Replication card offset below to make the "alongside, not
+    within" framing visual.
+
+    Replication facts verified against website/content/docs/reference/
+    kubernetes-api/replication.md and the user's confirmation that
+    status.lastTransferredDigest is correct.
+    """
+    s = prs.slides.add_slide(layouts["Plain"])
+    set_text(s, 1, "APPENDIX · REPLICATION")
+    set_text(s, 2, "Alongside the chain. Not within it.")
+    delete_placeholder(s, 10)
+
+    cr_w = 410
+    cr_h = 220
+    gap = 50
+    total_w = 4 * cr_w + 3 * gap
+    start_x = (SLIDE_W_PX - total_w) // 2
+    y = 540
+    crs = [
+        ("Repository",  "Where versions live."),
+        ("Component",   "Pulls + verifies."),
+        ("Resource",    "One artifact, by digest."),
+        ("Deployer",    "Applies. Resolves refs."),
+    ]
+    for i, (title, body) in enumerate(crs):
+        x = start_x + i * (cr_w + gap)
+        box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                  px(x), px(y), px(cr_w), px(cr_h))
+        box.fill.solid()
+        box.fill.fore_color.rgb = C.GREY_SOFT
+        box.line.color.rgb = C.GREY_MID
+        box.line.width = Pt(1.0)
+        tf = box.text_frame
+        tf.margin_left = tf.margin_right = Emu(180000)
+        tf.margin_top = tf.margin_bottom = Emu(180000)
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        tf.word_wrap = True
+        p1 = tf.paragraphs[0]
+        p1.alignment = PP_ALIGN.CENTER
+        r1 = p1.add_run()
+        r1.text = title
+        r1.font.name = "Aptos"
+        r1.font.size = Pt(24)
+        r1.font.bold = True
+        r1.font.color.rgb = C.GREY_MID
+        p2 = tf.add_paragraph()
+        p2.alignment = PP_ALIGN.CENTER
+        p2.space_before = Pt(8)
+        r2 = p2.add_run()
+        r2.text = body
+        r2.font.name = "Aptos"
+        r2.font.size = Pt(18)
+        r2.font.color.rgb = C.GREY_MID
+        if i < len(crs) - 1:
+            ax = x + cr_w + 6
+            ay = y + cr_h // 2 - 8
+            arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW,
+                                        px(ax), px(ay), px(gap - 12), px(18))
+            arrow.fill.solid()
+            arrow.fill.fore_color.rgb = C.GREY_MID
+            arrow.line.fill.background()
+
+    # Replication card, larger and in brand blue, offset below the chain.
+    rep_w = 700
+    rep_h = 260
+    rep_x = (SLIDE_W_PX - rep_w) // 2
+    rep_y = y + cr_h + 40
+    rep_box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                  px(rep_x), px(rep_y), px(rep_w), px(rep_h))
+    rep_box.fill.solid()
+    rep_box.fill.fore_color.rgb = C.GREY_SOFT
+    rep_box.line.color.rgb = C.BLUE
+    rep_box.line.width = Pt(2.0)
+    rtf = rep_box.text_frame
+    rtf.margin_left = rtf.margin_right = Emu(220000)
+    rtf.margin_top = rtf.margin_bottom = Emu(180000)
+    rtf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    rtf.word_wrap = True
+    rp1 = rtf.paragraphs[0]
+    rp1.alignment = PP_ALIGN.CENTER
+    rr1 = rp1.add_run()
+    rr1.text = "Replication"
+    rr1.font.name = "Aptos"
+    rr1.font.size = Pt(30)
+    rr1.font.bold = True
+    rr1.font.color.rgb = C.BLUE
+    for j, line in enumerate([
+        "Transfers a resolved component version from one OCM repository to another.",
+        "Records status.lastTransferredDigest. Same digest → no-op.",
+    ]):
+        p2 = rtf.add_paragraph()
+        p2.alignment = PP_ALIGN.CENTER
+        p2.space_before = Pt(10) if j == 0 else Pt(6)
+        r2 = p2.add_run()
+        r2.text = line
+        r2.font.name = "Aptos"
+        r2.font.size = Pt(20)
+        r2.font.color.rgb = C.BLACK
+
+    # Footer caption: equivalent of `ocm transfer cv`, in-cluster.
+    footer_tb, footer_tf = add_textbox(s, 120, rep_y + rep_h + 30, SLIDE_W_PX - 240, 50)
+    fp = footer_tf.paragraphs[0]
+    fp.alignment = PP_ALIGN.CENTER
+    fr = fp.add_run()
+    fr.text = ("Controller-shaped equivalent of `ocm transfer cv` — "
+               "mirroring, promotion, in-cluster air-gap.")
+    fr.font.name = "Aptos"
+    fr.font.size = Pt(20)
+    fr.font.color.rgb = C.BLUE_MID
 
 
 # -----------------------------------------------------------------------------
 # Sanity check
 # -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
-# Slide 12 — text-above-diagram option proposals (for user review)
-# -----------------------------------------------------------------------------
-
-# Three slide-12 variants. Each renders the same composition + day-2 visual
-# but introduces it with different text above the diagram. The point being
-# compared is the explanatory framing — what 1-2 sentences land best as
-# the architect reads the slide.
-
-def _slide12_body(slide):
-    """Render the canonical slide-12 body (two side-by-side descriptors + DAY
-    labels + arrow), starting from y_body_top (caller decides where)."""
-    K = C.BLUE_MID
-    V = C.BLACK
-    COM = C.GREY_MID
-    HIGH = C.BLUE
-
-    left_yaml = [
-        ("# day 1 — product 1.0.0",                                   COM),
-        ("component:",                                                K),
-        ("  name: acme.org/sovereign/product",                        V),
-        ("  version: 1.0.0",                                          V),
-        ("  componentReferences:",                                    K),
-        ("    - name: notes",                                         V),
-        ("      componentName: acme.org/sovereign/notes",             V),
-        ("      version: 1.0.0",                                      V),
-        ("    - name: postgres",                                      V),
-        ("      componentName: acme.org/sovereign/postgres",          V),
-        ("      version: 1.0.0",                                      V),
-    ]
-    right_yaml = [
-        ("# day 2 — product 1.1.0  (notes patched)",                  COM),
-        ("component:",                                                K),
-        ("  name: acme.org/sovereign/product",                        V),
-        ("  version: 1.1.0",                                          HIGH),
-        ("  componentReferences:",                                    K),
-        ("    - name: notes",                                         V),
-        ("      componentName: acme.org/sovereign/notes",             V),
-        ("      version: 1.1.0",                                      HIGH),
-        ("    - name: postgres",                                      V),
-        ("      componentName: acme.org/sovereign/postgres",          V),
-        ("      version: 1.0.0",                                      V),
-    ]
-    add_yaml_block(slide, x_px=60, y_px=480, w_px=900, h_px=460,
-                    yaml_lines=left_yaml, font_size=18)
-    add_yaml_block(slide, x_px=980, y_px=480, w_px=900, h_px=460,
-                    yaml_lines=right_yaml, font_size=18)
-
-    label_left_tb, label_left_tf = add_textbox(slide, 60, 440, 900, 30)
-    lp = label_left_tf.paragraphs[0]; lp.alignment = PP_ALIGN.LEFT
-    lr = lp.add_run(); lr.text = "DAY 1"
-    lr.font.name = "Aptos"; lr.font.size = Pt(20); lr.font.bold = True
-    lr.font.color.rgb = C.GREY_MID
-
-    label_right_tb, label_right_tf = add_textbox(slide, 980, 440, 900, 30)
-    rp = label_right_tf.paragraphs[0]; rp.alignment = PP_ALIGN.LEFT
-    rr = rp.add_run(); rr.text = "DAY 2"
-    rr.font.name = "Aptos"; rr.font.size = Pt(20); rr.font.bold = True
-    rr.font.color.rgb = C.BLUE
-
-    arrow_y = 690
-    arrow = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW,
-                                px(950), px(arrow_y), px(40), px(40))
-    arrow.fill.solid(); arrow.fill.fore_color.rgb = C.BLUE
-    arrow.line.fill.background()
-
-
-def _slide12_intro_text(slide, *, lines: list[tuple[str, str]]):
-    """Render explanatory text above the diagram. `lines` is a list of
-    (run_text, color_kind) where color_kind is 'normal' (black) or 'accent'
-    (blue) — this lets the variant builders highlight key nouns."""
-    tb, tf = add_textbox(slide, 60, 290, 1820, 130)
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.alignment = PP_ALIGN.LEFT
-    p.line_spacing = 1.30
-    for text, kind in lines:
-        r = p.add_run()
-        r.text = text
-        r.font.name = "Aptos"
-        r.font.size = Pt(22)
-        if kind == "accent":
-            r.font.bold = True
-            r.font.color.rgb = C.BLUE
-        else:
-            r.font.color.rgb = C.BLACK
-
-
-def build_slide12_option_a(prs, layouts):
-    """OPTION A — Title states the mechanic. Intro is two short sentences
-    that read as the architect would say them out loud."""
-    s = prs.slides.add_slide(layouts["Content / Diagram Compact"])
-    set_text(s, 1, "COMPOSITION + DAY 2")
-    set_text(s, 2, "Bump the product. Everything follows.")
-    delete_placeholder(s, 10)
-    _slide12_intro_text(s, lines=[
-        ("A product component ", "normal"),
-        ("references other components", "accent"),
-        (" by name and version.\n", "normal"),
-        ("To upgrade, raise the product version. ", "normal"),
-        ("The references move with it.", "accent"),
-    ])
-    _slide12_body(s)
-    _option_marker(s, "OPTION A — bump-the-product")
-
-
-def build_slide12_option_b(prs, layouts):
-    """OPTION B — Title is the canonical OCM mechanic. Intro defines
-    composition once and shows the day-2 path in one sentence."""
-    s = prs.slides.add_slide(layouts["Content / Diagram Compact"])
-    set_text(s, 1, "COMPOSITION + DAY 2")
-    set_text(s, 2, "One version bump upgrades the whole product.")
-    delete_placeholder(s, 10)
-    _slide12_intro_text(s, lines=[
-        ("A product is a component that ", "normal"),
-        ("references other components", "accent"),
-        (". On day 2, the operator raises the product version — and "
-         "the references update with it.", "normal"),
-    ])
-    _slide12_body(s)
-    _option_marker(s, "OPTION B — whole-product")
-
-
-def build_slide12_option_c(prs, layouts):
-    """OPTION C — Title names composition as the primitive. Intro lands
-    day-2 as the architect's mental model."""
-    s = prs.slides.add_slide(layouts["Content / Diagram Compact"])
-    set_text(s, 1, "COMPOSITION + DAY 2")
-    set_text(s, 2, "Compose a product. Upgrade in one place.")
-    delete_placeholder(s, 10)
-    _slide12_intro_text(s, lines=[
-        ("Compose a product from other components — ", "normal"),
-        ("each referenced by name and version.", "accent"),
-        ("\nDay 2 is a single edit on the product: bump the version, the "
-         "references resolve to the new children.", "normal"),
-    ])
-    _slide12_body(s)
-    _option_marker(s, "OPTION C — compose-and-upgrade")
-
-
-def _option_marker(slide, text: str):
-    """Bottom-right corner marker labelling which option this slide is."""
-    tb, tf = add_textbox(slide, x_px=1340, y_px=1020, w_px=560, h_px=40)
-    p = tf.paragraphs[0]
-    p.alignment = PP_ALIGN.RIGHT
-    r = p.add_run()
-    r.text = text
-    r.font.name = "Aptos"
-    r.font.size = Pt(12)
-    r.font.italic = True
-    r.font.color.rgb = C.GREY_MID
-
 
 # -----------------------------------------------------------------------------
 

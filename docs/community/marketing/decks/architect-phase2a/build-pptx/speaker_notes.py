@@ -23,16 +23,16 @@ SPEAKER_NOTES: dict[int, str] = {
     ),
     3: (
         "The conceptual fulcrum. Let it breathe. OCM separates three things the existing tools fuse:\n"
-        "• Coordinates - DNS-style name plus SemVer. Globally unique, location-agnostic. No registry in the name.\n"
+        "• Component identity - DNS-style name plus SemVer. Globally unique, location-agnostic. No registry in the name.\n"
         "• Digest - SHA-256 over each resource. Computed at pack time. This is what we sign.\n"
-        "• Access - type plus fetch fields (`OCIImage/v1`, `LocalBlob/v1`, `S3/v1`). Where the bytes currently live.\n"
-        "Promote EU -> US -> air-gapped CTF and DEV -> STAGING -> PROD : coordinate stays, digest stays, only access is rewritten. Signature still verifies - anywhere.\n"
+        "• Access - type plus fetch fields (`OCIImage/v1`, `Helm/v1`, `LocalBlob/v1`). Where the bytes currently live.\n"
+        "Promote EU -> US -> air-gapped CTF and DEV -> STAGING -> PROD : identity stays, digest stays, only access is rewritten. Signature still verifies - anywhere.\n"
         "Move the artifact. The digest stays. Only the access changes. That is the whole trick."
     ),
     4: (
         "Two jobs: pre-empt 'what does this replace?' and define the noun 'COMPONENT' the rest of the deck rests on.\n"
         "OCM is not a replacement for OCI, Helm, or your SBOM tooling. It composes around them and adds one new thing - the component.\n"
-        "• Any format - Helm stays Helm, OCI stays OCI, SBOM stays SPDX/CycloneDX. Each becomes a resource inside the component.\n"
+        "• Any format - Helm stays Helm, OCI stays OCI, configs stay configs. The artifact `type:` is free-form; access types are pluggable. SBOMs and other formats slot in via the same mechanism.\n"
         "• Any location - name and version do not encode a registry. Move it; the name stays.\n"
         "• One signature - covers every digest in the component. The whole release is one signed unit.\n"
         "A component is the unit you sign, transport, and deploy. Hold the noun."
@@ -59,26 +59,27 @@ SPEAKER_NOTES: dict[int, str] = {
     7: (
         "Name the primitive, then frame the next four slides.\n"
         "The signed descriptor is itself an OCI artifact - media type `application/vnd.ocm.software.component-descriptor.v2`. Lives in your registry next to the images. No new infrastructure.\n"
-        "Four verbs, same flow, every component:\n"
+        "Four moves, same flow, every component:\n"
         "• Pack - bundle once, name once.\n"
         "• Sign - one signature covers every digest.\n"
         "• Transport - registry ↔ registry ↔ tarball. Signature survives every hop.\n"
         "• Deploy - controller verifies, resolves digests, applies. No callback upstream.\n"
-        "Sovereign cloud, air-gap, customer cluster. Next four slides are the mechanics."
+        "These are lifecycle moves, not CLI verbs. The CLI you'll type is `ocm add cv`, `ocm sign cv`, `ocm transfer cv`, then `kubectl apply` against the Deployer CR. Same four moves, slightly different names. Sovereign cloud, air-gap, customer cluster. Next four slides are the mechanics."
     ),
     8: (
         "Composition is the architectural fact that makes day-2 work.\n"
-        "• Leaf components carry resources - images, charts, configs, SBOMs. Walk the LEFT box: `acme.org/sovereign/notes` and `acme.org/sovereign/postgres`, each with image + chart + `...` (real components carry more - configs, SBOMs - the `...` stands for that).\n"
-        "• A product or release component composes leaves via `componentReferences:` - name + version, no resources of its own. Walk the RIGHT box: `acme.org/sovereign/product` references both notes and postgres by name and version. Nothing else.\n"
-        "• Each leaf is independently versioned, signed, transferable. The product is a small descriptor that points at them.\n"
-        "Real releases are not one big component - they are one product component referencing several leaves. This is the shape day-2 (slide 12) operates on."
+        "• Service components carry resources - images, charts, configs, SBOMs. Walk the LEFT box: `acme.org/sovereign/notes` and `acme.org/sovereign/postgres`, each with image + chart + `...` (real components carry more - configs, SBOMs - the `...` stands for that).\n"
+        "• A product component composes services via `componentReferences:` - name + version, no resources of its own. Walk the RIGHT box: `acme.org/sovereign/product` references both notes and postgres by name and version. Nothing else.\n"
+        "• Each service is independently versioned, signed, transferable. The product is a small descriptor that points at them.\n"
+        "Real releases are not one big component - they are one product component referencing several services. This is the shape day-2 (slide 12) operates on."
     ),
     9: (
-        "Signature shape is separated from trust model. Descriptor signed one canonical way; how you prove the key is what varies. All three trust models are GA today:\n"
-        "• RSA / RSASSA-PSS - fits orgs with PKI, Vault, HSMs.\n"
+        "Signature shape is separated from trust model. Descriptor signed one canonical way; how you prove the key is what varies. All three are stable on the v1alpha1 API surface today:\n"
+        "• RSA / RSASSA-PSS - bare public-key pinning. The key you already rotate. No PKI required.\n"
         "• GPG - fits OSS maintainers and orgs already running web-of-trust keyrings.\n"
         "• Sigstore - keyless via OIDC + Rekor transparency log; fits CI like GitHub Actions with no long-lived keys.\n"
-        "Three things to land. Same signature shape covers the canonical descriptor. Verifiers can require multiple in parallel - RSA from release team and Sigstore from CI. Pick what your org already runs.\n"
+        "Three things to land. Same signed object - the canonical descriptor digest - in all three. Verifiers can require multiple in parallel: RSA from the release team and Sigstore from CI. Pick what your org already runs.\n"
+        "On PEM-encoded RSA (X.509 certificate chains): not on this slide because it's still experimental - the CLI prints `experimental` warnings on sign and verify. Slide 14 names that.\n"
         "CLI: `ocm sign cv ./archive//github.com/acme/widget:v1.4.2 --signature acme-release-key --private-key ./release-key.pem`. Idempotent."
     ),
     10: (
@@ -89,13 +90,14 @@ SPEAKER_NOTES: dict[int, str] = {
         "Same command in all three: `ocm transfer cv <src> <dst>`. Access changes; digests do not. Signature covers digests, so it survives every hop. Verification is purely local at the destination - that is the air-gap property."
     ),
     11: (
-        "OCM controllers verify and apply the component. One mirrors.\n"
+        "Four CRs, one chain. The controllers verify and apply the component.\n"
         "• Repository - names where component versions live. OCI registry, mounted CTF, S3, local FS.\n"
         "• Component - names a specific component version. Pulls the descriptor and verifies its signature.\n"
         "• Resource - picks one artifact from the verified component, by digest: Helm chart, OCI image, raw manifest, blob.\n"
-        "• Deployer - applies the resource to the cluster. Built-in for raw manifests; Flux for HelmRelease; Argo for Application.\n"
-        "Then point at the offset card below the chain: Replication. Sits ALONGSIDE the chain, not within it. References a source `Component` and a target `Repository`; when the source's resolved version changes, transfers that version with its full reference graph into the target. Equivalent of `ocm transfer` as a controller. Records `status.lastTransferredDigest`; same digest = no-op. Fits delivery pipelines, promotion between environments, air-gap mirroring.\n"
-        "Anti-lock-in answer: the Deployer tier is pluggable - built-in, Flux, or Argo. Slide 14 flags the only real sharp edges that remain."
+        "• Deployer - applies the resource to the cluster. Resolves image refs from the verified descriptor at apply time - that is where localization happens. Built-in for raw manifests; Flux for HelmRelease; Argo for Application.\n"
+        "Anti-lock-in: the Deployer tier is pluggable - built-in, Flux, or Argo - so OCM doesn't fight the reconciliation engine you already run.\n"
+        "Q&A backup: a fifth CR, `Replication`, sits alongside the chain (not within it) and transfers a version from one repository to another - the controller-shaped equivalent of `ocm transfer cv`. Optional appendix slide if it comes up.\n"
+        "Slide 14 flags the only real sharp edges that remain."
     ),
     12: (
         "Composition was just defined on slide 8. This slide does ONE job: the day-2 mechanic.\n"
@@ -114,14 +116,22 @@ SPEAKER_NOTES: dict[int, str] = {
         "The slide that earns trust. Deliver straight; do not soften.\n"
         "• Transfer defaults - copies only the descriptor. For air-gap, pass --copy-resources so the bytes travel too.\n"
         "• Controllers v1alpha1 - CRD shapes for Repository/Component/Resource/Deployer are stabilising but still v1alpha1. Pin minor versions in your platform install.\n"
+        "• PEM-encoded RSA (X.509 cert chains) is experimental - the CLI prints `experimental` warnings on sign and verify. Plain RSA, GPG, and Sigstore are stable on the same v1alpha1 surface; PEM may still shift.\n"
         "Honest now beats apologetic later. If any edge is a deal-breaker, tell us early."
     ),
     15: (
-        "Close with the ask. Three doors.\n"
-        "• Try it - `ocm.software`. Install the CLI, walk the getting-started, pack one of your own. You will know within an afternoon if OCM fits.\n"
-        "• Build with us - `github.com/open-component-model`. Spec, implementation, conformance suite, roadmap. All in the open. File issues; tell us what you build on top.\n"
-        "• Talk to us - community channels on the website. Maintainers, customers, foundation governance.\n"
-        "Not selling OCM. Stewarding a standard under NeoNephos Foundation governance. The more voices while it is being shaped, the better the standard gets.\n"
-        "Ship the release as one unit. Thank you - questions."
+        "Close with the ask. Three doors, architect-shaped.\n"
+        "• Evaluate - `ocm.software`. Read the spec, run the conformance scenario at `conformance/scenarios/sovereign`, judge fit. You will know within an afternoon if OCM fits.\n"
+        "• Pilot - `github.com/open-component-model`. Take one product, one team, scoped scope of work. Spec, implementation, conformance suite, roadmap - all in the open.\n"
+        "• Engage - community channels on the website. We're stewarding a standard under NeoNephos Foundation governance. The more voices while it's being shaped, the better the standard gets.\n"
+        "Not selling OCM. Stewarding it as a multi-vendor standard. Ship the release as one unit. Thank you - questions."
+    ),
+    16: (
+        "APPENDIX — pull only if asked about cluster-side mirroring or 'how do I get a version from one repo into another without running the CLI?'.\n"
+        "A fifth controller, `Replication`, sits alongside the four-card chain - not within it. Where the chain delivers content INTO the cluster, Replication transfers a resolved component version FROM one OCM repository TO another. Same descriptor, same digests, fresh access fields.\n"
+        "References a source `Component` CR and a target `Repository` CR. When the source's resolved version changes, transfers that version with its full reference graph into the target.\n"
+        "Mirrors the behavior of `ocm transfer cv` on the OCM CLI. Records `status.lastTransferredDigest` after each successful run; a later reconciliation seeing the same digest is a no-op.\n"
+        "Use cases: delivery pipelines, promotion between environments, air-gap mirroring kept in-cluster rather than on a workstation.\n"
+        "Not on the main deck because the four-card chain is the load-bearing story for a 30-minute architect talk. This is the answer to a specific question, not part of the arc."
     ),
 }

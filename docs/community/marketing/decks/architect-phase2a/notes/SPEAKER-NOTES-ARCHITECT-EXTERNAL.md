@@ -56,23 +56,23 @@ Beat. Now the calibration for the cosign shops:
 
 ## SLIDE 3 — THE HINGE  (02:15 — 04:00, ~105 sec)
 
-**On screen.** Eyebrow: THE HINGE. Title: "Identity that travels with the artifact." Three bullets on the left — Coordinates / Digest / Access. ASCII diagram on the right showing `github.com/acme.org/helloworld:1.0.0` fanning out across EU reg / US reg / Air gap, with caption "Same coordinate. Different access. Signature still verifies." Bottom caption: "Move the artifact; the digest stays; only the access changes. That's the trick."
+**On screen.** Eyebrow: THE HINGE. Title: "Identity that travels with the artifact." Three bullets on the left — Component identity / Digest / Access. ASCII diagram on the right showing `github.com/acme.org/helloworld:1.0.0` fanning out across EU reg / US reg / Air gap, with caption "Same component identity. Different access. Signature still verifies." Bottom caption: "Move the artifact; the digest stays; only the access changes. That's the trick."
 
 **Speaker notes.**
 
 This is the conceptual fulcrum. If they understand this slide, the next ten slides are mechanics. If they don't, the rest is noise. Let it breathe.
 
-> "OCM separates three things that the existing tools fuse together. Coordinates, digest, access. Three properties of the same resource, but each does a different job."
+> "OCM separates three things that the existing tools fuse together. Component identity, digest, access. Three properties of the same resource, but each does a different job."
 
-**Bullet 1 — Coordinates.** "The component has a name — a DNS-style path like `github.com/acme.org/helloworld` — and a SemVer version. That pair is globally unique. It does not encode a registry. It does not encode a URL. It's a name. Globally unique, location-agnostic."
+**Bullet 1 — Component identity.** "The component has a name — a DNS-style path like `github.com/acme.org/helloworld` — and a SemVer version. That pair is globally unique. It does not encode a registry. It does not encode a URL. It's a name. Globally unique, location-agnostic."
 
 **Bullet 2 — Digest.** "Every resource inside that component carries a SHA-256 content hash. Computed once, at pack time. The digest is what we sign. It is the content identity."
 
-**Bullet 3 — Access.** "And separately — *separately* — there's an access record. Type, plus enough fields to fetch the bytes. `OCIImage/v1` with an image reference. `LocalBlob/v1` with a local hash. `S3/v1` with a bucket and key. The access is where the resource currently lives."
+**Bullet 3 — Access.** "And separately — *separately* — there's an access record. Type, plus enough fields to fetch the bytes. `OCIImage/v1` with an image reference. `LocalBlob/v1` with a local hash. `Helm/v1` with a Helm repo URL and chart name. The access is where the resource currently lives."
 
 Point at the diagram.
 
-> "Now look at what happens on transport. You promote the component from a EU registry to a US registry to an air-gapped CTF tarball. The coordinate doesn't change. The digest doesn't change. Only the access field gets rewritten. The signature, which covers the digest, still verifies — anywhere."
+> "Now look at what happens on transport. You promote the component from a EU registry to a US registry to an air-gapped CTF tarball. The component identity doesn't change. The digest doesn't change. Only the access field gets rewritten. The signature, which covers the digest, still verifies — anywhere."
 
 Beat. Land it.
 
@@ -92,7 +92,7 @@ This slide does two jobs. First — pre-empt the "what does this replace?" quest
 
 **Point at ANY FORMAT.** "Every artifact format you ship today stays exactly what it is. A Helm chart is still a Helm chart. An OCI image is still an OCI image. SBOMs stay SPDX or CycloneDX. Each one becomes a *resource* inside the component."
 
-**Point at ANY LOCATION.** "Coordinates travel. The component has a name and version that don't encode a registry. Move it across registries; the name stays the same."
+**Point at ANY LOCATION.** "Component identity travels. The component has a name and version that don't encode a registry. Move it across registries; the name stays the same."
 
 **Point at ONE SIGNATURE.** "One signature covers every digest in the component. The whole release is one signed unit."
 
@@ -161,7 +161,7 @@ Set expectations on the trim before walking it.
 
 Walk through it section by section.
 
-> "Top of the file — same name, same version. That coordinate from slide 3."
+> "Top of the file — same name, same version. That component identity from slide 3."
 
 Point at the image resource.
 
@@ -189,9 +189,9 @@ Beat. Now deliver the payoff.
 
 ---
 
-## SLIDE 7 — FOUR VERBS, ONE COMPONENT  (11:00 — 12:15, ~75 sec)
+## SLIDE 7 — THE FOUR MOVES  (11:00 — 12:15, ~75 sec)
 
-**On screen.** Eyebrow: FOUR VERBS, ONE COMPONENT. Title: "Pack · Sign · Transport · Deploy." Four-tile flow with arrows: PACK → SIGN → TRANSPORT → DEPLOY → SOVEREIGN CLOUD. Footer caption: "The signed component descriptor is itself an OCI artifact (media type `application/vnd.ocm.software.component-descriptor.v2`). It lives in your registry. The next four slides are mechanics."
+**On screen.** Eyebrow: THE FOUR MOVES. Title: "Pack · Sign · Transport · Deploy." Four-tile flow with arrows: PACK → SIGN → TRANSPORT → DEPLOY → SOVEREIGN CLOUD. Footer caption: "The signed component descriptor is itself an OCI artifact (media type `application/vnd.ocm.software.component-descriptor.v2`). It lives in your registry. The next four slides are mechanics."
 
 **Speaker notes.**
 
@@ -201,7 +201,7 @@ This slide does two jobs. First — name the primitive the audience has been wai
 
 Beat.
 
-> "Now four verbs, same flow, every component, every time. The tile labels are the exec version — ignore them, look at the verbs."
+> "Now four moves. These are *lifecycle* moves, not CLI verbs — the CLI you'll actually type is `ocm add cv`, `ocm sign cv`, `ocm transfer cv`, then `kubectl apply` against the Deployer CR. Same four moves, slightly different names."
 
 > "Pack — bundle once, name once. We just did that."
 
@@ -215,13 +215,13 @@ Point at the cloud on the right.
 
 > "Sovereign cloud, air-gapped network, customer-owned cluster. The component lands. No callback upstream."
 
-> "Next four slides — one slide per verb. Mechanics. And then on slide 8 we introduce the composition primitive that makes the day-2 mechanic on slide 12 work."
+> "Next four slides — one slide per move. Mechanics. And then on slide 8 we introduce the composition primitive that makes the day-2 mechanic on slide 12 work."
 
 ---
 
 ## SLIDE 8 — COMPOSE  (12:15 — 14:00, ~105 sec)
 
-**On screen.** Eyebrow: COMPOSE. Title: "Leaf carries resources. Product carries references." Two side-by-side YAML blocks. LEFT box labelled LEAF: two leaf components — `acme.org/sovereign/notes:1.0.0` and `acme.org/sovereign/postgres:1.0.0` — each with `image`, `chart`, and a `...` line under `resources`. RIGHT box labelled PRODUCT: `acme.org/sovereign/product:1.0.0` with `componentReferences:` to both leaves by `componentName` and `version`. Composition arrow LEAF → PRODUCT between the boxes.
+**On screen.** Eyebrow: COMPOSE. Title: "Service carries resources. Product carries references." Two side-by-side YAML blocks. LEFT box labelled SERVICE: two service components — `acme.org/sovereign/notes:1.0.0` and `acme.org/sovereign/postgres:1.0.0` — each with `image`, `chart`, and a `...` line under `resources`. RIGHT box labelled PRODUCT: `acme.org/sovereign/product:1.0.0` with `componentReferences:` to both services by `componentName` and `version`. Composition arrow SERVICE → PRODUCT between the boxes.
 
 **Speaker notes.**
 
@@ -229,42 +229,42 @@ This slide introduces the composition primitive. The audience needs to see it on
 
 > "Every example so far has been one component with a few resources inside. Real products are compositions. Two boxes on this slide. Same descriptor shape on both sides. Different role."
 
-**Point at LEAF (left box).** "Two leaf components. `acme.org/sovereign/notes` at 1.0.0 — that's the web app. Image, chart, and a `...` for the rest: config, SBOM, whatever else the notes team packs. `acme.org/sovereign/postgres` at 1.0.0 — same shape, the database. Image, chart, `...`. Leaves carry the actual artifacts. Each leaf is independently versioned, independently signed, independently transportable."
+**Point at SERVICE (left box).** "Two service components. `acme.org/sovereign/notes` at 1.0.0 — that's the web app. Image, chart, and a `...` for the rest: config, SBOM, whatever else the notes team packs. `acme.org/sovereign/postgres` at 1.0.0 — same shape, the database. Image, chart, `...`. Services carry the actual artifacts. Each service is independently versioned, independently signed, independently transportable."
 
-**Point at PRODUCT (right box).** "Now look at the product. Same DNS-style name, same SemVer. No `resources:` block at all. Just `componentReferences:` — by `componentName` and `version`. The product owns *nothing* on its own. It composes the two leaves into one named, signed unit."
+**Point at PRODUCT (right box).** "Now look at the product. Same DNS-style name, same SemVer. No `resources:` block at all. Just `componentReferences:` — by `componentName` and `version`. The product owns *nothing* on its own. It composes the two services into one named, signed unit."
 
 Beat. Land the primitive.
 
-> "Leaves carry artifacts. Products compose. Same descriptor shape on both sides — there is no second YAML language, no parent schema. A component is a component. The role is decided by whether you put `resources:` or `componentReferences:` in it."
+> "Services carry artifacts. Products compose. Same descriptor shape on both sides — there is no second YAML language, no parent schema. A component is a component. The role is decided by whether you put `resources:` or `componentReferences:` in it. One release unit, transferable, signable end-to-end."
 
 Point at the arrow.
 
-> "The arrow is the composition relationship. The product references the leaves by name and version — globally unique coordinate, no registry encoded. When you sign the product descriptor, the signature covers the resolved digests of both child descriptors. Verify the parent; you transitively verify the children."
+> "The arrow is the composition relationship. The product references the services by name and version — globally unique component identity, no registry encoded. When you sign the product descriptor, the signature covers the resolved digests of both child descriptors. Verify the parent; you transitively verify the children."
 
 Pivot to slide 12.
 
 > "Hold this picture. On slide 12 we're going to bump one line on the product — the notes version — and watch the whole composition re-sign end-to-end. This composition primitive is what makes that day-2 mechanic work."
 
 **Anticipated questions.**
-- *"What's actually in a leaf versus a product?"* — Leaves have a `resources:` block; products have a `componentReferences:` block. Nothing stops a component from having both, but the convention — and the one the conformance suite tests — is leaf-or-product, not mixed.
+- *"What's actually in a service versus a product?"* — Services have a `resources:` block; products have a `componentReferences:` block. Nothing stops a component from having both, but the convention — and the one the conformance suite tests — is service-or-product, not mixed.
 - *"What happens if the notes team adds a new resource — a sidecar image, say?"* — They bump notes from 1.0.0 to 1.0.1, repack, re-sign. The product still references `version: 1.0.0` until someone updates that line. Independent cadence.
-- *"How do component coordinates compose? Is there a namespace collision risk?"* — Coordinates are globally unique by DNS-style path plus SemVer. Two teams can each own `acme.org/<team>/...` and never collide.
+- *"How do component identities compose? Is there a namespace collision risk?"* — Component identities are globally unique by DNS-style path plus SemVer. Two teams can each own `acme.org/<team>/...` and never collide.
 - *"Does the product's signature cover the children's bytes, or just their digests?"* — The product's signature covers the children's *descriptor digests*. Each child carries its own signature over its own resource digests. Verifying down the tree is what the controllers and the CLI do automatically.
-- *"Can a leaf reference another leaf?"* — Yes. `componentReferences:` is recursive. The conformance scenario uses a two-level graph; deeper graphs work the same way.
+- *"Can a service reference another service?"* — Yes. `componentReferences:` is recursive. The conformance scenario uses a two-level graph; deeper graphs work the same way.
 
 ---
 
 ## SLIDE 9 — SIGN  (14:00 — 16:30, ~150 sec)
 
-**On screen.** Eyebrow: SIGN. Title: "One signature shape. Three trust models." Three columns — RSA / GPG / SIGSTORE. Caption at the bottom: "Same descriptor hash. Three ways to vouch for it. Pick what your org already runs."
+**On screen.** Eyebrow: SIGN. Title: "Same signed object. Three trust models." Three columns — RSA / GPG / SIGSTORE. Caption at the bottom: "Same descriptor hash. Three ways to vouch for it. Pick what your org already runs."
 
 **Speaker notes.**
 
-This is the slide where the security architects in the room start paying close attention. Three trust models, all generally available. The honesty beat here isn't "early access" — it's "pick the one your org already runs."
+This is the slide where the security architects in the room start paying close attention. Three trust models, all stable on the same v1alpha1 API surface. The honesty beat here isn't "early access" — it's "pick the one your org already runs."
 
-> "OCM separates the signature *shape* from the trust model. The descriptor is signed in one canonical way. What changes is how you prove the signing key belongs to whoever you think it belongs to. Three columns, three trust models, all GA."
+> "OCM separates the signature *shape* from the trust model. The descriptor is signed in one canonical way. What changes is how you prove the signing key belongs to whoever you think it belongs to. Three columns, three trust models, all stable today."
 
-**Point at RSA.** "RSA. If your organisation already runs a PKI — keys in Vault, in an HSM, rotated on a schedule — this is the natural path. Same keys your release team manages today. The OCM signature is RSA-PSS over the canonical descriptor."
+**Point at RSA.** "RSA — bare public-key pinning. The relying party knows the public key out-of-band and pins it; no certificate chain, no PKI required. If your release engineers already rotate a long-lived signing key, this is the natural path. The OCM signature is RSA-PSS over the canonical descriptor."
 
 **Point at GPG.** "GPG. OpenPGP keys, the model your team probably already uses for git commit signing, package signing, mailing-list signing. Familiar key-ring semantics, ASCII-armored signatures. If your release engineers already manage OpenPGP keys for one process, point them at OCM for the release-level signature too."
 
@@ -272,7 +272,11 @@ This is the slide where the security architects in the room start paying close a
 
 Beat. Now deliver the discipline:
 
-> "Three things to land. First — the *signature shape* is the same in all three cases. It covers the canonical descriptor; it covers every digest in the descriptor. Second — verifiers can accept multiple trust models in parallel. You can require an RSA signature from your release team and a Sigstore signature from CI, and check both. Third — pick what your org already runs today. RSA if you have PKI. GPG if your team already manages OpenPGP keys. Sigstore if you're keyless via OIDC. OCM doesn't force a religious choice."
+> "Three things to land. First — the *signed object* is the same in all three cases. It is the canonical descriptor digest; it covers every resource digest in the descriptor. Second — verifiers can accept multiple trust models in parallel. You can require an RSA signature from your release team and a Sigstore signature from CI, and check both. Third — pick what your org already runs today. RSA if you already manage a long-lived signing key. GPG if your team uses OpenPGP. Sigstore if you're keyless via OIDC. OCM doesn't force a religious choice."
+
+PEM on the prepared answer:
+
+> "We also support an RSA mode that signs with an X.509 certificate chain — PEM encoding. That one is still experimental — the CLI prints `experimental` warnings on sign and verify — so it's flagged on slide 14, not shown here. The three on this slide are all stable on the same v1alpha1 surface."
 
 CLI for the curious:
 
@@ -280,7 +284,7 @@ CLI for the curious:
 
 **Anticipated questions.**
 - *"Can I sign without modifying the descriptor?"* — No. The signature is part of the descriptor. That's by design — there's nothing to lose in transit.
-- *"What about GPG specifically — what does the descriptor entry look like?"* — Same `signatures:` block, with the algorithm field naming the GPG variant. The website's `how-to/Sign and Verify/sign-component-version.md` page has the GPG walkthrough with a concrete key fingerprint and the `gpg --armor` command shape.
+- *"Why isn't PEM / cert chains on the slide?"* — It's a fourth signing option that's still experimental. Plain RSA is bare public-key pinning; PEM is RSA with an X.509 cert chain. The PEM tutorial and the CLI both call it out as experimental today.
 - *"What about post-quantum?"* — Spec is open to additional algorithm IDs. Today: RSA-PSS, GPG/OpenPGP signatures, Sigstore's ECDSA-P256. Roadmap covers ML-DSA when the standard stabilises.
 - *"Sigstore — same caveats as cosign?"* — Yes. Make sure your OIDC issuer is trusted in the verifier's policy. Same operational discipline you'd apply to any keyless flow.
 
@@ -304,18 +308,18 @@ This is the slide where the air-gap conversation lives. It is the slide where mo
 
 Beat. Deliver the payoff.
 
-> "Three things to land. First — same command in all three cases. `ocm transfer ctf` or `ocm transfer cv`, with a source and a destination. The CLI doesn't care which combination of registry-or-tarball you pick. Second — what changes on every transfer is the `access` field. Digests don't. The signature covers the digest, not the access, which is why the signature survives every hop. Third — verification can happen at the destination, with no callback to the source. That's the air-gap property. That's what 'sovereign-ready' means in mechanics."
+> "Three things to land. First — same command in all three cases. `ocm transfer cv` with a source and a destination. Source or destination can be a registry reference or a `ctf::./path` prefix — the CLI doesn't care which combination of registry-or-tarball you pick. Second — what changes on every transfer is the `access` field. Digests don't. The signature covers the digest, not the access, which is why the signature survives every hop. Third — verification can happen at the destination, with no callback to the source. That's the air-gap property. That's what 'sovereign-ready' means in mechanics."
 
 CLI examples:
 
 > "Registry to registry: `ocm transfer cv ghcr.io/source//acme/widget:v1.4.2 ghcr.io/target`."
 >
-> "Registry to CTF: `ocm transfer cv ghcr.io/source//acme/widget:v1.4.2 ./offline-bundle --type=ctf`."
+> "Registry to CTF: `ocm transfer cv ghcr.io/source//acme/widget:v1.4.2 ctf::./offline-bundle`."
 >
-> "CTF to registry: `ocm transfer ctf ./offline-bundle registry.sovereign.local`."
+> "CTF to registry: `ocm transfer cv ctf::./offline-bundle//acme/widget:v1.4.2 registry.sovereign.local`."
 
 **Anticipated questions.**
-- *"What if the source has the resource and the destination has a different digest at the same coordinate?"* — Transfer refuses. Digests are immutable identity; mismatch is a failure.
+- *"What if the source has the resource and the destination has a different digest at the same component identity?"* — Transfer refuses. Digests are immutable identity; mismatch is a failure.
 - *"Can I transfer just one resource?"* — At the component level, no — the unit is the descriptor. At the resource level, you can `ocm download resource` for inspection, but you can't selectively re-pack without a new version.
 - *"What about size? CTF tarballs for a real product?"* — Hundreds of MB to several GB depending on what's inside. Real customers ship them on portable media or via approved transfer mechanisms.
 - *"Does `ocm transfer` copy the resource bytes by default?"* — No — flagged on slide 14. Transfer defaults to descriptor-only. Pass `--copy-resources` for the air-gap case where the bytes have to travel with the descriptor.
@@ -324,44 +328,38 @@ CLI examples:
 
 ## SLIDE 11 — DEPLOY  (19:00 — 21:30, ~150 sec)
 
-**On screen.** Eyebrow: DEPLOY. Title: "Four controllers verify and apply. One mirrors." Five CR cards. The top row is a chain of four cards left-to-right with arrows: Repository → Component → Resource → Deployer. Each top-row card carries a single-sentence body. A fifth card — Replication — is offset below the chain, centered, with no arrow connecting it to the chain.
+**On screen.** Eyebrow: DEPLOY. Title: "OCM controllers verify and apply." Four CR cards in a left-to-right chain with arrows: Repository → Component → Resource → Deployer. Each card carries a single-sentence body.
 
 **Speaker notes.**
 
-This is the slide where Kubernetes folks lean in. The four-card chain is verify-and-apply. The fifth card sits alongside the chain rather than within it, and the title is the architectural statement: "Four controllers verify and apply. One mirrors."
+This is the slide where Kubernetes folks lean in. The four-card chain is verify-and-apply. The title is the architectural statement: "OCM controllers verify and apply."
 
-> "OCM ships a small set of Kubernetes controllers. Four of them form the chain that brings a component into the cluster. A fifth sits alongside the chain. Let me walk both."
+> "OCM ships a small set of Kubernetes controllers. Four of them form the chain that brings a component into the cluster. Let me walk through it."
 
 **Point at Repository (chain card 1).** "Repository. Where component versions live. One per source — an OCI registry, a CTF mounted from a PVC, an S3 bucket. The other controllers find descriptors through this object."
 
-**Point at Component (chain card 2).** "Component. Pulls one version. Verifies its signature against a trust anchor you give it — the public key, the certificate chain, or the Sigstore identity policy. If verification fails, nothing downstream sees a verified descriptor. The whole chain stops here."
+**Point at Component (chain card 2).** "Component. Pulls one version. Verifies its signature against a trust anchor you give it — the public key, the GPG keyring, or the Sigstore identity policy. If verification fails, nothing downstream sees a verified descriptor. The whole chain stops here."
 
 **Point at Resource (chain card 3).** "Resource. One artifact, by digest. The controller picks which resource — image, chart, raw manifest — out of the verified component, resolves its access record, and fetches the bytes. The resource is exposed to the cluster as a typed artifact."
 
-**Point at Deployer (chain card 4).** "Deployer. Applies it to the cluster. The interesting one for platform teams: it can apply raw manifests directly, hand off to Flux for a HelmRelease, or hand off to Argo for an Application. Pluggable at this tier — point your existing reconciliation engine at the Resource CRs and OCM doesn't fight your platform stack."
-
-Beat. Now pivot to Replication.
-
-> "That's the chain. Repository, Component, Resource, Deployer — verify and apply. Now look at the card sitting below the chain. It's not connected by an arrow on purpose. It does a different job."
-
-**Point at Replication.** "Replication. The controller equivalent of `ocm transfer`. It references a `Component` for its source, and a `Repository` for its target. When the source `Component`'s resolved version changes, Replication transfers that version — together with the full reference graph of components it brings with it — into the target repository."
-
-> "Two phases when it runs. First it walks the reference graph through the resolution worker pool — that's `ResolutionInProgress` in its status. Then it executes the transfer — `TransferInProgress`. On success it records `status.lastTransferredDigest`. If a later reconciliation sees the same digest, it's a no-op. The controller doesn't re-transfer unchanged content."
-
-> "Use cases. Delivery pipelines — promote a component version between environments without leaving the cluster. Backup. Air-gap scenarios where a management cluster mirrors content into a downstream registry. Anything you'd reach for `ocm transfer` in a CLI for, run as a controller instead."
+**Point at Deployer (chain card 4).** "Deployer. Applies it to the cluster — and *this* is where localization happens. The Deployer resolves image references and other deploy-time pointers from the *verified* component descriptor at apply time, not at transfer time. That's the v2 mechanism. It can apply raw manifests directly, hand off to Flux for a HelmRelease, or hand off to Argo for an Application. Pluggable at this tier — point your existing reconciliation engine at the Resource CRs and OCM doesn't fight your platform stack."
 
 Beat. Land the title.
 
-> "Four controllers verify and apply. One mirrors. That's the architectural shape. The chain is for delivery into the cluster; Replication is for delivery between repositories."
+> "Four controllers verify and apply. The chain is the architectural shape: descriptor in at Repository, verified bytes out at Deployer, with localization happening at apply time, sourced from the descriptor the chain has already verified."
 
 Honesty pre-empts slide 14:
 
 > "One honest edge that we'll come back to in three slides: the controllers ship as v1alpha1. The CRD surface can move. Pin minor versions in your platform installs."
 
+Q&A backup — Replication appendix:
+
+> "If anyone asks about the controller equivalent of `ocm transfer` for mirroring between repositories — there is one. It's called `Replication`, it sits alongside the chain (not within it), and there's an appendix slide for it. Happy to walk through it in Q&A."
+
 **Anticipated questions.**
 - *"Does this replace Argo?"* — No. It replaces the manual `kubectl apply` step. Argo and Flux remain on top as the UI and reconciliation engine.
-- *"Does Replication replace `ocm transfer` in the CLI?"* — No. The CLI command still exists; Replication is its in-cluster equivalent. Same mechanic, different driver — one for an operator at a terminal, one for a controller watching a `Component`.
-- *"Can Replication target a non-OCI repository?"* — The current shape references a `Repository` with a `repositorySpec` — the example in the docs uses `type: OCIRepository`. Recursion depth, copy mode, and credentials are configured via OCM configuration referenced from `spec.ocmConfig`, under the `transfer.config.ocm.software` key. For non-OCI targets, check the latest `Repository` types supported in the controllers' API reference.
+- *"Where does localization actually happen?"* — At the Deployer, at apply time. The Deployer resolves image refs and other templating from the verified descriptor and feeds them into the deployment tool (Flux/HelmRelease, Argo/Application, or raw manifest apply). Transfer doesn't rewrite resource bytes — that would change digests and invalidate signatures. The deploy-time injection is the v2 mechanism.
+- *"Is there a controller-shaped `ocm transfer`?"* — Yes — `Replication`. Pull the appendix slide if it comes up.
 - *"What about secret rendering at deploy time?"* — Workflow concern, not a model concern. Secrets-as-resources is supported via External Secrets / sealed-secrets patterns; the secrets themselves don't live in the descriptor.
 - *"How does verification config get to the Component controller?"* — Trust anchor lives in a Secret or a dedicated config object referenced from the ComponentCR. There's no single "TrustPolicyCR" yet — verification config lives next to the consumer.
 
@@ -439,39 +437,41 @@ Beat.
 
 ## SLIDE 14 — WHAT'S SHARP  (26:30 — 28:00, ~90 sec)
 
-**On screen.** Eyebrow: WHAT'S SHARP. Title: "Two honest edges." Two bullets in a blue box — (1) Transfer defaults to descriptor-only; pass `--copy-resources` for air-gap. (2) Controllers are v1alpha1 — pin minor versions. Caption: "Honest now beats apologetic later. Plan for the trim edge."
+**On screen.** Eyebrow: WHAT'S SHARP. Title: "Three honest edges." Three bullets in a blue box — (1) Transfer defaults to descriptor-only; pass `--copy-resources` for air-gap. (2) Controllers are v1alpha1 — pin minor versions. (3) PEM-encoded RSA (cert chains) is experimental — CLI prints `experimental` warnings on sign/verify; Plain RSA, GPG, and Sigstore are stable. Caption: "Honest now beats apologetic later. Plan for the trim edge."
 
 **Speaker notes.**
 
-This is the slide that earns trust. Architects do not believe a deck without a sharp-edges slide. Two edges, delivered straight. No softening.
+This is the slide that earns trust. Architects do not believe a deck without a sharp-edges slide. Three edges, delivered straight. No softening.
 
-> "Two edges I want to call out before you go home and prototype this."
+> "Three edges I want to call out before you go home and prototype this."
 
 **Bullet 1 — Transfer defaults to descriptor-only.** "When you run `ocm transfer`, by default it copies only the descriptor — the metadata, the references, the signatures. The bytes of the resources stay at their original access locations. That's fine for promotion inside one connected estate. It is *not* fine for air-gap. For the air-gap case you pass `--copy-resources` so the bytes travel with the descriptor into the CTF tarball. Default is descriptor-only; if you want bytes too, you ask for them. Worth catching in a CI step the first time someone runs an air-gap export."
 
-**Bullet 2 — Controllers are v1alpha1.** "The Kubernetes controllers ship at v1alpha1. The CRD surface can still move between minor versions — fields renamed, behaviour adjusted. The mechanic — Repository, Component, Resource, Deployer, Replication — is settled. The exact shape of those CRDs isn't. Pin minor versions in your platform installs. Treat upgrades the way you'd treat any v1alpha1 — check the changelog, test in staging."
+**Bullet 2 — Controllers are v1alpha1.** "The Kubernetes controllers ship at v1alpha1. The CRD surface can still move between minor versions — fields renamed, behaviour adjusted. The mechanic — Repository, Component, Resource, Deployer — is settled. The exact shape of those CRDs isn't. Pin minor versions in your platform installs. Treat upgrades the way you'd treat any v1alpha1 — check the changelog, test in staging."
+
+**Bullet 3 — PEM-encoded RSA is experimental.** "On slide 9 we showed three trust models: RSA (bare key pinning), GPG, and Sigstore. There's a fourth option — RSA with an X.509 certificate chain in PEM encoding — that we didn't put on the slide because it's still experimental. The CLI prints an `experimental` warning to your terminal on every sign and every verify with PEM. The other three are stable on the same v1alpha1 API surface. PEM may still shift; if your trust model needs cert chains rather than bare public keys, talk to us about timing."
 
 Beat.
 
-> "Honest now beats apologetic later. If either of these edges is a deal-breaker for your platform, tell us — we'd rather know early. If they're trim work, plan for them; the rest of the model is sound."
+> "Honest now beats apologetic later. If any of these edges is a deal-breaker for your platform, tell us — we'd rather know early. If they're trim work, plan for them; the rest of the model is sound."
 
 ---
 
 ## SLIDE 15 — CTA  (28:00 — 30:00, ~120 sec)
 
-**On screen.** Eyebrow: JOIN US. Title: "Ship the release as one unit." Three lines: Try it — `ocm.software` / Build with us — `github.com/open-component-model` / Talk to us — community channels on the website. NeoNephos Foundation logomark bottom-right.
+**On screen.** Eyebrow: JOIN US. Title: "Ship the release as one unit." Three lines: Evaluate — `ocm.software` · run conformance/scenarios/sovereign / Pilot — `github.com/open-component-model` · one product, one team / Engage — community channels on the website · NeoNephos Foundation. NeoNephos Foundation logomark bottom-right.
 
 **Speaker notes.**
 
-Close with the ask. Plain language. Three doors. The title is the whole talk in six words.
+Close with the ask. Architect-shaped: Evaluate, Pilot, Engage. The title is the whole talk in six words.
 
 > "Ship the release as one unit. That's the talk in six words. Three doors out of this room."
 
-> "Try it. `ocm.software` — install the CLI, walk through the getting-started guide, pack one of your own components. You'll know within an afternoon whether OCM fits your delivery model."
+> "Evaluate. `ocm.software` — the spec, the concept docs, the conformance suite. Run the conformance scenario at `conformance/scenarios/sovereign` — it's a working end-to-end example you can read in an afternoon. You'll know whether OCM fits your delivery model after that read."
 
-> "Build with us. `github.com/open-component-model` — the spec, the implementation, the conformance suite, the roadmap. All open. All in the open. If you find an edge, file an issue; if you build on top, we want to know."
+> "Pilot. `github.com/open-component-model` — one product, one team, scoped scope of work. Spec, implementation, conformance suite, roadmap. All open, all in the open. If you find an edge, file an issue; if you build on top, we want to know."
 
-> "Talk to us. The community channels are linked from the website — the maintainers are there, customers are there, the foundation governance discussions happen there. If your organisation is at the supply-chain pressure point I described at the start, we want to hear about your delivery problem in your words."
+> "Engage. The community channels are linked from the website — the maintainers are there, customers are there, the foundation governance discussions happen there. If your organisation is at the supply-chain pressure point I described at the start, we want to hear about your delivery problem in your words."
 
 Beat.
 
@@ -480,6 +480,33 @@ Beat.
 > "That's the talk. Thank you. Happy to take questions."
 
 (Then: take questions.)
+
+---
+
+## SLIDE 16 — APPENDIX · REPLICATION  (PULL-ON-DEMAND, not in main 30-min flow)
+
+**On screen.** Eyebrow: APPENDIX · REPLICATION. Title: "Alongside the chain. Not within it." Four greyed-out chain cards at the top (Repository → Component → Resource → Deployer) reminding the audience of slide 11. A larger Replication card in brand blue, offset below the chain, with body text: "Transfers a resolved component version from one OCM repository to another. Records status.lastTransferredDigest. Same digest → no-op." Footer in mid-blue: "Controller-shaped equivalent of `ocm transfer cv` — mirroring, promotion, in-cluster air-gap."
+
+**Speaker notes.**
+
+Pull only on demand — typical triggers: "is there a controller for `ocm transfer`?", "how do I mirror components between management cluster and tenant clusters?", "what about in-cluster air-gap promotion?".
+
+> "There's a fifth controller I didn't put on slide 11 because the four-card chain is the load-bearing story. It's called Replication, and it sits alongside the chain — not within it. The chain delivers content *into* the cluster. Replication transfers content *from* one OCM repository *to* another."
+
+**Point at the chain (greyed).** "These four are unchanged from slide 11 — that's the verify-and-apply path."
+
+**Point at Replication.** "Replication references a `Component` for its source and a `Repository` for its target. When the source `Component`'s resolved version changes, Replication transfers that version — with its full reference graph of components — into the target repository."
+
+> "It records `status.lastTransferredDigest` after each successful run. A later reconciliation that sees the same digest is a no-op. The controller doesn't re-transfer unchanged content."
+
+> "Use cases. Delivery pipelines — promote a component version between environments without leaving the cluster. Backup. Air-gap scenarios where a management cluster mirrors content into a downstream registry on a separate trust boundary. Anything you'd reach for `ocm transfer` on a workstation, run as a controller instead."
+
+> "Same mechanic as the CLI verb. Different driver — one for an operator at a terminal, one for a controller watching a `Component`."
+
+**Anticipated questions.**
+- *"Why isn't this in the main deck?"* — Because the four-card chain is the architectural message. Replication is a coda for a specific use case. We pull it when it matters.
+- *"Can Replication target a non-OCI repository?"* — The current shape references a `Repository` with a `repositorySpec` — the example in the docs uses `type: OCIRepository`. Recursion depth, copy mode, and credentials are configured via OCM configuration referenced from `spec.ocmConfig`, under the `transfer.config.ocm.software` key.
+- *"Status `ResolutionInProgress` / `TransferInProgress`?"* — Two phases per reconcile. First the resolution worker walks the reference graph; then the transfer executes. Standard controller-status pattern.
 
 ---
 
