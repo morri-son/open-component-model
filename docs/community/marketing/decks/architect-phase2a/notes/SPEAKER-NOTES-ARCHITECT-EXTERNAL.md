@@ -90,7 +90,9 @@ This slide does two jobs. First — pre-empt the "what does this replace?" quest
 
 > "Before we go further, let me say what OCM is *not*. It is not a replacement for OCI. It is not a replacement for Helm. It is not a replacement for your SBOM tooling. It composes around all of them. And it does that by defining one new thing — the *component*."
 
-**Point at ANY FORMAT.** "Every artifact format you ship today stays exactly what it is. A Helm chart is still a Helm chart. An OCI image is still an OCI image. SBOMs stay SPDX or CycloneDX. Each one becomes a *resource* inside the component."
+**Point at ANY FORMAT.** "Every artifact format you ship today stays exactly what it is. A Helm chart is still a Helm chart. An OCI image is still an OCI image. SBOMs stay SPDX or CycloneDX. npm packages, maven artifacts, raw binaries — each one becomes a *resource* inside the component. The artifact `type:` field is free-form; the access can be `File/v1` or `LocalBlob/v1` for anything without a dedicated access binding. So OCM components carry these things today."
+
+**Q&A backup for ANY FORMAT.** If asked about npm and maven specifically: "OCM v1 shipped dedicated `NPM/v1` and `Maven/v1` access types. We're bringing those back to v2 — they're on the near-term roadmap. Until then, npm and maven artifacts ride in via `File/v1` or `LocalBlob/v1`. Same component shape; you get a dedicated access type later for nicer pull semantics."
 
 **Point at ANY LOCATION.** "Component identity travels. The component has a name and version that don't encode a registry. Move it across registries; the name stays the same."
 
@@ -195,7 +197,13 @@ Beat. Now deliver the payoff.
 
 **Speaker notes.**
 
-This slide does two jobs. First — name the primitive the audience has been waiting to hear named ("where does the thing actually live?"). Second — organise the next four slides under one mental picture.
+This slide is the hinge from noun to verb. On slides 5 and 6 the audience saw the *static artifact* — what you write and what travels. This slide pivots to the *dynamic lifecycle* — what happens to that artifact over its life.
+
+Open with the bridge so the seam between slide 6 and 7 is invisible:
+
+> "On the last two slides you saw the static artifact — what you write, what travels. Now four moves on that artifact. And actually — we've covered the first half of two of them already. The constructor on slide five is the *input* to Pack. The descriptor on slide six is the *output* of Pack, the *target* of Sign, and the *unit* of Transport. So you've already met three of these four moves, you just hadn't seen them named."
+
+Beat. Now land the primitive:
 
 > "Look at the footer line for a moment. The component descriptor — the thing you just saw on slide six — is itself an OCI artifact. Media type `application/vnd.ocm.software.component-descriptor.v2`. It lives in your registry, right next to the images it references. Same registry, no new infrastructure. That's the primitive."
 

@@ -32,7 +32,7 @@ SPEAKER_NOTES: dict[int, str] = {
     4: (
         "Two jobs: pre-empt 'what does this replace?' and define the noun 'COMPONENT' the rest of the deck rests on.\n"
         "OCM is not a replacement for OCI, Helm, or your SBOM tooling. It composes around them and adds one new thing - the component.\n"
-        "• Any format - Helm stays Helm, OCI stays OCI, configs stay configs. The artifact `type:` is free-form; access types are pluggable. SBOMs and other formats slot in via the same mechanism.\n"
+        "• Any format - Helm stays Helm, OCI stays OCI, configs stay configs. The artifact `type:` is free-form, so an OCM component already carries SBOMs, npm packages, maven artifacts and anything else your team produces today - access is via `File/v1` or `LocalBlob/v1`. Dedicated `NPM/v1` and `Maven/v1` access types are on the roadmap (the v1 line shipped them; we're bringing them back to v2).\n"
         "• Any location - name and version do not encode a registry. Move it; the name stays.\n"
         "• One signature - covers every digest in the component. The whole release is one signed unit.\n"
         "A component is the unit you sign, transport, and deploy. Hold the noun."
@@ -57,8 +57,9 @@ SPEAKER_NOTES: dict[int, str] = {
         "Sign the descriptor hash, not the access. Seven words; whole transport story."
     ),
     7: (
-        "Name the primitive, then frame the next four slides.\n"
-        "The signed descriptor is itself an OCI artifact - media type `application/vnd.ocm.software.component-descriptor.v2`. Lives in your registry next to the images. No new infrastructure.\n"
+        "Bridge from noun to verb. On slides 5 and 6 you saw the static artifact - what you write and what travels. Now four moves on that artifact.\n"
+        "We've covered the first half of two of them already: the constructor (slide 5) is the input to Pack; the descriptor (slide 6) is the output of Pack, the target of Sign, and the unit of Transport.\n"
+        "Name the primitive: the signed descriptor is itself an OCI artifact - media type `application/vnd.ocm.software.component-descriptor.v2`. Lives in your registry next to the images. No new infrastructure.\n"
         "Four moves, same flow, every component:\n"
         "• Pack - bundle once, name once.\n"
         "• Sign - one signature covers every digest.\n"

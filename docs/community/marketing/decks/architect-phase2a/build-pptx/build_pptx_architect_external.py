@@ -777,7 +777,7 @@ def build_slide_4_positioning(prs, layouts):
     set_text(s, 1, "WHERE OCM SITS")
     set_text(s, 2, "One component wraps every artifact, signed once.")
     set_text(s, 10, "ANY FORMAT")
-    set_text(s, 11, "OCI, Helm, configs, SBOMs, binaries.\n"
+    set_text(s, 11, "OCI, Helm, configs, SBOMs, npm, maven, binaries.\n"
                      "Artifact type is free-form; access types are pluggable.")
     set_text(s, 12, "ANY LOCATION")
     set_text(s, 13, "Component identity travels.\n"
