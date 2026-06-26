@@ -622,6 +622,68 @@ def layout_three_column() -> bytes:
     return wrap_layout("obj", "Content / 3-Column", shapes_xml(*shapes))
 
 
+# -- Layout 3b: Content / 3-Column Tall Title --------------------------------
+
+def layout_three_column_tall() -> bytes:
+    """Variant of Content / 3-Column with room for a two-line title.
+
+    Same column structure, but the title slot is taller (h=300 vs 200) and
+    the column block starts lower (col_y=620 vs 520), so a 2-line 74pt title
+    has ~90px of breathing room before the blue rules.
+
+    Use when the title intentionally spans two lines, e.g. positioning
+    slides that mirror the column features in the title itself.
+    """
+    shapes = []
+    # Eyebrow — identical to standard 3-Column.
+    shapes.append(make_textbox(
+        "Eyebrow", 10, 120, 255, 1680, 48,
+        placeholder_type="body", placeholder_idx=1,
+        default_text="EYEBROW",
+        size_pt=32, bold=True, color_hex="0F6BFF",
+        all_caps=True, letter_spacing_pt=1.4,
+    ))
+    # Title — taller slot (h=300) for 2 lines at 74pt.
+    shapes.append(make_textbox(
+        "Title", 11, 120, 308, 1680, 300,
+        placeholder_type="title", placeholder_idx=2,
+        default_text="Two-line section title goes here.",
+        size_pt=74, bold=True, color_hex="000000",
+        font="Aptos Display", line_spacing_pct=0.9,
+    ))
+    # Three columns pushed down to col_y=620.
+    margin_x = 120
+    gutter = 56
+    inner_w = SLIDE_W_PX - 2 * margin_x
+    col_w = (inner_w - 2 * gutter) // 3
+    col_y = 620
+    next_id = 12
+    for i in range(3):
+        cx = margin_x + i * (col_w + gutter)
+        shapes.append(make_rect(f"Col{i+1} Rule", next_id,
+                                  cx, col_y, col_w, 4, "0F6BFF"))
+        next_id += 1
+        shapes.append(make_textbox(
+            f"Col{i+1} Header", next_id, cx, col_y + 16, col_w, 56,
+            placeholder_type="body", placeholder_idx=10 + i * 2,
+            default_text=f"COLUMN {i+1} HEADER",
+            size_pt=23, bold=True, color_hex="0F6BFF",
+            all_caps=True, letter_spacing_pt=1.3,
+            no_autofit=True,
+        ))
+        next_id += 1
+        shapes.append(make_textbox(
+            f"Col{i+1} Body", next_id, cx, col_y + 84, col_w, 380,
+            placeholder_type="body", placeholder_idx=11 + i * 2,
+            default_text=f"Column {i+1} body. Replace with one or two short sentences.",
+            size_pt=25, color_hex="000000",
+        ))
+        next_id += 1
+    shapes.append(_footer_shape(next_id))
+    return wrap_layout("obj", "Content / 3-Column Tall Title",
+                        shapes_xml(*shapes))
+
+
 # -- Layout 4: Content / Diagram ---------------------------------------------
 
 def layout_diagram() -> bytes:
@@ -651,6 +713,40 @@ def layout_diagram() -> bytes:
         _footer_shape(13),
     ]
     return wrap_layout("obj", "Content / Diagram", shapes_xml(*shapes))
+
+
+# -- Layout 4b: Content / Diagram Compact -----------------------------------
+
+def layout_diagram_compact() -> bytes:
+    """Diagram-with-context layout. Mid-weight header (eyebrow + title around
+    half the brand-default size) so a slide can carry both a sizeable title
+    AND content-heavy body — YAML, ASCII art, side-by-side descriptors —
+    without the title clipping or the body feeling cramped.
+
+    Use this when:
+      - Content / Diagram's tiny 80px title slot can't fit your title
+      - Plain layout's tall 308+200 title block crowds out the body content
+      - You want a body slot taller than 780px (this gives 800px)
+
+    Geometry (1920×1080 canvas):
+      - Eyebrow   y= 80  h= 40   (26pt, brand-blue, ALL-CAPS)
+      - Title     y=130  h=100   (56pt, fits 1 line at ~52 chars / 2 short lines)
+      - Diagram   y=260  h=760   (1800 wide, 60px gutter)
+    """
+    shapes = [
+        make_textbox("Eyebrow", 10, 120, 80, 1680, 40,
+                     placeholder_type="body", placeholder_idx=1,
+                     default_text="EYEBROW", size_pt=26, bold=True,
+                     color_hex="0F6BFF", all_caps=True, letter_spacing_pt=1.4),
+        make_textbox("Title", 11, 120, 130, 1680, 100,
+                     placeholder_type="title", placeholder_idx=2,
+                     default_text="Section title goes here.",
+                     size_pt=56, bold=True, color_hex="000000",
+                     font="Aptos Display", line_spacing_pct=0.9),
+        _picture_placeholder("Diagram", 12, 60, 260, 1800, 760, ph_idx=10),
+        _footer_shape(13),
+    ]
+    return wrap_layout("obj", "Content / Diagram Compact", shapes_xml(*shapes))
 
 
 # -- Layout 5: Content / Tiles -----------------------------------------------
@@ -981,15 +1077,17 @@ def embed_fonts(archive: dict[str, bytes]) -> None:
 # -----------------------------------------------------------------------------
 
 LAYOUTS = [
-    ("Hero",                "title",   layout_hero),
-    ("CTA",                 "obj",     layout_cta),
-    ("Content / 3-Column",  "obj",     layout_three_column),
-    ("Content / Diagram",   "obj",     layout_diagram),
-    ("Content / Tiles",     "obj",     layout_tiles),
-    ("Content / 2-Column",  "twoObj",  layout_two_column),
-    ("Section Divider",     "secHead", layout_section),
-    ("Plain",               "obj",     layout_plain),
-    ("Plain / Compact",     "obj",     layout_plain_compact),
+    ("Hero",                       "title",   layout_hero),
+    ("CTA",                        "obj",     layout_cta),
+    ("Content / 3-Column",         "obj",     layout_three_column),
+    ("Content / 3-Column Tall Title", "obj",  layout_three_column_tall),
+    ("Content / Diagram",          "obj",     layout_diagram),
+    ("Content / Diagram Compact",  "obj",     layout_diagram_compact),
+    ("Content / Tiles",            "obj",     layout_tiles),
+    ("Content / 2-Column",         "twoObj",  layout_two_column),
+    ("Section Divider",            "secHead", layout_section),
+    ("Plain",                      "obj",     layout_plain),
+    ("Plain / Compact",            "obj",     layout_plain_compact),
 ]
 
 

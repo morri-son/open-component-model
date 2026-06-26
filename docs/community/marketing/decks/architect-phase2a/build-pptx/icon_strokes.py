@@ -1,0 +1,1 @@
+../../exec-phase1/build-pptx/icon_strokes.py

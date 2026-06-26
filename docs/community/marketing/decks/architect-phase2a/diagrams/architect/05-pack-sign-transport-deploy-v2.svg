@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 540" font-family="Aptos, Inter, system-ui, sans-serif">
+  <defs>
+    <style>
+      .step-card { fill: #FFFFFF; stroke: none; filter: url(#card-shadow); }
+      .step-card-bg { fill: #F3F4F6; stroke: none; }
+      .step-rule { fill: #0F6BFF; }
+      .target-card { fill: #0A3A99; stroke: none; }
+      .step-label { fill: #0A3A99; font-size: 34px; font-weight: 700; letter-spacing: 0.6px; }
+      .step-body { fill: #333333; font-size: 26px; font-weight: 400; }
+      .target-label { fill: #0A3A99; font-size: 34px; font-weight: 700; letter-spacing: 0.6px; }
+      .target-body { fill: #333333; font-size: 26px; font-weight: 400; }
+      .arrow { stroke: #6B7280; stroke-width: 2.5; fill: none; }
+      .arrow-head { fill: #6B7280; }
+      .icon { stroke: #0F6BFF; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .cloud-fill { fill: #0F6BFF; stroke: none; }
+      .lock-stroke { stroke: #FFFFFF; stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .lock-fill { fill: #FFFFFF; stroke: none; }
+    </style>
+    <!-- Drop shadow used on every card. Soft, low-distance, brand-neutral grey. -->
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="3" result="offsetblur"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.30"/></feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" class="arrow-head"/>
+    </marker>
+  </defs>
+
+  <!-- Layout: 4 step cards (380 wide) + 3 inter-card gaps (28) + arrow gap (44) + target card (~360).
+       Total: 4*380 + 3*28 + 44 + 360 = 1988 — slightly wide; balanced by reducing target spacing.
+       Use cards 360 wide, gaps 30, target gap 50, target 360 → 4*360+3*30+50+360 = 1940 ≈ canvas.
+       Centred: (1920-1940)/2 = -10 → start at x=10. Card height 400. y=70 vertically centres in 540. -->
+
+  <!-- Card 1: Pack -->
+  <g transform="translate(10, 70)">
+    <g class="step-card">
+      <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
+    </g>
+    <rect width="360" height="4" class="step-rule"/>
+    <!-- Pack icon: Tabler `package` (closed cardboard box, isometric).
+         Hosted in a nested SVG so the 24x24 Tabler viewBox renders inside
+         our 60x60 slot. vector-effect on every path keeps the stroke at
+         the existing 2.4px thickness regardless of scale, so the icon
+         visually matches the rest of slide 6 instead of bulking up. -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/>
+        <path vector-effect="non-scaling-stroke" d="M12 12l8 -4.5"/>
+        <path vector-effect="non-scaling-stroke" d="M12 12l0 9"/>
+        <path vector-effect="non-scaling-stroke" d="M12 12l-8 -4.5"/>
+        <path vector-effect="non-scaling-stroke" d="M16 5.25l-8 4.5"/>
+      </g>
+    </svg>
+    <text x="32" y="170" class="step-label">PACK</text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Constructor in,</tspan><tspan x="32" dy="36">descriptor out.</tspan></text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="380" y1="270" x2="406" y2="270" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Card 2: Sign -->
+  <g transform="translate(420, 70)">
+    <g class="step-card">
+      <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
+    </g>
+    <rect width="360" height="4" class="step-rule"/>
+    <!-- Sign icon: Tabler `shield-check`. Same nesting trick as Pack. -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"/>
+        <path vector-effect="non-scaling-stroke" d="M15 19l2 2l4 -4"/>
+      </g>
+    </svg>
+    <text x="32" y="170" class="step-label">SIGN</text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">One signature covers</tspan><tspan x="32" dy="36">every digest.</tspan></text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="790" y1="270" x2="816" y2="270" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Card 3: Transport -->
+  <g transform="translate(830, 70)">
+    <g class="step-card">
+      <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
+    </g>
+    <rect width="360" height="4" class="step-rule"/>
+    <!-- Transport icon: Tabler `world` (globe with meridians + parallels). -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/>
+        <path vector-effect="non-scaling-stroke" d="M3.6 9h16.8"/>
+        <path vector-effect="non-scaling-stroke" d="M3.6 15h16.8"/>
+        <path vector-effect="non-scaling-stroke" d="M11.5 3a17 17 0 0 0 0 18"/>
+        <path vector-effect="non-scaling-stroke" d="M12.5 3a17 17 0 0 1 0 18"/>
+      </g>
+    </svg>
+    <text x="32" y="170" class="step-label">TRANSPORT</text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Access rewritten.</tspan><tspan x="32" dy="36">Signature still verifies.</tspan></text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="1200" y1="270" x2="1226" y2="270" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Card 4: Deploy -->
+  <g transform="translate(1240, 70)">
+    <g class="step-card">
+      <rect width="360" height="400" rx="14" ry="14" class="step-card-bg"/>
+    </g>
+    <rect width="360" height="4" class="step-rule"/>
+    <!-- Deploy icon: Tabler `rocket` (paths verbatim from
+         diagrams/icons/rocket.svg, the same source feeding slide 9 tile-icon
+         "Kubernetes-native deployment"). The Tabler rocket already points
+         up-and-to-the-right at its native orientation — no rotation needed. -->
+    <svg x="32" y="36" width="60" height="60" viewBox="0 0 24 24" overflow="visible">
+      <g class="icon">
+        <path vector-effect="non-scaling-stroke" d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"/>
+        <path vector-effect="non-scaling-stroke" d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"/>
+        <path vector-effect="non-scaling-stroke" d="M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
+      </g>
+    </svg>
+    <text x="32" y="170" class="step-label">DEPLOY</text>
+    <text x="32" y="216" class="step-body"><tspan x="32" dy="0">Four controllers verify,</tspan><tspan x="32" dy="36">resolve, apply.</tspan></text>
+  </g>
+
+  <!-- Big arrow to target -->
+  <line x1="1610" y1="270" x2="1660" y2="270" class="arrow" stroke-width="3" marker-end="url(#arrowhead)"/>
+
+  <!-- Target: Sovereign Cloud (cloud-lock, no card) -->
+  <g transform="translate(1670, 60)">
+    <g transform="translate(8, 50)">
+      <path class="cloud-fill" d="M 56 130 C 28 130 4 110 4 80 C 4 54 26 32 54 36 C 64 14 92 6 112 22 C 132 6 162 14 174 38 C 200 36 222 56 222 80 C 222 108 198 130 174 130 Z"/>
+      <!-- Lock shackle -->
+      <path class="lock-stroke" d="M 99 66 L 99 54 C 99 42 105 36 113 36 C 121 36 127 42 127 54 L 127 66"/>
+      <!-- Lock body -->
+      <rect class="lock-fill" x="91" y="66" width="44" height="32" rx="4" ry="4"/>
+      <!-- Keyhole -->
+      <circle cx="113" cy="78" r="3" fill="#0F6BFF"/>
+      <rect x="111" y="78" width="4" height="10" fill="#0F6BFF"/>
+    </g>
+    <text x="124" y="252" text-anchor="middle" class="target-label">SOVEREIGN</text>
+    <text x="124" y="284" text-anchor="middle" class="target-label">CLOUD</text>
+    <text x="124" y="320" text-anchor="middle" class="target-body">Verify at destination.</text>
+    <text x="124" y="358" text-anchor="middle" class="target-body">No callback upstream.</text>
+  </g>
+</svg>

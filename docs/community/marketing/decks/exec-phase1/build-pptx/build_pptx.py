@@ -48,6 +48,7 @@ RASTER_DIR = SCRIPT_DIR / "_raster"
 
 POTX_PATH = DECK_DIR / "OCM-Master.potx"
 OUTPUT_PPTX = DECK_DIR / "OCM-Sovereign-Delivery-Exec.pptx"
+NOTES_MD = DECK_DIR / "notes" / "SPEAKER-NOTES-EXEC-EXTERNAL.md"
 
 RASTER_DIR.mkdir(exist_ok=True)
 
@@ -209,8 +210,74 @@ def open_template_as_pptx() -> Presentation:
 
 
 # -----------------------------------------------------------------------------
-# Placeholder helpers
+# Speaker notes — markdown → PPTX notes panel
 # -----------------------------------------------------------------------------
+#
+# Single source of truth for speaker notes is the markdown file under notes/.
+# We parse it once at build time and stamp the per-slide notes into each
+# slide's notes panel so the deck travels with its narration. Without this
+# wiring, the .pptx ships with empty notes pages and the speaker has to keep
+# the .md open in a second window.
+#
+# Parser is intentionally simple: split on lines that start with
+# "## SLIDE N — ", grab everything until the next "## " heading (or "---"
+# divider that separates the slide section from the timing/Q&A appendix),
+# strip leading/trailing blanks. The slide number embedded in the heading is
+# the canonical index — we don't rely on file order in case sections are
+# reordered later. Markdown formatting (>, **, etc.) survives as plain text
+# in the PowerPoint notes panel, which is fine: notes are read by the
+# speaker, not styled.
+
+import re as _re_notes
+
+
+def load_speaker_notes(md_path: Path) -> dict[int, str]:
+    """Parse SPEAKER-NOTES-EXEC-EXTERNAL.md into {slide_number: notes_text}.
+
+    Heading shape we match: `## SLIDE 1 — HERO  (00:00 — 00:45, ~45 sec)`.
+    Section ends at the next `## ` heading or a top-level `---` line
+    appearing AFTER the section started (the slide sections themselves
+    contain `---` only as visual separators between slide blocks, so the
+    first `---` after a heading is the end of that section).
+
+    Returns a dict keyed by slide number. Missing keys (e.g. appendix
+    glossary, hidden trademark slides) are silently absent — the build code
+    calls `set_slide_notes` only on slides it wants annotated, and a missing
+    entry is treated as "no notes for this slide" (no error).
+    """
+    if not md_path.exists():
+        return {}
+    text = md_path.read_text(encoding="utf-8")
+    notes: dict[int, str] = {}
+    # Capture: heading line → body until the next "## " or "---" on its own line.
+    pattern = _re_notes.compile(
+        r"^## SLIDE (\d+).*?$\n(.*?)(?=^## |^---\s*$)",
+        _re_notes.MULTILINE | _re_notes.DOTALL,
+    )
+    for m in pattern.finditer(text):
+        idx = int(m.group(1))
+        body = m.group(2).strip()
+        notes[idx] = body
+    return notes
+
+
+def set_slide_notes(slide, text: str):
+    """Stamp `text` into the slide's notes panel. No-op if text is empty.
+
+    python-pptx auto-creates the notesSlide on first access of
+    `slide.notes_slide`. Setting `.notes_text_frame.text` replaces any
+    existing notes content. We use the plain-text route (not run-level
+    formatting) because PowerPoint's notes pane is plain-text by convention
+    — speaker-formatting bold/italic in notes is rare and inconsistent
+    across PowerPoint versions.
+    """
+    if not text:
+        return
+    tf = slide.notes_slide.notes_text_frame
+    tf.text = text
+
+
+
 
 def find_placeholder(slide, idx: int):
     for ph in slide.placeholders:
@@ -609,6 +676,13 @@ def build():
     if missing:
         sys.exit(f"template missing expected layouts: {missing}")
 
+    # Load speaker notes from the canonical markdown file so the PPTX notes
+    # panel travels in lockstep with the .md. Missing entries are tolerated
+    # (the appendix glossary and hidden trademark slides intentionally have
+    # none). Each slide block below ends with `set_slide_notes(s, notes.get(N))`
+    # — keep that line in sync with the slide's section heading in the .md.
+    notes = load_speaker_notes(NOTES_MD)
+
     # ---- SLIDE 1 — HERO (cold-room canonical, revised 2026-06-17) -----------
     # Stake-led title + spannungs-subtitle. The original 11-word "Three minutes
     # from now, you'll know what your supply chain doesn't" was decomposed:
@@ -626,8 +700,38 @@ def build():
              "Open Component Model — open source, NeoNephos Foundation.",
              color=C.WHITE)
     add_brand_row(s)
+    set_slide_notes(s, notes.get(1, ""))
 
-    # ---- SLIDE 2 — WHY NOW (V1, sovereignty-led) ----------------------------
+    # ---- SLIDE 2 — THREE BLIND SPOTS (added 2026-06-24) --------------------
+    # Discharges the contract slide 1 made: "three minutes from now, you'll
+    # know what the blind spots are." Pre-existing deck went straight from
+    # promise (slide 1) to forces (slide 2 WHY NOW) to answer (slide 3 MEET
+    # OCM) — early reader flagged that the blind spots were never named in
+    # the audience's own vocabulary. This new slide names three picturable
+    # defects in the current delivery model, in exec language (no OCI / Helm
+    # / SBOM jargon), translated from the architect-deck slide 2 diagnosis
+    # ("identity bound to location").
+    #
+    # Same three-column layout as the WHY NOW slide that now follows it —
+    # visually the deck reads: picturable defect (slide 2) → why it matters
+    # right now (slide 3) → the answer (slide 4). Column bodies are tight;
+    # the column headers do most of the work.
+    s = prs.slides.add_slide(layouts["Content / 3-Column"])
+    set_text(s, 1, "THREE BLIND SPOTS")
+    set_text(s, 2, "Where today's delivery model can't see.")
+    set_text(s, 10, "IDENTITY DRIFT")
+    set_text(s, 11, "You signed the artifact at source.\n"
+                     "Each transfer changes its reference. "
+                     "Downstream verifies a reference you never signed.")
+    set_text(s, 12, "NO RELEASE ENVELOPE")
+    set_text(s, 13, "You sign artifacts. You don't sign the release.\n"
+                     "Twelve pieces, twelve signatures — if you're lucky.")
+    set_text(s, 14, "UNVERIFIED ARRIVAL")
+    set_text(s, 15, "Sovereign zones forbid upstream traffic.\n"
+                     "Verification ships with the release — or it doesn't happen.")
+    set_slide_notes(s, notes.get(2, ""))
+
+    # ---- SLIDE 3 — WHY NOW (V1, sovereignty-led) ----------------------------
     # Column 1 (SOVEREIGNTY PRESSURE) shortened: the original full-clause
     # description was reading like a definition (the audience reads the slide
     # instead of listening). Now two short sentences.
@@ -643,8 +747,9 @@ def build():
     set_text(s, 14, "SUPPLY-CHAIN ATTACKS ARE REAL")
     set_text(s, 15, "SolarWinds. xz. log4shell. Signatures must survive the "
                      "journey, or compliance is theatre.")
+    set_slide_notes(s, notes.get(3, ""))
 
-    # ---- SLIDE 3 — MEET OCM (hub-and-spoke diagram, Option 3 reframe) -------
+    # ---- SLIDE 4 — MEET OCM (hub-and-spoke diagram, Option 3 reframe) -------
     # Diagram positioned per user spec 2026-06-17: 50.02 × 15.93 cm,
     # x=-2.4cm (slight bleed left), y=11.65cm.
     s = prs.slides.add_slide(layouts["Content / Diagram"])
@@ -652,10 +757,11 @@ def build():
     set_text(s, 2, "Meet OCM. One identity, every boundary.")
     add_diagram(s, DIAGRAMS_DIR / "03-meet-ocm-hub-and-spoke.svg",
                  x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+    set_slide_notes(s, notes.get(4, ""))
     # Earlier iterations carried a NATIVE PPT shapes variant side-by-side
     # for review; PowerPoint review settled on the raster SVG, native dropped.
 
-    # ---- SLIDE 4a — THE SHIFT, SBOD (text-only) -----------------------------
+    # ---- SLIDE 5a — THE SHIFT, SBOD (text-only) -----------------------------
     # Three bullets (the fourth — "SBOD is the category SAP defined" — was
     # dropped for the external deck; vendor-neutral NeoNephos governance is
     # the credibility anchor for cold-start audiences, not SAP authorship).
@@ -669,8 +775,9 @@ def build():
         "SBOD contains SBOM. OCM doesn't replace your SBOM tooling — "
         "OCM gives the SBOM an envelope.",
     ])
+    set_slide_notes(s, notes.get(5, ""))
 
-    # ---- SLIDE 4b — THE SHIFT (diagram, Option A only) ---------------------
+    # ---- SLIDE 5b — THE SHIFT (diagram, Option A only) ---------------------
     # SBOD diagram. Earlier iterations carried three variants (raster + two
     # native versions); PowerPoint reviews settled on the artifact-list +
     # signature-bracket layout (Option A) so the picture shows SBOM as one
@@ -685,8 +792,9 @@ def build():
     )
     if diagram:
         add_diagram(s, diagram, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+    set_slide_notes(s, notes.get(6, ""))
 
-    # ---- SLIDE 5 — HOW OCM COMPOSES (NEW, comparator slide) ----------------
+    # ---- SLIDE 7 — HOW OCM COMPOSES (comparator slide) ---------------------
     # Two-line columns: [status quo today] / [OCM contribution]. Cold-start
     # audience explicitly benefits from the parallel structure — they read
     # the differential ("OCM does X *instead of / on top of* Y") in one
@@ -702,8 +810,9 @@ def build():
     set_text(s, 14, "COMPLIANCE")
     set_text(s, 15, "Your scanners see one artifact at a time.\n"
                      "OCM correlates findings to the release.")
+    set_slide_notes(s, notes.get(7, ""))
 
-    # ---- SLIDE 6 — OCM IN ONE PICTURE --------------------------------------
+    # ---- SLIDE 8 — OCM IN ONE PICTURE --------------------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "OCM IN ONE PICTURE")
     set_text(s, 2, "Pack · Sign · Transport · Deploy")
@@ -712,8 +821,9 @@ def build():
         DIAGRAMS_DIR / "05-pack-sign-transport-deploy.svg",
     )
     add_diagram(s, diagram6, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+    set_slide_notes(s, notes.get(8, ""))
 
-    # ---- SLIDE 7a — SOVEREIGN-READY (text-only) ----------------------------
+    # ---- SLIDE 9a — SOVEREIGN-READY (text-only) ----------------------------
     # Anchor + characterisation + consequence — cold-start audience needs the
     # third clause to ground unfamiliar terms (location-independent, day-2 ops,
     # boundary). Internal-deck format is more compressed because sponsors know
@@ -731,18 +841,20 @@ def build():
         "Transfer — self-contained. "
         "Every artifact travels with the component.",
     ])
+    set_slide_notes(s, notes.get(9, ""))
 
-    # ---- SLIDE 7b — SOVEREIGN-READY (diagram only) -------------------------
+    # ---- SLIDE 9b — SOVEREIGN-READY (diagram only) -------------------------
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "SOVEREIGN-READY — AIR-GAP")
     set_text(s, 2, "Trust travels with the component.")
     add_diagram(s, DIAGRAMS_DIR / "06-sovereign-airgap.svg",
                  x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
+    set_slide_notes(s, notes.get(10, ""))
 
-    # ---- SLIDE 8 — SCAN (shortened eyebrow) --------------------------------
+    # ---- SLIDE 11 — SCAN (shortened eyebrow) -------------------------------
     # Eyebrow was "SCAN — COMPLIANCE-NATIVE WITH OPEN DELIVERY GEAR" — trimmed
     # to just "SCAN" (positions as the 5th step after Pack/Sign/Transport/Deploy
-    # on slide 6). ODG definition stays as bullet 1 because the cold-start
+    # on slide 8). ODG definition stays as bullet 1 because the cold-start
     # audience doesn't know the product.
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "SCAN")
@@ -755,8 +867,9 @@ def build():
         "Contextual rescoring — patch what matters, not the noise.",
         "Identity-correlated evidence — auditors get answers, not spreadsheets.",
     ])
+    set_slide_notes(s, notes.get(11, ""))
 
-    # ---- SLIDE 9 — WHAT OCM UNLOCKS (tiles, was 8) -------------------------
+    # ---- SLIDE 12 — WHAT OCM UNLOCKS (tiles) -------------------------------
     s = prs.slides.add_slide(layouts["Content / Tiles"])
     set_text(s, 1, "WHAT OCM UNLOCKS")
     set_text(s, 2, "One model unlocks all of this.")
@@ -780,8 +893,9 @@ def build():
         set_text(s, 21 + i * 2, body)
         x, y = tile_origin(i)
         add_tile_icon(s, x, y, icon)
+    set_slide_notes(s, notes.get(12, ""))
 
-    # ---- SLIDE 10 — TRUSTED IN PRODUCTION (two-tier logo wall) --------------
+    # ---- SLIDE 13 — TRUSTED IN PRODUCTION (two-tier logo wall) -------------
     # Title is four parallel stop-sentences: "SAP stewards. NeoNephos governs.
     # Production-grade. Sovereign-ready." — each carries one of the four
     # credibility claims the slide needs to land. Logo wall is then structured
@@ -825,16 +939,26 @@ def build():
         "",
         logo_url="https://neonephos.org",
         logo_caption="NeoNephos")
+    set_slide_notes(s, notes.get(13, ""))
 
-    # ---- SLIDE 11 — CTA (was 10) --------------------------------------------
+    # ---- SLIDE 14 — CTA (reshaped 2026-06-24, exec-scaled) -----------------
+    # Previous shape was developer-scaled (Try it / Build with us / Talk to
+    # us) — install-the-CLI is not an action an exec takes in the room; the
+    # asks read as "this is for my platform team" and kill the close. New
+    # shape mirrors the internal-deck's Sponsor / Scale / Standardize cadence
+    # but in customer vocabulary: Pilot one regulated delivery → Evaluate
+    # what your team found → Engage with the standard. CLI + repo + community
+    # links survive in the path column so a platform lead in the room can
+    # still find them — they just stop being the headline.
     s = prs.slides.add_slide(layouts["CTA"])
-    set_text(s, 1, "Start delivering with confidence.", color=C.WHITE)
+    set_text(s, 1, "Pilot. Evaluate. Engage.", color=C.WHITE)
     set_action_path_lines(s, 2, [
-        ("Try it",        "ocm.software"),
-        ("Build with us", "github.com/open-component-model"),
-        ("Talk to us",    "community channels on the website"),
+        ("Pilot",    "pack one regulated delivery this quarter"),
+        ("Evaluate", "hear back from your platform and security leads"),
+        ("Engage",   "ocm.software · github.com/open-component-model"),
     ])
     add_brand_row(s)
+    set_slide_notes(s, notes.get(14, ""))
 
     # ---- HIDDEN — Trademark & licensing notice -----------------------------
     # Marked show="0" so it doesn't appear in slideshow mode but is visible
