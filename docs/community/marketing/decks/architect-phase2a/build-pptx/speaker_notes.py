@@ -31,10 +31,11 @@ SPEAKER_NOTES: dict[int, str] = {
     ),
     4: (
         "Two jobs: pre-empt 'what does this replace?' and define the noun 'COMPONENT' the rest of the deck rests on.\n"
-        "OCM is not a replacement for OCI, Helm, or your SBOM tooling. It composes around them and adds one new thing - the component.\n"
-        "• Any format - Helm stays Helm, OCI stays OCI, configs stay configs. The artifact `type:` is free-form, so an OCM component already carries SBOMs, npm packages, maven artifacts and anything else your team produces today - access is via `File/v1` or `LocalBlob/v1`. Dedicated `NPM/v1` and `Maven/v1` access types are on the roadmap (the v1 line shipped them; we're bringing them back to v2).\n"
+        "OCM is not a replacement for OCI, Helm, cosign, sigstore, or your SBOM tooling. It WRAPS them — adds one envelope signature over the whole release, sitting on top of whatever signatures the individual artifacts already carried.\n"
+        "• Any format - Helm stays Helm, OCI stays OCI, configs stay configs. The artifact `type:` is free-form, so an OCM component already carries SBOMs, npm packages, maven artifacts and anything else your team produces today - access is via `File/v1` or `LocalBlob/v1`. Dedicated `NPM/v1` and `Maven/v1` access types are roadmap (Maven epic ocm-project#836; NPM targeted before first GA at end of 2026).\n"
         "• Any location - name and version do not encode a registry. Move it; the name stays.\n"
         "• One signature - covers every digest in the component. The whole release is one signed unit.\n"
+        "Q&A backup on cosign / sigstore / OCI 1.1 referrers: We don't replace per-artifact signatures - they travel inside the component. OCM adds a release-level envelope: one signature over the canonicalized component descriptor that covers the digests of every resource. If you cosign-sign every image and ship a sigstore bundle per chart today, keep doing that - OCM signs the wrapper above them.\n"
         "A component is the unit you sign, transport, and deploy. Hold the noun."
     ),
     5: (
@@ -75,12 +76,12 @@ SPEAKER_NOTES: dict[int, str] = {
         "Real releases are not one big component - they are one product component referencing several services. This is the shape day-2 (slide 12) operates on."
     ),
     9: (
-        "Signature shape is separated from trust model. Descriptor signed one canonical way; how you prove the key is what varies. All three are stable on the v1alpha1 API surface today:\n"
-        "• RSA / RSASSA-PSS - bare public-key pinning. The key you already rotate. No PKI required.\n"
-        "• GPG - fits OSS maintainers and orgs already running web-of-trust keyrings.\n"
-        "• Sigstore - keyless via OIDC + Rekor transparency log; fits CI like GitHub Actions with no long-lived keys.\n"
-        "Three things to land. Same signed object - the canonical descriptor digest - in all three. Verifiers can require multiple in parallel: RSA from the release team and Sigstore from CI. Pick what your org already runs.\n"
-        "On PEM-encoded RSA (X.509 certificate chains): not on this slide because it's still experimental - the CLI prints `experimental` warnings on sign and verify. Slide 14 names that.\n"
+        "Same signed object - the canonical descriptor digest - in all three. How you prove the key is what varies. All three are stable on the v1alpha1 API surface today:\n"
+        "• RSA / RSASSA-PSS - bare public-key pinning. The key you already rotate. No PKI required. Trust model: key pinning.\n"
+        "• GPG - OpenPGP key material; trust model is the same as RSA Plain (key pinning), just with a different key format. Fits orgs already running web-of-trust keyrings.\n"
+        "• Sigstore - keyless via OIDC + Rekor transparency log; trust anchor is your OIDC issuer. Fits CI workloads and any signer that can present an OIDC identity.\n"
+        "Three things to land. Same signed object - the canonical descriptor digest. Verifiers can require multiple in parallel (RSA from release team + Sigstore from CI). Pick what your org already runs.\n"
+        "Q&A backup on PEM / cert chains: A fourth option exists - RSA with X.509 certificate chain, PEM encoding. Still experimental: the CLI prints `experimental` warnings on every sign and verify. Watch the docs; we'll promote it when the encoding stabilizes.\n"
         "CLI: `ocm sign cv ./archive//github.com/acme/widget:v1.4.2 --signature acme-release-key --private-key ./release-key.pem`. Idempotent."
     ),
     10: (
@@ -93,19 +94,20 @@ SPEAKER_NOTES: dict[int, str] = {
     11: (
         "Four CRs, one chain. The controllers verify and apply the component.\n"
         "• Repository - names where component versions live. OCI registry, mounted CTF, S3, local FS.\n"
-        "• Component - names a specific component version. Pulls the descriptor and verifies its signature.\n"
+        "• Component - names a specific component version. Pulls the descriptor and verifies its signature. If verification fails, nothing downstream sees a verified descriptor - the chain stops here.\n"
         "• Resource - picks one artifact from the verified component, by digest: Helm chart, OCI image, raw manifest, blob.\n"
-        "• Deployer - applies the resource to the cluster. Resolves image refs from the verified descriptor at apply time - that is where localization happens. Built-in for raw manifests; Flux for HelmRelease; Argo for Application.\n"
-        "Anti-lock-in: the Deployer tier is pluggable - built-in, Flux, or Argo - so OCM doesn't fight the reconciliation engine you already run.\n"
-        "Q&A backup: a fifth CR, `Replication`, sits alongside the chain (not within it) and transfers a version from one repository to another - the controller-shaped equivalent of `ocm transfer cv`. Optional appendix slide if it comes up.\n"
-        "Slide 14 flags the only real sharp edges that remain."
+        "• Deployer - applies the resource to the cluster. Resolves image refs and other deploy-time pointers from the verified component descriptor at apply time - that is where localization happens in v2.\n"
+        "For the Helm-deploy reference flow, the chain feeds a `ResourceGraphDefinition` that kro reconciles, with Flux applying the resulting `HelmRelease`. The OCM controllers DON'T ship kro or Flux - bring your own. Slide 14 flags this as one of the three honest edges.\n"
+        "Q&A backup if asked about Argo: Argo as an alternative to Flux is in flight (docs PR landing soon). Until merged, the documented Helm-deploy path is kro + Flux.\n"
+        "Q&A backup on the controller-shaped `ocm transfer`: yes, there's a `Replication` CR for in-cluster repo-to-repo mirroring. Appendix slide 16 covers it."
     ),
     12: (
         "Composition was just defined on slide 8. This slide does ONE job: the day-2 mechanic.\n"
-        "The product is `acme.org/sovereign/product`. Day 1 references notes 1.0.0 and postgres 1.0.0. The notes team ships a patch - 1.0.0 -> 1.1.0. The platform team raises the product to 1.1.0 and updates the notes reference. Postgres stays.\n"
-        "Commit. The controller pulls the new product descriptor, verifies the signature, resolves new digests for the notes artifacts. Notes rolls forward; postgres is untouched.\n"
-        "Differentiator for the security architect: every digest in 1.1.0 is pinned by the signature. Verified before the cluster is touched. `helm upgrade` cannot promise that.\n"
-        "Bump the product. The references follow."
+        "The product is `acme.org/sovereign/product`. Day 1 references notes 1.0.0 and postgres 1.0.0, each with its descriptor digest pinned. The notes team ships a patch (1.0.0 -> 1.1.0). The platform team raises the product to 1.1.0 and updates the notes reference (its version AND its digest, because the new notes descriptor hashes differently). Postgres stays - same version, same digest.\n"
+        "Commit. The controller pulls the new product descriptor, verifies the signature, resolves the new digests, applies. Notes rolls forward; postgres is untouched.\n"
+        "Differentiator framing for security architects: OCM is a release-level envelope. `helm upgrade` upgrades one chart; cosign signs one image. The OCM signature covers the whole release as one unit - every digest in every resource of every referenced component is pinned by the one parent signature. Drift would mean breaking that signature.\n"
+        "Q&A backup on forged descriptors: nothing OCM-specific stops a malicious operator from committing a forged descriptor with bumped versions, an attacker's image references, and a re-signed signature using a stolen key. Same threat model as any signed-release system: rotate keys, dual-sign, audit. What OCM gives you is one signature to audit instead of N.\n"
+        "Bump the product. The references follow. The cluster cannot drift without breaking the envelope."
     ),
     13: (
         "Two paths to a first OCM component. Both tested in conformance on every release. Both fit an afternoon on a laptop.\n"
@@ -115,9 +117,9 @@ SPEAKER_NOTES: dict[int, str] = {
     ),
     14: (
         "The slide that earns trust. Deliver straight; do not soften.\n"
-        "• Transfer defaults - copies only the descriptor. For air-gap, pass --copy-resources so the bytes travel too.\n"
-        "• Controllers v1alpha1 - CRD shapes for Repository/Component/Resource/Deployer are stabilising but still v1alpha1. Pin minor versions in your platform install.\n"
-        "• PEM-encoded RSA (X.509 cert chains) is experimental - the CLI prints `experimental` warnings on sign and verify. Plain RSA, GPG, and Sigstore are stable on the same v1alpha1 surface; PEM may still shift.\n"
+        "• Transfer defaults - copies only the descriptor. For air-gap, pass --copy-resources so the bytes travel too. Worth catching in a CI step the first time someone runs an air-gap export.\n"
+        "• Controllers v1alpha1 - CRD shapes for Repository/Component/Resource/Deployer are stabilising but still v1alpha1. Pin to specific release tags in your platform installs.\n"
+        "• Helm-deploy adds kro + Flux - the OCM controllers don't ship them. The reference Helm-deploy flow is OCM Controllers -> ResourceGraphDefinition -> kro -> Flux/HelmRelease. Three installs, not one. Plan for it.\n"
         "Honest now beats apologetic later. If any edge is a deal-breaker, tell us early."
     ),
     15: (

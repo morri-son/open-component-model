@@ -493,7 +493,8 @@ from icon_strokes import STROKE_THIN, STROKE_REGULAR, STROKE_BOLD
 def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
                                            icons_dir: Path,
                                            rasterize_recolored,
-                                           icon_stroke: float = STROKE_THIN):
+                                           icon_stroke: float = STROKE_THIN,
+                                           cards_override=None):
     """Draw the Pack · Sign · Transport · Deploy → Sovereign Cloud diagram
     natively into the (x, y, w, h) slot.
 
@@ -501,12 +502,24 @@ def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
     the SVG variant's outline weight; STROKE_REGULAR is slightly heavier;
     STROKE_BOLD is Tabler's own default (visually heavy at 60-px display).
 
+    cards_override lets callers (e.g. the architect deck) replace the
+    default per-card body text without copy-pasting the whole function.
+    Pass a list of 4 tuples (icon_filename, label, sub1, sub2) in the
+    same shape as the module-level CARDS constant. Defaults to CARDS
+    (exec-deck wording) when omitted, keeping the original call sites
+    unchanged.
+
     Parameters mirror slide_4b_native.add_sbod_native_diagram so the deck
     builder can call both with the same callable wiring.
 
     The source SVG's 1920×540 viewBox is mapped uniformly into the slot,
     centred on whichever axis has the slack.
     """
+    cards = cards_override if cards_override is not None else CARDS
+    if len(cards) != 4:
+        raise ValueError(
+            f"cards_override must be exactly 4 entries, got {len(cards)}"
+        )
     # ---- Map the 1920×540 viewBox into the slot, uniformly + centred. ----
     SVG_W, SVG_H = 1920.0, 540.0
     scale = min(w / SVG_W, h / SVG_H)
@@ -547,7 +560,7 @@ def add_pack_sign_transport_deploy_native(slide, *, x, y, w, h,
 
     card_x_svgs = [10, 420, 830, 1240]
 
-    for (cx_svg, (icon_file, label, sub1, sub2)) in zip(card_x_svgs, CARDS):
+    for (cx_svg, (icon_file, label, sub1, sub2)) in zip(card_x_svgs, cards):
         # --- Card chrome ---------------------------------------------------
         card_x = ox + s(cx_svg)
         card_y = oy + s(card_y_svg)

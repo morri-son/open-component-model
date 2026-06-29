@@ -56,7 +56,7 @@ Beat. Now the calibration for the cosign shops:
 
 ## SLIDE 3 — THE HINGE  (02:15 — 04:00, ~105 sec)
 
-**On screen.** Eyebrow: THE HINGE. Title: "Identity that travels with the artifact." Three bullets on the left — Component identity / Digest / Access. ASCII diagram on the right showing `github.com/acme.org/helloworld:1.0.0` fanning out across EU reg / US reg / Air gap, with caption "Same component identity. Different access. Signature still verifies." Bottom caption: "Move the artifact; the digest stays; only the access changes. That's the trick."
+**On screen.** Eyebrow: THE HINGE. Title: "Identity that travels with the artifact." Three bullets on the left — Component identity / Digest / Access. ASCII diagram on the right showing `github.com/acme.org/helloworld:1.0.0` fanning out across EU reg / US reg / Air gap, with caption "Same component identity. Different access. Signature still verifies." Bottom caption: "Move the artifact; the digest stays; only the access changes. That's the trick." A brand-blue footer at the bottom states the load-bearing sentence: *"Move the artifact. The digest stays. Only the access changes."*
 
 **Speaker notes.**
 
@@ -82,7 +82,7 @@ Beat. Land it.
 
 ## SLIDE 4 — POSITIONING  (04:00 — 05:15, ~75 sec)
 
-**On screen.** Eyebrow: WHERE OCM SITS. Title: "One component wraps every artifact, signed once." Three columns — ANY FORMAT / ANY LOCATION / ONE SIGNATURE — each ending with the noun "component" in the body. Bottom caption: "A component is the unit you sign, transport, and deploy. The next slides show how it's built."
+**On screen.** Eyebrow: WHERE OCM SITS. Title: "Wraps every artifact. Signs the whole release." Three columns — ANY FORMAT / ANY LOCATION / ONE SIGNATURE — each ending with the noun "component" in the body. Bottom caption: "A component is the unit you sign, transport, and deploy. The next slides show how it's built."
 
 **Speaker notes.**
 
@@ -102,11 +102,15 @@ Beat. Land the definition.
 
 > "A component is the unit you sign, transport, and deploy. That's the noun. Hold it. The next ten slides are about how it's built, how it travels, how it's verified, and what changes for you on the platform side."
 
+**Anticipated questions.**
+- *"How does OCM relate to OCI 1.1 referrers and sigstore bundles? If I already sign images with cosign and ship attestations, what does adopting OCM give me — and what do I have to give up?"* — We don't replace cosign / sigstore / OCI referrers. Existing per-artifact signatures travel inside the component descriptor untouched. OCM adds a *release-level envelope*: one signature over the canonicalized descriptor that covers the digests of every resource in every referenced component. If you cosign-sign your images today and ship a sigstore bundle per chart, keep doing that — OCM signs the wrapper above them. What you gain: one verifiable name for the release as a whole, location-independent identity (mirror without re-signing), and signed composition (the product signature transitively covers every child digest). What you give up: nothing in your current signing flow; you add OCM signing on top.
+- *"Are 'npm', 'maven', 'SBOM' really first-class resource types?"* — `type:` on a resource is a free-form string in v2 (see `bindings/go/descriptor/v2/descriptor.go:102`). An OCM component carries any of those today via `File/v1` or `LocalBlob/v1` access. Dedicated `NPM/v1` and `Maven/v1` access types: Maven is tracked under epic ocm-project#836 with GA target end of 2026; NPM is on the GA roadmap, also targeting end of 2026.
+
 ---
 
 ## SLIDE 5 — CONSTRUCTOR  (05:15 — 08:00, ~165 sec)
 
-**On screen.** Eyebrow: CONSTRUCTOR. Title: "What you write." YAML block on the left (the `component-constructor.yaml` straight from the getting-started doc — `github.com/acme.org/helloworld` at v1.0.0 with a local-file resource and an OCI image resource). Two right-side callouts: `input:` (by value) and `access:` (by reference). Bottom caption: "Two ways in. Same descriptor."
+**On screen.** Eyebrow: CONSTRUCTOR. Title: "What you write." YAML block on the left (the `component-constructor.yaml` straight from the getting-started doc — `github.com/acme.org/helloworld` at v1.0.0 with a local-file resource and an OCI image resource). The YAML's inline comments carry the input-vs-access distinction: `# Embed by value` on the `input:` block, `# Reference external artifact` on the `access:` block. Bottom caption: "Two ways in. Same descriptor."
 
 **Speaker notes.**
 
@@ -149,7 +153,7 @@ If you have time, mention the supported input/access types in passing — File, 
 
 ## SLIDE 6 — DESCRIPTOR  (08:00 — 11:00, ~180 sec)
 
-**On screen.** Eyebrow: DESCRIPTOR. Title: "What gets signed and travels." YAML block on the left — the post-pack component descriptor. We show ONE resource (the image) with `access`, `digest`, and a `...` line standing in for the other resources and references a real component would carry. The `access:` line carries a `# excluded from signature` comment to make the rule visible. Below that, a `signatures` block with the descriptor digest, algorithm, and a hex-encoded signature placeholder. Three right-side callouts aligned to the YAML sections: `access:` (excluded — rewritten on every transfer), `digest:` (content identity — input to the descriptor hash), `signature:` (one hash — over the canonicalized descriptor).
+**On screen.** Eyebrow: DESCRIPTOR. Title: "What gets signed and travels." YAML block on the left — the post-pack component descriptor. We show ONE resource (the image) with `access`, `digest`, and a `...` line standing in for the other resources and references a real component would carry. The YAML's inline comments now carry the load-bearing semantics: the `access:` block is annotated as excluded from signature (rewritten on every transfer), the `digest:` block is annotated as the content identity that feeds the descriptor hash, and the `signatures:` block is annotated as the single hash over the canonicalized descriptor. The `digest:` block and `signatures:` block lines are rendered in brand blue, marking what's new compared to the constructor on slide 5.
 
 **Speaker notes.**
 
@@ -264,43 +268,39 @@ Pivot to slide 12.
 
 ## SLIDE 9 — SIGN  (14:00 — 16:30, ~150 sec)
 
-**On screen.** Eyebrow: SIGN. Title: "Same signed object. Three trust models." Three columns — RSA / GPG / SIGSTORE. Caption at the bottom: "Same descriptor hash. Three ways to vouch for it. Pick what your org already runs."
+**On screen.** Eyebrow: SIGN. Title: "Same signed object. Three signing options." Three columns — RSA / GPG / SIGSTORE. Column bodies (hybrid form): RSA — "Bare public-key pinning. / If you already rotate a signing key." GPG — "OpenPGP keys, ASCII-armored. / If your team runs a keyring." Sigstore — "Keyless via OIDC + Rekor. / If you already trust your identity provider." Caption at the bottom: "Same descriptor hash. Three ways to vouch for it. Pick what your org already runs."
 
 **Speaker notes.**
 
-This is the slide where the security architects in the room start paying close attention. Three trust models, all stable on the same v1alpha1 API surface. The honesty beat here isn't "early access" — it's "pick the one your org already runs."
+This is the slide where the security architects in the room start paying close attention. Three signing options, all stable on the same v1alpha1 API surface. Two of them — Plain RSA and GPG — share the same *trust model* (key pinning); Sigstore swaps it for identity-based trust. The honesty beat here isn't "early access" — it's "pick the one your org already runs."
 
-> "OCM separates the signature *shape* from the trust model. The descriptor is signed in one canonical way. What changes is how you prove the signing key belongs to whoever you think it belongs to. Three columns, three trust models, all stable today."
+> "OCM separates the signature *shape* from the signing option. The descriptor is signed in one canonical way. What changes is the key material you use to sign and how the relying party establishes that the signing key belongs to whoever you think it belongs to. Three columns, three options, all stable today."
 
 **Point at RSA.** "RSA — bare public-key pinning. The relying party knows the public key out-of-band and pins it; no certificate chain, no PKI required. If your release engineers already rotate a long-lived signing key, this is the natural path. The OCM signature is RSA-PSS over the canonical descriptor."
 
-**Point at GPG.** "GPG. OpenPGP keys, the model your team probably already uses for git commit signing, package signing, mailing-list signing. Familiar key-ring semantics, ASCII-armored signatures. If your release engineers already manage OpenPGP keys for one process, point them at OCM for the release-level signature too."
+**Point at GPG.** "GPG. Same trust model as Plain RSA — key pinning — just with OpenPGP key material instead of bare RSA. The model your team probably already uses for git commit signing, package signing, mailing-list signing. Familiar key-ring semantics, ASCII-armored signatures. If your release engineers already manage OpenPGP keys for one process, point them at OCM for the release-level signature too — same pinning discipline, different encoding."
 
-**Point at Sigstore.** "Sigstore. Keyless via OIDC. Best fit for OSS pipelines where the signer is a GitHub Actions workflow or any other identity provider — no long-lived key material at rest. Compatible with the cosign verification flow, with OCM-specific extensions. The trust anchor is your OIDC issuer plus the rekor transparency log."
+**Point at Sigstore.** "Sigstore. Different trust model — keyless via OIDC. Best fit for OSS pipelines where the signer is a GitHub Actions workflow or any other identity provider — no long-lived key material at rest. Compatible with the cosign verification flow, with OCM-specific extensions. The trust anchor is your OIDC issuer plus the rekor transparency log."
 
 Beat. Now deliver the discipline:
 
-> "Three things to land. First — the *signed object* is the same in all three cases. It is the canonical descriptor digest; it covers every resource digest in the descriptor. Second — verifiers can accept multiple trust models in parallel. You can require an RSA signature from your release team and a Sigstore signature from CI, and check both. Third — pick what your org already runs today. RSA if you already manage a long-lived signing key. GPG if your team uses OpenPGP. Sigstore if you're keyless via OIDC. OCM doesn't force a religious choice."
-
-PEM on the prepared answer:
-
-> "We also support an RSA mode that signs with an X.509 certificate chain — PEM encoding. That one is still experimental — the CLI prints `experimental` warnings on sign and verify — so it's flagged on slide 14, not shown here. The three on this slide are all stable on the same v1alpha1 surface."
+> "Three things to land. First — the *signed object* is the same in all three cases. It is the canonical descriptor digest; it covers every resource digest in the descriptor. Second — verifiers can accept multiple signing options in parallel. You can require an RSA signature from your release team and a Sigstore signature from CI, and check both. Third — pick what your org already runs today. RSA if you already manage a long-lived signing key. GPG if your team uses OpenPGP. Sigstore if you're keyless via OIDC. OCM doesn't force a religious choice."
 
 CLI for the curious:
 
 > "`ocm sign cv ./transport-archive//github.com/acme/widget:v1.4.2 --signature acme-release-key --private-key ./release-key.pem`. Adds an entry to the `signatures` list in the descriptor. Idempotent if the signature already exists."
 
 **Anticipated questions.**
+- *"What about PEM-encoded RSA / certificate chains?"* — A fourth option exists: RSA with an X.509 certificate chain, PEM encoding. Still experimental — the CLI prints `experimental` warnings on every sign and verify. We didn't put it on the slide because it's not yet at the same stability bar as the other three. Watch the docs; we'll promote it when the encoding stabilizes.
+- *"Why call GPG a 'signing option' but not a 'trust model'?"* — GPG follows the same trust model as Plain RSA: key pinning. The relying party knows the public key out of band and pins it. GPG just uses OpenPGP key material instead of bare RSA keys. PEM and Sigstore introduce *different* trust models (cert-chain trust and identity-based trust, respectively).
 - *"Can I sign without modifying the descriptor?"* — No. The signature is part of the descriptor. That's by design — there's nothing to lose in transit.
-- *"Why isn't PEM / cert chains on the slide?"* — It's a fourth signing option that's still experimental. Plain RSA is bare public-key pinning; PEM is RSA with an X.509 cert chain. The PEM tutorial and the CLI both call it out as experimental today.
-- *"What about post-quantum?"* — Spec is open to additional algorithm IDs. Today: RSA-PSS, GPG/OpenPGP signatures, Sigstore's ECDSA-P256. Roadmap covers ML-DSA when the standard stabilises.
-- *"Sigstore — same caveats as cosign?"* — Yes. Make sure your OIDC issuer is trusted in the verifier's policy. Same operational discipline you'd apply to any keyless flow.
+- *"What about post-quantum?"* — Spec is open to additional algorithm IDs. Today: RSA-PSS, GPG/OpenPGP, Sigstore ECDSA-P256. Roadmap covers ML-DSA when the standard stabilises.
 
 ---
 
 ## SLIDE 10 — TRANSPORT  (16:30 — 19:00, ~150 sec)
 
-**On screen.** Eyebrow: TRANSPORT. Title: "Three patterns. One command." Three columns — REGISTRY → REGISTRY / REGISTRY → CTF / CTF → REGISTRY. Each has a short two-line description. Caption: "Access fields rewrite at transfer. Digests don't. Signature still verifies — anywhere."
+**On screen.** Eyebrow: TRANSPORT. Title: "Three patterns. One command." Three columns — REGISTRY → REGISTRY / REGISTRY → CTF / CTF → REGISTRY. Each has a short two-line description. The third column (CTF → REGISTRY) carries an "AIR-GAP" tag above it. Caption: "Access fields rewrite at transfer. Digests don't. Signature still verifies — anywhere." Mid-grey footer below the columns: *"CTF = Common Transport Format — a filesystem-based OCM repository, portable via any transfer mechanism."*
 
 **Speaker notes.**
 
@@ -350,7 +350,9 @@ This is the slide where Kubernetes folks lean in. The four-card chain is verify-
 
 **Point at Resource (chain card 3).** "Resource. One artifact, by digest. The controller picks which resource — image, chart, raw manifest — out of the verified component, resolves its access record, and fetches the bytes. The resource is exposed to the cluster as a typed artifact."
 
-**Point at Deployer (chain card 4).** "Deployer. Applies it to the cluster — and *this* is where localization happens. The Deployer resolves image references and other deploy-time pointers from the *verified* component descriptor at apply time, not at transfer time. That's the v2 mechanism. It can apply raw manifests directly, hand off to Flux for a HelmRelease, or hand off to Argo for an Application. Pluggable at this tier — point your existing reconciliation engine at the Resource CRs and OCM doesn't fight your platform stack."
+**Point at Deployer (chain card 4).** "Deployer. Applies it to the cluster — and *this* is where localization happens. The Deployer resolves image references and other deploy-time pointers from the *verified* component descriptor at apply time, not at transfer time. That's the v2 mechanism. It can apply raw manifests directly, or hand off to Flux for a HelmRelease. Pluggable at this tier — point your existing reconciliation engine at the Resource CRs and OCM doesn't fight your platform stack."
+
+> "Honest layering: for the Helm-deploy reference flow the chain feeds a `ResourceGraphDefinition` that kro reconciles, with Flux applying the resulting `HelmRelease`. The OCM controllers don't ship kro or Flux — bring your own. Slide 14 flags this as one of three honest edges."
 
 Beat. Land the title.
 
@@ -365,8 +367,9 @@ Q&A backup — Replication appendix:
 > "If anyone asks about the controller equivalent of `ocm transfer` for mirroring between repositories — there is one. It's called `Replication`, it sits alongside the chain (not within it), and there's an appendix slide for it. Happy to walk through it in Q&A."
 
 **Anticipated questions.**
-- *"Does this replace Argo?"* — No. It replaces the manual `kubectl apply` step. Argo and Flux remain on top as the UI and reconciliation engine.
-- *"Where does localization actually happen?"* — At the Deployer, at apply time. The Deployer resolves image refs and other templating from the verified descriptor and feeds them into the deployment tool (Flux/HelmRelease, Argo/Application, or raw manifest apply). Transfer doesn't rewrite resource bytes — that would change digests and invalidate signatures. The deploy-time injection is the v2 mechanism.
+- *"Does this replace Argo?"* — No. It replaces the manual `kubectl apply` step. Argo as an alternative to Flux is in flight — docs PR landing soon. Until merged, the documented Helm-deploy path is kro + Flux.
+- *"Do I need kro and Flux to use this?"* — For the Helm-deploy reference flow, yes — `deploy-helm-chart.md` walks Component → Resource (a `ResourceGraphDefinition`) → kro → Flux/`HelmRelease`. For the raw-manifest path, the Deployer is enough on its own. The OCM controllers don't ship kro or Flux; bring your existing GitOps engine.
+- *"Where does localization actually happen?"* — At the Deployer, at apply time. The Deployer resolves image refs and other templating from the verified descriptor and feeds them into the deployment tool (Flux/HelmRelease via kro for the Helm path, or raw manifest apply). Transfer doesn't rewrite resource bytes — that would change digests and invalidate signatures. The deploy-time injection is the v2 mechanism.
 - *"Is there a controller-shaped `ocm transfer`?"* — Yes — `Replication`. Pull the appendix slide if it comes up.
 - *"What about secret rendering at deploy time?"* — Workflow concern, not a model concern. Secrets-as-resources is supported via External Secrets / sealed-secrets patterns; the secrets themselves don't live in the descriptor.
 - *"How does verification config get to the Component controller?"* — Trust anchor lives in a Secret or a dedicated config object referenced from the ComponentCR. There's no single "TrustPolicyCR" yet — verification config lives next to the consumer.
@@ -375,7 +378,7 @@ Q&A backup — Replication appendix:
 
 ## SLIDE 12 — DAY 2  (21:30 — 24:30, ~180 sec)
 
-**On screen.** Eyebrow: DAY 2. Title: "Bump the product version. / Everything follows." Two side-by-side full descriptor YAMLs. LEFT — day-1 product 1.0.0 referencing notes 1.0.0 + postgres 1.0.0, ending with a `signatures:` block (`- name: acme-release-key` / `value: a4b1c2d3e5f6789abc012345def04691...`). RIGHT — day-2 product 1.1.0 with notes bumped to 1.1.0 and postgres unchanged at 1.0.0, ending with `signatures:` block carrying a different `value: 9c2af18b3e7d52914a8c6b0f1d2e8f37...`. Arrow between the blocks labelled "bump version" in mid-blue above it. Three changes highlighted in brand blue: the product version, the notes child version, the signature value. Pt24 mid-blue footer beneath both blocks: "Every digest pinned by the signature. The cluster cannot drift."
+**On screen.** Eyebrow: DAY 2. Title: "Bump the product version. / Everything follows." Two side-by-side full descriptor YAMLs. LEFT — day-1 product 1.0.0 referencing notes 1.0.0 + postgres 1.0.0, each `componentReferences:` entry showing its own `digest: { hashAlgorithm: SHA-256, value: ... }` sub-block (the digest of the child descriptor), ending with a `signatures:` block (`- name: acme-release-key` / `value: a4b1c2d3e5f6789abc012345def04691...`). RIGHT — day-2 product 1.1.0 with notes bumped to 1.1.0 and postgres unchanged at 1.0.0; the notes entry's child digest has changed, the postgres entry's child digest is unchanged, and the `signatures:` block carries a different `value: 9c2af18b3e7d52914a8c6b0f1d2e8f37...`. Arrow between the blocks labelled "bump version" in mid-blue above it. The brand-blue highlights mark the product version, the notes child version, the notes child digest, and the signature value — every line that changed. Postgres's digest stays the same. Pt24 mid-blue footer beneath both blocks: "Every digest pinned by the signature. The cluster cannot drift."
 
 **Speaker notes.**
 
@@ -395,6 +398,8 @@ Point at the right YAML, walking the three highlights.
 
 > "Day 2. Three lines on the slide are highlighted in brand blue. The product version. The notes child version. And the signature value — `9c2af18b...`. Different bytes. The signature has changed because the descriptor has changed, and the descriptor has changed because one child version has changed. Bump one line; the whole chain re-signs."
 
+> "Look closer at the `componentReferences:` block. Each entry now carries its own `digest:` sub-block — `hashAlgorithm: SHA-256` plus a `value:` — that's the digest of the referenced *descriptor*. The notes entry's child digest is highlighted in brand blue on day 2: it changed, because the notes descriptor changed. The postgres entry's child digest is unchanged — postgres is still 1.0.0, same descriptor, same hash. The parent's signature covers both child digests, so the day-2 signature transitively pins the new notes descriptor and the unchanged postgres descriptor as one unit."
+
 > "Postgres is unchanged. Its version stays at 1.0.0. Its digests stay the same. But its digests are still covered by the new signature on the new product descriptor, because the product's signature is over the canonical form of the descriptor as a whole."
 
 Point at the footer.
@@ -403,7 +408,7 @@ Point at the footer.
 
 Beat. Now the differentiator.
 
-> "A `helm upgrade` cannot give you this property. A chart version says nothing about which image tag will resolve where, what a registry might have re-pushed under the same tag, or whether the values overlay has been altered. OCM's day-2 is signed end-to-end. Bump `spec.version` on the product, the controller pulls the new descriptor, verifies the signature *before* it touches the cluster, and either everything reconciles in lockstep or nothing does. The cluster cannot drift away from what you signed."
+> "A `helm upgrade` cannot give you this property. The differentiator for security architects: OCM is a release-level *envelope*. `helm upgrade` upgrades one chart; cosign signs one image. OCM's signature covers the whole release as one unit — every digest in every resource of every referenced component is pinned by the one parent signature. Drift would mean breaking that envelope. Not 'helm upgrade can't do this' — it's that the unit of signing is different. Bump `spec.version` on the product, the controller pulls the new descriptor, verifies the signature *before* it touches the cluster, and either everything reconciles in lockstep or nothing does. The cluster cannot drift away from what you signed."
 
 > "This whole flow is in our conformance scenarios. Product, notes, postgres. We test it on every release. If you want to see it run end-to-end, the scenario lives in the open-component-model repository."
 
@@ -413,12 +418,13 @@ Beat. Now the differentiator.
 - *"What is the schema migration story?"* — Whatever the notes component packaged: Helm pre-upgrade hook, init container, separate Job resource — your choice. OCM doesn't reinvent the migration mechanic; it just makes sure the migration job's image is itself a pinned, signed resource that arrived in the same descriptor as the new app image.
 - *"What if a child is signed by a different team?"* — Multiple signatures supported. Verification policy lives at the controller; you decide which keys you trust at which layer. The product's signature covers child *digests*; a child's own signature covers its *resources*.
 - *"What if I don't use Helm — am I tied to it for day-2?"* — No. The mechanic is "controller sees a new descriptor, verifies it, the deployer applies." Whether the deployer points at a raw manifest, a HelmRelease, or an Argo App is your choice; the signing and verification property holds regardless.
+- *"What stops a malicious operator from committing a forged descriptor with bumped versions, an attacker's image references, and a signature from a leaked key?"* — Nothing OCM-specific. Same threat model as any signed-release system: rotate keys, require dual-sign, audit access to signing material. What OCM gives you is *one* signature to audit instead of N — easier to monitor, easier to revoke. The composition property doesn't change the trust model; it changes the *unit of signing*.
 
 ---
 
 ## SLIDE 13 — ADOPTION  (24:30 — 26:30, ~120 sec)
 
-**On screen.** Eyebrow: ADOPTION. Title: "Two paths to a first OCM component." Two columns — FROM ZERO — CLI / ON YOUR CLUSTER — CONTROLLERS. Each is four short lines. Caption: "Pick the path. The conformance scenario tests both on every release."
+**On screen.** Eyebrow: ADOPTION. Title: "Two paths to a first OCM component." Two columns — FROM ZERO — CLI / ON YOUR CLUSTER — CONTROLLERS. Each is four short lines. The CLI column closes with *"Thirty minutes on a laptop."* The controllers column closes with *"Thirty minutes on any cluster."* Caption: "Pick the path. The conformance scenario tests both on every release."
 
 **Speaker notes.**
 
@@ -445,7 +451,7 @@ Beat.
 
 ## SLIDE 14 — WHAT'S SHARP  (26:30 — 28:00, ~90 sec)
 
-**On screen.** Eyebrow: WHAT'S SHARP. Title: "Three honest edges." Three bullets in a blue box — (1) Transfer defaults to descriptor-only; pass `--copy-resources` for air-gap. (2) Controllers are v1alpha1 — pin minor versions. (3) PEM-encoded RSA (cert chains) is experimental — CLI prints `experimental` warnings on sign/verify; Plain RSA, GPG, and Sigstore are stable. Caption: "Honest now beats apologetic later. Plan for the trim edge."
+**On screen.** Eyebrow: WHAT'S SHARP. Title: "Three honest edges." Three bullets in a blue box — (1) Transfer defaults to descriptor-only; pass `--copy-resources` for air-gap. (2) Controllers are v1alpha1 — pin to specific release tags. (3) Helm-deploy adds kro + Flux — the OCM controllers don't ship them. Caption: "Honest now beats apologetic later. Plan for the trim edge."
 
 **Speaker notes.**
 
@@ -455,9 +461,9 @@ This is the slide that earns trust. Architects do not believe a deck without a s
 
 **Bullet 1 — Transfer defaults to descriptor-only.** "When you run `ocm transfer`, by default it copies only the descriptor — the metadata, the references, the signatures. The bytes of the resources stay at their original access locations. That's fine for promotion inside one connected estate. It is *not* fine for air-gap. For the air-gap case you pass `--copy-resources` so the bytes travel with the descriptor into the CTF tarball. Default is descriptor-only; if you want bytes too, you ask for them. Worth catching in a CI step the first time someone runs an air-gap export."
 
-**Bullet 2 — Controllers are v1alpha1.** "The Kubernetes controllers ship at v1alpha1. The CRD surface can still move between minor versions — fields renamed, behaviour adjusted. The mechanic — Repository, Component, Resource, Deployer — is settled. The exact shape of those CRDs isn't. Pin minor versions in your platform installs. Treat upgrades the way you'd treat any v1alpha1 — check the changelog, test in staging."
+**Bullet 2 — Controllers are v1alpha1.** "The Kubernetes controllers ship at v1alpha1. The CRD surface can still move between releases — fields renamed, behaviour adjusted. The mechanic — Repository, Component, Resource, Deployer — is settled. The exact shape of those CRDs isn't. Pin to specific release tags in your platform installs. Treat upgrades the way you'd treat any v1alpha1 — check the changelog, test in staging."
 
-**Bullet 3 — PEM-encoded RSA is experimental.** "On slide 9 we showed three trust models: RSA (bare key pinning), GPG, and Sigstore. There's a fourth option — RSA with an X.509 certificate chain in PEM encoding — that we didn't put on the slide because it's still experimental. The CLI prints an `experimental` warning to your terminal on every sign and every verify with PEM. The other three are stable on the same v1alpha1 API surface. PEM may still shift; if your trust model needs cert chains rather than bare public keys, talk to us about timing."
+**Bullet 3 — Helm-deploy adds kro + Flux.** "On slide 11 we walked through the four-controller chain. The honest layering you need to know: for the Helm-deploy reference flow, the chain feeds a `ResourceGraphDefinition` that kro reconciles, with Flux applying the resulting `HelmRelease`. That's three installs (OCM controllers + kro + Flux), not one. The OCM controllers don't ship kro or Flux; you bring your existing GitOps engine. For raw-manifest deploy paths the Deployer is enough on its own — kro + Flux are only required for the Helm/RGD pattern."
 
 Beat.
 
@@ -493,7 +499,7 @@ Beat.
 
 ## SLIDE 16 — APPENDIX · REPLICATION  (PULL-ON-DEMAND, not in main 30-min flow)
 
-**On screen.** Eyebrow: APPENDIX · REPLICATION. Title: "Alongside the chain. Not within it." Four greyed-out chain cards at the top (Repository → Component → Resource → Deployer) reminding the audience of slide 11. A larger Replication card in brand blue, offset below the chain, with body text: "Transfers a resolved component version from one OCM repository to another. Records status.lastTransferredDigest. Same digest → no-op." Footer in mid-blue: "Controller-shaped equivalent of `ocm transfer cv` — mirroring, promotion, in-cluster air-gap."
+**On screen.** Eyebrow: APPENDIX · REPLICATION. Title: "Alongside the chain. Not within it." Four greyed-out chain cards at the top (Repository → Component → Resource → Deployer) reminding the audience of slide 11. A larger Replication card in brand blue, offset below the chain, with body text: "Transfers a resolved component version from one OCM repository to another. Records status.lastTransferredDigest. Same digest → no-op." Footer in mid-blue: "Controller-shaped equivalent of the OCM CLI's `ocm transfer cv` — point it at a source `Component` and a target `Repository`, and it keeps them in sync."
 
 **Speaker notes.**
 

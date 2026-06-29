@@ -57,9 +57,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DECK_DIR = SCRIPT_DIR.parent
 DIAGRAMS_DIR = DECK_DIR / "diagrams"
 EXEC_DIAGRAMS_DIR = DECK_DIR.parent / "exec-phase1" / "diagrams"
+EXEC_BUILD_DIR = DECK_DIR.parent / "exec-phase1" / "build-pptx"
 ASSETS_DIR = DECK_DIR.parent.parent / "assets"
 THEME_DIR = DECK_DIR / "theme"
 RASTER_DIR = SCRIPT_DIR / "_raster"
+
+# Reuse the exec deck's native "Pack · Sign · Transport · Deploy" rendering.
+# The slide-7 PPT (which the user crafted in PowerPoint and we extracted)
+# matches this function's output 1:1, with the same icons + sovereign-cloud
+# target glyph. By calling it directly we keep one source of truth.
+if str(EXEC_BUILD_DIR) not in sys.path:
+    sys.path.insert(0, str(EXEC_BUILD_DIR))
+from slide_6_native import add_pack_sign_transport_deploy_native
 
 POTX_PATH = DECK_DIR / "OCM-Master.potx"
 OUTPUT_PPTX = DECK_DIR / "OCM-Story-Architect-External.pptx"
@@ -110,6 +119,45 @@ def rasterize_svg(svg_path: Path, target_w_px: int) -> Path:
     subprocess.run(
         ["rsvg-convert", "--width", str(target_w_px), "--keep-aspect-ratio",
          str(svg_path), "-o", str(out)],
+        check=True, capture_output=True,
+    )
+    return out
+
+
+def rasterize_svg_recolored(svg_path: Path, target_w_px: int,
+                            color_hex: str,
+                            stroke_width: float | None = None) -> Path:
+    """Rasterize a `currentColor`-based SVG (Tabler icon family) with an
+    explicit stroke/fill colour. Mirrors the exec build script's helper of
+    the same name — duplicated here to keep the architect script self-
+    contained (no import-time dependency on exec build internals beyond
+    slide_6_native, which is intentional reuse). Falls back to on-the-fly
+    rasterisation under `_raster/`; does NOT honour exec's prebuilt-icon
+    shortcut, because the architect deck doesn't ship its own prebuilt
+    library yet.
+    """
+    if not svg_path.exists():
+        raise FileNotFoundError(svg_path)
+    colour = color_hex.lstrip("#").upper()
+    sw_tag = (f"_sw{stroke_width:g}".replace(".", "p")
+              if stroke_width is not None else "")
+    out = RASTER_DIR / f"{svg_path.stem}_{target_w_px}_{colour}{sw_tag}.png"
+    if out.exists() and out.stat().st_mtime >= svg_path.stat().st_mtime:
+        return out
+    src = svg_path.read_text(encoding="utf-8")
+    patched = src.replace("currentColor", f"#{colour}")
+    if stroke_width is not None:
+        import re as _re
+        patched = _re.sub(
+            r'stroke-width="[^"]*"',
+            f'stroke-width="{stroke_width:g}"',
+            patched,
+        )
+    tmp = RASTER_DIR / f"{svg_path.stem}_{colour}{sw_tag}.svg"
+    tmp.write_text(patched, encoding="utf-8")
+    subprocess.run(
+        ["rsvg-convert", "--width", str(target_w_px), "--keep-aspect-ratio",
+         str(tmp), "-o", str(out)],
         check=True, capture_output=True,
     )
     return out
@@ -766,6 +814,19 @@ def build_slide_3_insight(prs, layouts):
                                      x_px=1060, y_px=540,
                                      w_px=820, h_px=440)
 
+    # Footer caption — the slide's load-bearing one-liner. Brand blue so
+    # it reads as the conclusion to the diagram above. Same treatment as
+    # slide 12 footer (consistent "this is the punchline" signal across
+    # the deck).
+    footer_tb, footer_tf = add_textbox(s, 120, 990, SLIDE_W_PX - 240, 60)
+    fp = footer_tf.paragraphs[0]
+    fp.alignment = PP_ALIGN.CENTER
+    fr = fp.add_run()
+    fr.text = "Move the artifact. The digest stays. Only the access changes."
+    fr.font.name = "Aptos"
+    fr.font.size = Pt(24)
+    fr.font.color.rgb = C.BLUE
+
 
 def build_slide_4_positioning(prs, layouts):
     """4 POSITIONING — Where OCM Sits. Three columns.
@@ -775,7 +836,7 @@ def build_slide_4_positioning(prs, layouts):
     wrapper around resources."""
     s = prs.slides.add_slide(layouts["Content / 3-Column Tall Title"])
     set_text(s, 1, "WHERE OCM SITS")
-    set_text(s, 2, "One component wraps every artifact, signed once.")
+    set_text(s, 2, "Wraps every artifact. Signs the whole release.")
     set_text(s, 10, "ANY FORMAT")
     set_text(s, 11, "OCI, Helm, configs, SBOMs, npm, maven, binaries.\n"
                      "Artifact type is free-form; access types are pluggable.")
@@ -836,12 +897,11 @@ def build_slide_5_constructor(prs, layouts):
     # Callouts aligned to their YAML sections.
     # Line height @ Pt16 ls 1.20 ~ 25.6px. Box top y=300 + ~30px top padding.
     # Line 9 (input:) starts at ~y=508; line 15 (access:) at ~y=662.
-    add_callout(s, x_px=1340, y_px=495, w_px=460, h_px=85,
-                 anchor="input:  by value",
-                 body="Embed bytes at pack time.")
-    add_callout(s, x_px=1340, y_px=650, w_px=460, h_px=85,
-                 anchor="access:  by reference",
-                 body="Resolve external artifact at pack time.")
+    # Right-side callouts removed — the inline YAML comments
+    # (`# Embed by value`, `# Reference external artifact`) carry the
+    # input-vs-access distinction without a horizontal saccade across
+    # the slide. Architects read comments inline as they parse YAML
+    # structure left-to-right; callouts were redundant friction.
 
 
 def build_slide_6_descriptor(prs, layouts):
@@ -867,47 +927,69 @@ def build_slide_6_descriptor(prs, layouts):
     V = C.BLACK
     COM = C.GREY_MID
     SIG = C.BLUE
+    # Color discipline (audited, semantics-based):
+    #   K (dark blue)   — every YAML key, INCLUDING `signatures:` itself.
+    #                     The key is structural — the architect's eye-
+    #                     anchor for "this is YAML scaffolding".
+    #   V (black)       — values that are metadata about the component
+    #                     (name, version, type, etc.). NOT the cryptographic
+    #                     payload.
+    #   COM (grey)      — inline comments. Kept on the same line as the key
+    #                     they annotate; padded with spaces for readability.
+    #   SIG (brand blue)— RESERVED for "content the signature covers /
+    #                     content the signature IS": digest values + the
+    #                     signature value + the contents of the
+    #                     signatures: block (name, algorithm, etc.). The
+    #                     rule is "wherever brand blue appears, this is
+    #                     the cryptographic payload". Architects can scan
+    #                     for blue and see exactly what's signed.
     yaml_lines = [
-        ("component:                                  # (fields trimmed)", COM),
-        ("  name: github.com/acme.org/helloworld",                       V),
-        ("  version: 1.0.0",                                             V),
-        ("  resources:",                                                 K),
-        ("    - name: image",                                            V),
-        ("      type: ociImage",                                         V),
-        ("      access:                                  # excluded from signature",    COM),
-        ("        type: OCIImage/v1",                                    V),
-        ("        imageReference: ghcr.io/.../podinfo@sha256:8fa569...", V),
-        ("      digest:                                  # input to hash", COM),
-        ("        hashAlgorithm: SHA-256",                               V),
-        ("        value: 262578cde928d5c9eba3bce0...",                   V),
-        ("    - ...                                     # more resources, references", COM),
-        ("signatures:",                                                  SIG),
-        ("  - name: acme-release-key",                                   V),
-        ("    digest:                                  # of the descriptor", COM),
-        ("      hashAlgorithm: SHA-256",                                 V),
-        ("      value: a4b1c2d3e4f5...",                                 V),
-        ("    signature:",                                               K),
-        ("      algorithm: RSASSA-PSS",                                  V),
-        ("      value: <hex-encoded signature>",                         V),
+        ("component:                              # (fields trimmed)",                       COM),
+        ("  name: github.com/acme.org/helloworld",                                           V),
+        ("  version: 1.0.0",                                                                 V),
+        ("  resources:",                                                                     K),
+        ("    - name: image",                                                                V),
+        ("      type: ociImage",                                                             V),
+        ("      access:                          # excluded — rewritten on transfer",        COM),
+        ("        type: OCIImage/v1",                                                        V),
+        ("        imageReference: ghcr.io/.../podinfo@sha256:8fa569...",                     V),
+        ("",                                                                                 V),
+        ("      digest:                          # content identity — input to descriptor hash", COM),
+        ("        hashAlgorithm: SHA-256",                                                   SIG),
+        ("        value: 262578cde928d5c9eba3bce0...",                                       SIG),
+        ("",                                                                                 V),
+        ("signatures:                            # one hash over the canonicalized descriptor", COM),
+        ("  - name: acme-release-key",                                                       SIG),
+        ("    digest:                            # of the descriptor",                       COM),
+        ("      hashAlgorithm: SHA-256",                                                     SIG),
+        ("      value: a4b1c2d3e4f5...",                                                     SIG),
+        ("    signature:",                                                                   K),
+        ("      algorithm: RSASSA-PSS",                                                      SIG),
+        ("      value: <hex-encoded signature>",                                             SIG),
     ]
-    # 21 lines @ Pt16 @ ls 1.20 ~ 540pt ~ 540px + ~60px padding ~ 600px.
-    add_yaml_block(s, x_px=120, y_px=280, w_px=1180, h_px=620,
-                    yaml_lines=yaml_lines, font_size=16)
+    # Note on the inline-comment-on-same-line trick: a single tuple gets
+    # one color from add_yaml_block. So when a line has both a key and a
+    # trailing # comment, we color the WHOLE line with the tone that best
+    # serves the line's job. For `component:` and the digest/signatures
+    # keys with inline comments, COM (grey) reads as the line's tone —
+    # the architect sees the comment first, the key second. That's the
+    # correct reading order for an annotated key: "this thing, with this
+    # caveat". For uncommented keys (`resources:`, `signature:`), K (dark
+    # blue) renders as pure structure.
+    #
+    # 22 lines @ Pt14 @ ls 1.20 ~ 403pt ~ 540px-ish at Pt14. Box height
+    # 680 with padding fits comfortably.
+    add_yaml_block(s, x_px=120, y_px=280, w_px=1500, h_px=680,
+                    yaml_lines=yaml_lines, font_size=14)
 
     # Callouts aligned with YAML sections.
     # Line height @ Pt16 ls 1.20 ~ 25.6px. Box top y=280 + ~30px padding.
     # Line 7 (access:) at ~y=464; line 10 (digest:) at ~y=541;
     # line 14 (signatures:) at ~y=643.
-    add_callout(s, x_px=1340, y_px=455, w_px=460, h_px=70,
-                 anchor="access:  excluded",
-                 body="Rewritten on every transfer.")
-    add_callout(s, x_px=1340, y_px=530, w_px=460, h_px=70,
-                 anchor="digest:  content identity",
-                 body="Input to the descriptor hash.")
-    add_callout(s, x_px=1340, y_px=635, w_px=460, h_px=90,
-                 anchor="signature:  one hash",
-                 body="Over the canonicalized descriptor.",
-                 anchor_color=C.BLUE)
+    # Right-side callouts removed for slide 6 — inline YAML comments now
+    # carry the access-excluded / digest-as-input / signature-as-hash
+    # meaning, and brand-blue highlighting (signatures block + digest
+    # values) marks what's new vs the constructor on slide 5.
 
     # No footer caption — at 18pt it's unreadable at presentation distance.
     # Speaker delivers "Sign the descriptor hash, not the access." verbally.
@@ -916,27 +998,34 @@ def build_slide_6_descriptor(prs, layouts):
 def build_slide_7_overview(prs, layouts):
     """7 OVERVIEW — Pack · Sign · Transport · Deploy.
 
-    Reuses the exec-deck SVG. The tile labels inside the SVG ("Bring your
-    own GitOps", "K8s Controllers") read as exec-deck legacy in the
-    architect context; the eyebrow + footer caption reframe verbally so
-    the speaker doesn't have to apologise for the inherited art.
+    Native PowerPoint shapes via the exec deck's slide_6_native module.
+    The user crafted this slide by hand in PowerPoint after copying the
+    exec slide-8 layout; the PPT XML extraction confirmed the geometry
+    matches `add_pack_sign_transport_deploy_native(s, x=60, y=240,
+    w=1800, h=780, ...)` 1:1 (cards at 337.5×375, top stripe h≈4,
+    icons at +30/+34 from card top-left, etc.).
 
-    Eyebrow is THE FOUR MOVES (not FOUR VERBS): docs frame OCM as a
-    lifecycle, not as a CLI verb list. The CLI verbs you'll actually
-    type are `ocm add cv` / `ocm sign cv` / `ocm transfer cv` / kubectl
-    apply against the Deployer — the speaker notes bridge to that."""
+    Eyebrow is THE FOUR MOVES (the architect-deck framing — docs frame
+    OCM as a lifecycle, not a CLI verb list). The CLI verbs you'll
+    actually type are `ocm add cv` / `ocm sign cv` / `ocm transfer cv`
+    / kubectl apply against the Deployer — speaker notes bridge to that.
+
+    Card body text matches the exec deck's selling copy (the user kept
+    the exec wording when porting the slide; the architect-deck wording
+    earlier proposed was a deck-author refinement that didn't land).
+    """
     s = prs.slides.add_slide(layouts["Content / Diagram"])
     set_text(s, 1, "THE FOUR MOVES")
     set_text(s, 2, "Pack · Sign · Transport · Deploy.")
-    diagram = (find_diagram("05-pack-sign-transport-deploy-v2.svg")
-                or find_diagram("05-pack-sign-transport-deploy.svg"))
-    # Shrink the diagram slightly to make room for the primitive callout
-    # below — y=240 → y=940, leaving 60px for the bottom caption.
-    add_diagram(s, diagram, x_px=60, y_px=240, max_w_px=1800, max_h_px=780)
-    # No footer caption — the descriptor-is-an-OCI-artifact framing lives
-    # in the speaker notes ("The component descriptor is itself an OCI
-    # artifact, media type application/vnd.ocm.software.component-
-    # descriptor.v2 — it lives in your registry.")
+    icons_dir = EXEC_DIAGRAMS_DIR / "icons"
+    add_pack_sign_transport_deploy_native(
+        s,
+        x=60, y=240, w=1800, h=780,
+        icons_dir=icons_dir,
+        rasterize_recolored=rasterize_svg_recolored,
+        # No cards_override — defaults to the exec CARDS list, which
+        # matches the extracted slide-7 text.
+    )
 
 
 def build_slide_8_pack(prs, layouts):
@@ -959,6 +1048,10 @@ def build_slide_8_pack(prs, layouts):
     delete_placeholder(s, 10)
 
     # Intro text aligned with title (x=120).
+    # Trailing "…" rhymes with the `...` continuation lines in the service
+    # YAML below — same idiom across two registers: "more types possible"
+    # in the prose, "more fields per resource" in the YAML. "by name and
+    # version" dropped — the right-box YAML already shows the mechanism.
     intro_tb, intro_tf = add_textbox(s, 120, 280, 1680, 90)
     intro_tf.word_wrap = True
     ip = intro_tf.paragraphs[0]
@@ -966,11 +1059,10 @@ def build_slide_8_pack(prs, layouts):
     ip.line_spacing = 1.30
     for text, kind in [
         ("Service components ", "accent"),
-        ("carry resources — images, charts, configs, SBOMs.\n", "normal"),
+        ("carry resources — images, charts, configs, SBOMs, …\n", "normal"),
         ("A product component ", "accent"),
-        ("composes other components by ", "normal"),
-        ("name and version", "accent"),
-        (". One release unit, transferable, signable end-to-end.", "normal"),
+        ("composes other components.", "normal"),
+        (" One release unit, transferable, signable end-to-end.", "normal"),
     ]:
         r = ip.add_run()
         r.text = text
@@ -986,25 +1078,34 @@ def build_slide_8_pack(prs, layouts):
     V = C.BLACK
     COM = C.GREY_MID
 
+    # YAML notes:
+    #   - Top header comments dropped on both boxes — the title and the
+    #     SERVICE/PRODUCT labels already name what each box is; the headers
+    #     were saying the same thing a third time.
+    #   - First trimmed resource carries the full comment ("# type,
+    #     input/access, digest trimmed"); the other three trimmed resources
+    #     just use a bare `...` on a separate indented line. Teaches the
+    #     convention once, then uses shorthand. Cuts visual weight without
+    #     losing the "more fields per resource" signal.
     leaf_yaml = [
-        ("# service components — carry the artifacts",       COM),
         ("components:",                                      K),
         ("  - name: acme.org/sovereign/notes",               V),
         ("    version: 1.0.0",                               V),
         ("    resources:",                                   K),
         ("      - name: image       # OCI image",            V),
+        ("        # type, input/access, digest trimmed",    COM),
         ("      - name: chart       # Helm chart",           V),
-        ("      - ...",                                      V),
+        ("        ...",                                      COM),
         ("  - name: acme.org/sovereign/postgres",            V),
         ("    version: 1.0.0",                               V),
         ("    resources:",                                   K),
         ("      - name: image       # OCI image",            V),
+        ("        ...",                                      COM),
         ("      - name: chart       # Helm chart",           V),
-        ("      - ...",                                      V),
+        ("        ...",                                      COM),
         ("# product references both, by name and version",   COM),
     ]
     product_yaml = [
-        ("# product / release component",                     COM),
         ("components:",                                        K),
         ("  - name: acme.org/sovereign/product",                V),
         ("    version: 1.0.0",                                  V),
@@ -1058,7 +1159,7 @@ def build_slide_8_pack(prs, layouts):
 
 
 def build_slide_9_sign(prs, layouts):
-    """9 SIGN — One signature shape. Three trust models.
+    """9 SIGN — One signature shape. Three signing options.
 
     All three algorithms shown are stable on the same v1alpha1 surface:
     Plain RSA (bare public-key pinning, no PKI), GPG (OpenPGP keyrings),
@@ -1069,16 +1170,16 @@ def build_slide_9_sign(prs, layouts):
     """
     s = prs.slides.add_slide(layouts["Content / 3-Column"])
     set_text(s, 1, "SIGN")
-    set_text(s, 2, "Same signed object. Three trust models.")
+    set_text(s, 2, "Same signed object. Three signing options.")
     set_text(s, 10, "RSA")
     set_text(s, 11, "Bare public-key pinning.\n"
-                     "The key you already rotate.")
+                     "If you already rotate a signing key.")
     set_text(s, 12, "GPG")
-    set_text(s, 13, "OpenPGP keys.\n"
-                     "Familiar trust model, ASCII-armored.")
+    set_text(s, 13, "OpenPGP keys, ASCII-armored.\n"
+                     "If your team runs a keyring.")
     set_text(s, 14, "SIGSTORE")
-    set_text(s, 15, "Keyless via OIDC.\n"
-                     "Identity, not long-lived keys.")
+    set_text(s, 15, "Keyless via OIDC + Rekor.\n"
+                     "If you already trust your identity provider.")
     # Punchline moved to speaker notes: "Same descriptor hash. Three
     # ways to vouch for it. Pick what your org already runs."
 
@@ -1097,81 +1198,247 @@ def build_slide_10_transport(prs, layouts):
     set_text(s, 14, "CTF → REGISTRY")
     set_text(s, 15, "Air-gap import.\n"
                      "Verify on arrival. No callback to source.")
+    # CTF acronym is used in the third column without definition — add a
+    # footer below the columns so an architect glancing at the slide
+    # doesn't have to wait for the speaker to define it. Wording matches
+    # the website (transfer-concept.md): "filesystem-based OCM repository".
+    # Left-aligned to anchor with the title; Pt20 regular (not italic) so
+    # it reads as a definition the audience can use, not a disclaimer.
+    ctf_tb, ctf_tf = add_textbox(s, 120, 980, SLIDE_W_PX - 240, 60)
+    cp = ctf_tf.paragraphs[0]
+    cp.alignment = PP_ALIGN.LEFT
+    cr = cp.add_run()
+    cr.text = ("CTF = Common Transport Format — a filesystem-based "
+               "OCM repository, portable via any transfer mechanism.")
+    cr.font.name = "Aptos"
+    cr.font.size = Pt(20)
+    cr.font.color.rgb = C.GREY_MID
+
+    # AIR-GAP tag above the third column — pulls the dramatic move out
+    # of the trio. Air-gap is the slide's headline use case but visually
+    # the three columns weigh the same; this tag fixes that. Positioned
+    # just below the title bottom (~508) and above the third column header.
+    # Sized Pt22 (one Pt below the Pt23 column-header weight) so it sits
+    # in the same typographic family as the column titles, not below them.
+    tag_tb, tag_tf = add_textbox(s, 1320, 520, 320, 40)
+    tp = tag_tf.paragraphs[0]
+    tp.alignment = PP_ALIGN.CENTER
+    tr = tp.add_run()
+    tr.text = "AIR-GAP"
+    tr.font.name = "Aptos"
+    tr.font.size = Pt(22)
+    tr.font.bold = True
+    tr.font.color.rgb = C.BLUE
     # Punchline moved to speaker notes: "Access fields rewrite at
     # transfer. Digests don't. Signature still verifies — anywhere."
 
 
+def _render_chain_cards(slide, *,
+                        cards,
+                        cards_y, card_w, card_h, gap,
+                        stripe_h,
+                        label_size, label_color,
+                        body_size, body_color,
+                        stripe_color,
+                        arrow_color, arrow_stroke_pt,
+                        arrow_y_offset,
+                        shadow=True,
+                        label_pad_x=30, label_pad_y=42,
+                        body_pad_y=110,
+                        body_align=PP_ALIGN.LEFT):
+    """Render a horizontal chain of cards in the slide-7/11 family.
+
+    Each card is a borderless rounded rectangle with a flush-top brand
+    rectangle (the "stripe"), an optional soft drop shadow, an ALL-CAPS
+    label, and a multi-line body. Adjacent cards are connected by a thin
+    arrow (stem rectangle + triangular head).
+
+    Args:
+        slide: the python-pptx slide to draw on.
+        cards: list of (label, body_runs) where body_runs is a list of
+            (text, bold) tuples — one run per body line.
+        cards_y: vertical position of the top of the card row (slide-px).
+        card_w / card_h: per-card width and height (slide-px).
+        gap: horizontal gap between adjacent cards.
+        stripe_h: height of the top stripe (slide-px); 4-5 typical.
+        label_size / label_color: label typography (Aptos bold).
+        body_size / body_color: body typography (Aptos regular, bold runs
+            opt-in via the per-line `bold` flag in `body_runs`).
+        stripe_color: top-stripe fill color (RGBColor).
+        arrow_color / arrow_stroke_pt: arrow fill + line weight.
+        arrow_y_offset: arrow vertical center relative to card top.
+        shadow: whether to attach the soft outerShdw drop shadow.
+        label_pad_x / label_pad_y: label position inside the card
+            (offset from card top-left).
+        body_pad_y: body vertical offset from card top.
+        body_align: paragraph alignment for both label and body
+            (label inherits this — keep them aligned together).
+
+    Used by slide 11 (DEPLOY chain — all brand colors) and slide 16
+    (Replication appendix — chain in grey + Replication card pulled out
+    in brand). Same shape, different color palettes via the parameters.
+    """
+    total_w = len(cards) * card_w + (len(cards) - 1) * gap
+    start_x = (SLIDE_W_PX - total_w) // 2
+
+    for i, (label, body_runs) in enumerate(cards):
+        x = start_x + i * (card_w + gap)
+
+        # Card body — borderless rounded rect with optional drop shadow.
+        card = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            px(x), px(cards_y), px(card_w), px(card_h),
+        )
+        # Corner radius ~14 px regardless of card size (matches slide_6_native).
+        card.adjustments[0] = 14.0 / min(card_w, card_h)
+        card.fill.solid()
+        card.fill.fore_color.rgb = C.GREY_SOFT
+        card.line.fill.background()  # no outline
+
+        if shadow:
+            # Soft outerShdw — same params as slide_6_native (blur 3 px,
+            # offset 0,3 px straight down, 30% black).
+            spPr = card._element.spPr
+            for old in spPr.findall(f"{{{A_NS}}}effectLst"):
+                spPr.remove(old)
+            effectLst = etree.SubElement(spPr, f"{{{A_NS}}}effectLst")
+            outerShdw = etree.SubElement(effectLst, f"{{{A_NS}}}outerShdw")
+            outerShdw.set("blurRad", "28575")
+            outerShdw.set("dist",    "28575")
+            outerShdw.set("dir",     "5400000")
+            outerShdw.set("rotWithShape", "0")
+            clr = etree.SubElement(outerShdw, f"{{{A_NS}}}srgbClr")
+            clr.set("val", "000000")
+            alpha = etree.SubElement(clr, f"{{{A_NS}}}alpha")
+            alpha.set("val", "30000")
+
+        # Top stripe — flush rectangle on the card's top edge.
+        stripe = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            px(x), px(cards_y), px(card_w), px(stripe_h),
+        )
+        stripe.fill.solid()
+        stripe.fill.fore_color.rgb = stripe_color
+        stripe.line.fill.background()
+
+        # Label — ALL-CAPS Aptos bold, left-aligned by default.
+        lbl_tb = slide.shapes.add_textbox(
+            px(x + label_pad_x), px(cards_y + label_pad_y),
+            px(card_w - 2 * label_pad_x), px(50),
+        )
+        lbl_tf = lbl_tb.text_frame
+        lbl_tf.margin_left = lbl_tf.margin_right = 0
+        lbl_tf.margin_top = lbl_tf.margin_bottom = 0
+        lbl_tf.word_wrap = True
+        lp = lbl_tf.paragraphs[0]
+        lp.alignment = body_align
+        lr = lp.add_run()
+        lr.text = label
+        lr.font.name = "Aptos"
+        lr.font.size = Pt(label_size)
+        lr.font.bold = True
+        lr.font.color.rgb = label_color
+
+        # Body — one paragraph per body run (each is a separate line).
+        # Bold can be set per run for emphasis (e.g., slide 11 Component
+        # card bolds "Verifies its signature." to mark the verification
+        # cliff edge).
+        bdy_tb = slide.shapes.add_textbox(
+            px(x + label_pad_x), px(cards_y + body_pad_y),
+            px(card_w - 2 * label_pad_x), px(card_h - body_pad_y - 20),
+        )
+        bdy_tf = bdy_tb.text_frame
+        bdy_tf.margin_left = bdy_tf.margin_right = 0
+        bdy_tf.margin_top = bdy_tf.margin_bottom = 0
+        bdy_tf.word_wrap = True
+        for j, (run_text, run_bold) in enumerate(body_runs):
+            p = bdy_tf.paragraphs[0] if j == 0 else bdy_tf.add_paragraph()
+            p.alignment = body_align
+            p.line_spacing = 1.25
+            r = p.add_run()
+            r.text = run_text
+            r.font.name = "Aptos"
+            r.font.size = Pt(body_size)
+            r.font.color.rgb = body_color
+            if run_bold:
+                r.font.bold = True
+
+        # Arrow into the next card — stem rectangle + triangle head
+        # (MSO_SHAPE.RIGHT_TRIANGLE rotated 90° = right-pointing).
+        if i < len(cards) - 1:
+            arrow_y = cards_y + arrow_y_offset
+            arrow_x1 = x + card_w + 10
+            arrow_x2 = x + card_w + gap - 10
+            stem_h = arrow_stroke_pt * 0.9
+            head_w = 16
+            stem_w = max(0, (arrow_x2 - arrow_x1) - head_w + 1)
+            if stem_w > 0:
+                stem = slide.shapes.add_shape(
+                    MSO_SHAPE.RECTANGLE,
+                    px(arrow_x1), px(arrow_y - stem_h / 2.0),
+                    px(stem_w), px(stem_h),
+                )
+                stem.fill.solid()
+                stem.fill.fore_color.rgb = arrow_color
+                stem.line.fill.background()
+            # Triangle head: build via freeform for a symmetric isoceles.
+            head_x = arrow_x2 - head_w
+            head_y_top = arrow_y - 7
+            head_y_bot = arrow_y + 7
+            builder = slide.shapes.build_freeform(
+                px(head_x), px(arrow_y), scale=1.0,
+            )
+            builder.add_line_segments([
+                (px(arrow_x2), px(head_y_top)),
+                (px(arrow_x2), px(head_y_bot)),
+            ], close=True)
+            head = builder.convert_to_shape()
+            head.fill.solid()
+            head.fill.fore_color.rgb = arrow_color
+            head.line.fill.background()
+
+
 def build_slide_11_deploy(prs, layouts):
-    """11 DEPLOY — Four CRs, one chain.
-    Title is the architectural statement (not a recap of the cards).
-    Card text is technically precise — what each CR actually contains.
+    """11 DEPLOY — Four CRs, one chain. Slide-7 card family.
 
-    Deployer card flags localization: image refs in `values.yaml` and
-    similar templating are resolved from the verified component descriptor
-    at apply time — that is where localization happens in v2, not at
-    transfer time (transfer-concept.md:84 + the controller status.additional
-    mechanism feeding kro/Flux).
+    Cards are borderless rounded rectangles with a brand-blue top stripe,
+    soft drop shadow, ALL-CAPS mid-blue labels left-aligned, dark-grey
+    bodies left-aligned. Connecting arrows are thin (stem + triangle head)
+    in brand blue.
 
-    Replication is the fifth controller. It sits alongside the chain, not
-    within it. Moved to appendix slide 16 — it's a Q&A backup, not part
-    of the four-card architectural message.
+    The Component card's second body line ("Verifies its signature.") is
+    bold — the security-architect cue that tells the audience where the
+    chain stops on bad signatures. Other three cards stay regular weight.
+
+    Geometry per the user's PPT extraction (slide-7 card family at a
+    smaller scale appropriate for a four-CR chain without icons).
+
+    Replication is the fifth controller; it sits alongside the chain
+    rather than within it. Moved to appendix slide 16 — Q&A backup, not
+    part of the four-card architectural message.
     """
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "DEPLOY")
     set_text(s, 2, "OCM controllers verify and apply.")
     delete_placeholder(s, 10)
 
-    cr_w = 410
-    cr_h = 220
-    gap = 50
-    total_w = 4 * cr_w + 3 * gap
-    start_x = (SLIDE_W_PX - total_w) // 2
-    y = 560
-
-    crs = [
-        ("Repository",  "Where component versions live."),
-        ("Component",   "Pulls one version. Verifies its signature."),
-        ("Resource",    "One artifact, by digest."),
-        ("Deployer",    "Applies it. Resolves image refs from\nthe verified descriptor."),
-    ]
-    for i, (title, body) in enumerate(crs):
-        x = start_x + i * (cr_w + gap)
-        box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                                  px(x), px(y), px(cr_w), px(cr_h))
-        box.fill.solid()
-        box.fill.fore_color.rgb = C.GREY_SOFT
-        box.line.color.rgb = C.BLUE
-        box.line.width = Pt(1.5)
-        tf = box.text_frame
-        tf.margin_left = tf.margin_right = Emu(180000)
-        tf.margin_top = tf.margin_bottom = Emu(180000)
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        tf.word_wrap = True
-        p1 = tf.paragraphs[0]
-        p1.alignment = PP_ALIGN.CENTER
-        r1 = p1.add_run()
-        r1.text = title
-        r1.font.name = "Aptos"
-        r1.font.size = Pt(28)
-        r1.font.bold = True
-        r1.font.color.rgb = C.BLUE
-        for j, line in enumerate(body.split("\n")):
-            p2 = tf.add_paragraph()
-            p2.alignment = PP_ALIGN.CENTER
-            p2.space_before = Pt(8) if j == 0 else Pt(2)
-            r2 = p2.add_run()
-            r2.text = line
-            r2.font.name = "Aptos"
-            r2.font.size = Pt(22)
-            r2.font.color.rgb = C.BLACK
-        if i < len(crs) - 1:
-            ax = x + cr_w + 6
-            ay = y + cr_h // 2 - 8
-            arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW,
-                                        px(ax), px(ay), px(gap - 12), px(18))
-            arrow.fill.solid()
-            arrow.fill.fore_color.rgb = C.BLUE
-            arrow.line.fill.background()
+    _render_chain_cards(
+        s,
+        cards=[
+            ("REPOSITORY", [("Where component versions live.", False)]),
+            ("COMPONENT",  [("Pulls one version.", False),
+                            ("Verifies its signature.", True)]),
+            ("RESOURCE",   [("One artifact, by digest.", False)]),
+            ("DEPLOYER",   [("Applies it to the cluster.", False)]),
+        ],
+        cards_y=540, card_w=361, card_h=265, gap=76,
+        stripe_h=5,
+        label_size=30, label_color=C.BLUE_MID,
+        body_size=22, body_color=RGBColor(0x33, 0x33, 0x33),
+        stripe_color=C.BLUE,
+        arrow_color=C.BLUE, arrow_stroke_pt=2.0,
+        arrow_y_offset=132,  # arrow vertical center relative to card top
+    )
 
     # Replication moved to appendix slide 16 — Q&A backup, not part of
     # the four-card chain. Speaker keeps it in their back pocket for
@@ -1223,9 +1490,15 @@ def build_slide_12_composition(prs, layouts):
         ("    - name: notes",                                         V),
         ("      componentName: acme.org/sovereign/notes",             V),
         ("      version: 1.0.0",                                      V),
+        ("      digest:                                               # of the child descriptor", COM),
+        ("        hashAlgorithm: SHA-256",                            V),
+        ("        value: 7a1b2c3d4e...",                              V),
         ("    - name: postgres",                                      V),
         ("      componentName: acme.org/sovereign/postgres",          V),
         ("      version: 1.0.0",                                      V),
+        ("      digest:",                                             COM),
+        ("        hashAlgorithm: SHA-256",                            V),
+        ("        value: f5e4d3c2b1...",                              V),
         ("signatures:",                                               K),
         ("  - name: acme-release-key",                                V),
         ("    signature:",                                            K),
@@ -1240,23 +1513,30 @@ def build_slide_12_composition(prs, layouts):
         ("    - name: notes",                                         V),
         ("      componentName: acme.org/sovereign/notes",             V),
         ("      version: 1.1.0",                                      HIGH),
+        ("      digest:                                               # of the child descriptor", COM),
+        ("        hashAlgorithm: SHA-256",                            V),
+        ("        value: 9b8a7c6d5e...",                              HIGH),
         ("    - name: postgres",                                      V),
         ("      componentName: acme.org/sovereign/postgres",          V),
         ("      version: 1.0.0",                                      V),
+        ("      digest:",                                             COM),
+        ("        hashAlgorithm: SHA-256",                            V),
+        ("        value: f5e4d3c2b1...",                              V),
         ("signatures:",                                               K),
         ("  - name: acme-release-key",                                V),
         ("    signature:",                                            K),
         ("      algorithm: RSASSA-PSS",                               V),
         ("      value: 9c2af18b3e7d52914a8c6b0f1d2e8f37...",          HIGH),
     ]
-    # 15 lines @ Pt20 @ ls 1.20 ~ 360pt ~ 480px text + ~60px padding ~ 540px.
-    # Box grown to 560 to fit; footer pushed to y=970.
+    # 21 lines @ Pt17 — reduced from 15 lines @ Pt20 to fit reference
+    # digests. Box grown to 600px, top moved up to 370 to keep footer
+    # at y=985.
     # YAML carries componentName: on each reference + algorithm: in the
     # signature: sub-block per spec — without the mediaType: line, which
     # adds verification chrome without signal at this altitude.
     box_w = 740
-    box_h = 560
-    box_y = 380
+    box_h = 600
+    box_y = 370
     arrow_w = 120
     arrow_h = 100
     gap = 20
@@ -1267,9 +1547,9 @@ def build_slide_12_composition(prs, layouts):
     arrow_y = box_y + (box_h - arrow_h) // 2
 
     add_yaml_block(s, x_px=left_x, y_px=box_y, w_px=box_w, h_px=box_h,
-                    yaml_lines=left_yaml, font_size=20)
+                    yaml_lines=left_yaml, font_size=17)
     add_yaml_block(s, x_px=right_x, y_px=box_y, w_px=box_w, h_px=box_h,
-                    yaml_lines=right_yaml, font_size=20)
+                    yaml_lines=right_yaml, font_size=17)
 
     # Arrow with "bump version" label above it. Label sits just above the
     # arrow's vertical center so the eye reads label-then-arrow as one unit.
@@ -1292,18 +1572,21 @@ def build_slide_12_composition(prs, layouts):
     lr.font.color.rgb = C.BLUE
 
     # Footer caption — the differentiator. Single line, centred under both
-    # YAML blocks, in mid-blue so it reads as a deliberate punchline rather
-    # than chrome. This sentence answers the most common architect challenge
-    # to OCM ("how is this different from helm upgrade?") with a property
-    # the audience can verify from the diagram above.
-    footer_tb, footer_tf = add_textbox(s, 120, 970, SLIDE_W_PX - 240, 60)
+    # YAML blocks, in brand blue so it reads as the conclusion of the diff
+    # rather than chrome. Brand blue matches the highlighted day-2 changes
+    # above (version bumps + new signature value) — same color register
+    # says "these changes produce this consequence". This sentence answers
+    # the most common architect challenge to OCM ("how is this different
+    # from helm upgrade?") with a property the audience can verify from
+    # the diagram above.
+    footer_tb, footer_tf = add_textbox(s, 120, 985, SLIDE_W_PX - 240, 60)
     fp = footer_tf.paragraphs[0]
     fp.alignment = PP_ALIGN.CENTER
     fr = fp.add_run()
     fr.text = "Every digest pinned by the signature. The cluster cannot drift."
     fr.font.name = "Aptos"
     fr.font.size = Pt(24)
-    fr.font.color.rgb = C.BLUE_MID
+    fr.font.color.rgb = C.BLUE
 
 
 def build_slide_13_whats_sharp(prs, layouts):
@@ -1313,12 +1596,10 @@ def build_slide_13_whats_sharp(prs, layouts):
     will hit:
       1. Transfer defaults to descriptor-only.
          (transfer-concept.md:42 — air-gap requires --copy-resources)
-      2. Controllers ship as v1alpha1 — pin minor versions.
+      2. Controllers ship as v1alpha1 — pin to specific release tags.
          (kubernetes/controller/api/v1alpha1)
-      3. PEM-encoded RSA (X.509 cert chains) is experimental.
-         (bindings/go/rsa/signing/v1alpha1/encoding_policy_pem.go:33 +
-          runtime slog.Warn in handler.go:114,181 — the CLI prints
-          `experimental` warnings on every sign/verify with PEM.)
+      3. Helm-deploy adds kro + Flux dependencies.
+         (ocm-controllers.md:116 — Helm path requires kro + Flux alongside)
     """
     s = prs.slides.add_slide(layouts["Plain / Compact"])
     set_text(s, 1, "WHAT'S SHARP")
@@ -1327,10 +1608,9 @@ def build_slide_13_whats_sharp(prs, layouts):
         "Transfer defaults — copies only the descriptor. "
         "For air-gap, pass --copy-resources so the bytes travel too.",
         "Controllers are v1alpha1 — the CRD surface can move. "
-        "Pin minor versions in your platform installs.",
-        "PEM-encoded RSA (cert chains) is experimental — the CLI prints "
-        "`experimental` warnings on sign/verify. Plain RSA, GPG, and "
-        "Sigstore are stable on the same v1alpha1 surface; PEM may still shift.",
+        "Pin to specific release tags in your platform installs.",
+        "Helm-deploy adds kro + Flux — the OCM controllers don't ship "
+        "them. Bring your existing GitOps engine.",
     ], font_size=26)
     # Punchline moved to speaker notes: "Honest now beats apologetic
     # later. Plan for the trim edge."
@@ -1358,12 +1638,12 @@ def build_slide_14_adoption(prs, layouts):
          ["Pack one component. Sign it.",
           "Air-gap CTF round-trip.",
           "Verify on the other side.",
-          "Thirty minutes. One afternoon."]),
+          "Thirty minutes on a laptop."]),
         ("ON YOUR CLUSTER — CONTROLLERS",
          ["Helm-install the OCM controllers.",
           "Point them at your registry.",
           "Deploy a component.",
-          "Thirty minutes. One reconciling cluster."]),
+          "Thirty minutes on any cluster."]),
     ]
     for i, (header, lines) in enumerate(columns):
         x = start_x + i * (col_w + gap)
@@ -1422,116 +1702,153 @@ def build_slide_16_appendix_replication(prs, layouts):
 
     Out of the main 15-slide arc. Pulled only if the audience asks about
     cluster-side mirroring or repo-to-repo transfer without the CLI.
-    Visually consistent with slide 11: same four-card chain at the top,
-    plus the Replication card offset below to make the "alongside, not
-    within" framing visual.
+
+    Visually consistent with slide 11: same card family (rounded rect, no
+    border, top stripe, soft shadow, ALL-CAPS left-aligned label, dark-
+    grey body). Two distinct treatments separate the "chain echo" from
+    the "Replication highlight":
+
+      Top row — four chain cards (Repository / Component / Resource /
+        Deployer) in GREY. Grey top stripe, grey labels, grey body. Same
+        card shape as slide 11 but visually dimmed — "this is the chain
+        from slide 11, not the focus of this slide". Smaller cards too
+        (~330×200) reinforcing the "echo" reading.
+
+      Bottom — single Replication card in BRAND COLORS. Brand-blue top
+        stripe, mid-blue label, dark-grey body. Wider (~700×260) and
+        offset below the chain. This is the slide's actual subject.
+
+    Footer caption beneath the Replication card delivers the one-line
+    "controller equivalent of `ocm transfer cv`" framing.
 
     Replication facts verified against website/content/docs/reference/
     kubernetes-api/replication.md and the user's confirmation that
-    status.lastTransferredDigest is correct.
+    `status.lastTransferredDigest` is correct.
     """
     s = prs.slides.add_slide(layouts["Plain"])
     set_text(s, 1, "APPENDIX · REPLICATION")
     set_text(s, 2, "Alongside the chain. Not within it.")
     delete_placeholder(s, 10)
 
-    cr_w = 410
-    cr_h = 220
-    gap = 50
-    total_w = 4 * cr_w + 3 * gap
-    start_x = (SLIDE_W_PX - total_w) // 2
-    y = 540
-    crs = [
-        ("Repository",  "Where versions live."),
-        ("Component",   "Pulls + verifies."),
-        ("Resource",    "One artifact, by digest."),
-        ("Deployer",    "Applies. Resolves refs."),
-    ]
-    for i, (title, body) in enumerate(crs):
-        x = start_x + i * (cr_w + gap)
-        box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                                  px(x), px(y), px(cr_w), px(cr_h))
-        box.fill.solid()
-        box.fill.fore_color.rgb = C.GREY_SOFT
-        box.line.color.rgb = C.GREY_MID
-        box.line.width = Pt(1.0)
-        tf = box.text_frame
-        tf.margin_left = tf.margin_right = Emu(180000)
-        tf.margin_top = tf.margin_bottom = Emu(180000)
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        tf.word_wrap = True
-        p1 = tf.paragraphs[0]
-        p1.alignment = PP_ALIGN.CENTER
-        r1 = p1.add_run()
-        r1.text = title
-        r1.font.name = "Aptos"
-        r1.font.size = Pt(24)
-        r1.font.bold = True
-        r1.font.color.rgb = C.GREY_MID
-        p2 = tf.add_paragraph()
-        p2.alignment = PP_ALIGN.CENTER
-        p2.space_before = Pt(8)
-        r2 = p2.add_run()
-        r2.text = body
-        r2.font.name = "Aptos"
-        r2.font.size = Pt(18)
-        r2.font.color.rgb = C.GREY_MID
-        if i < len(crs) - 1:
-            ax = x + cr_w + 6
-            ay = y + cr_h // 2 - 8
-            arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW,
-                                        px(ax), px(ay), px(gap - 12), px(18))
-            arrow.fill.solid()
-            arrow.fill.fore_color.rgb = C.GREY_MID
-            arrow.line.fill.background()
+    # --- Top row: dimmed chain in slide-7/11 family with grey stripe ---
+    _render_chain_cards(
+        s,
+        cards=[
+            ("REPOSITORY", [("Where component versions live.", False)]),
+            ("COMPONENT",  [("Pulls + verifies.", False)]),
+            ("RESOURCE",   [("One artifact, by digest.", False)]),
+            ("DEPLOYER",   [("Applies it to the cluster.", False)]),
+        ],
+        cards_y=520, card_w=330, card_h=200, gap=60,
+        stripe_h=4,
+        label_size=22, label_color=C.GREY_MID,
+        body_size=16, body_color=C.GREY_MID,
+        stripe_color=C.GREY_MID,
+        arrow_color=C.GREY_MID, arrow_stroke_pt=1.8,
+        arrow_y_offset=100,
+        shadow=True,
+        label_pad_x=24, label_pad_y=32,
+        body_pad_y=90,
+    )
 
-    # Replication card, larger and in brand blue, offset below the chain.
+    # --- Bottom: highlighted Replication card in slide-7/11 family ---
     rep_w = 700
     rep_h = 260
     rep_x = (SLIDE_W_PX - rep_w) // 2
-    rep_y = y + cr_h + 40
-    rep_box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                                  px(rep_x), px(rep_y), px(rep_w), px(rep_h))
-    rep_box.fill.solid()
-    rep_box.fill.fore_color.rgb = C.GREY_SOFT
-    rep_box.line.color.rgb = C.BLUE
-    rep_box.line.width = Pt(2.0)
-    rtf = rep_box.text_frame
-    rtf.margin_left = rtf.margin_right = Emu(220000)
-    rtf.margin_top = rtf.margin_bottom = Emu(180000)
-    rtf.vertical_anchor = MSO_ANCHOR.MIDDLE
-    rtf.word_wrap = True
-    rp1 = rtf.paragraphs[0]
-    rp1.alignment = PP_ALIGN.CENTER
-    rr1 = rp1.add_run()
-    rr1.text = "Replication"
-    rr1.font.name = "Aptos"
-    rr1.font.size = Pt(30)
-    rr1.font.bold = True
-    rr1.font.color.rgb = C.BLUE
-    for j, line in enumerate([
+    rep_y = 520 + 200 + 60  # chain row bottom + 60px breathing space
+
+    rep_card = s.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        px(rep_x), px(rep_y), px(rep_w), px(rep_h),
+    )
+    rep_card.adjustments[0] = 14.0 / min(rep_w, rep_h)
+    rep_card.fill.solid()
+    rep_card.fill.fore_color.rgb = C.GREY_SOFT
+    rep_card.line.fill.background()
+
+    # Drop shadow (same as chain cards above).
+    spPr = rep_card._element.spPr
+    for old in spPr.findall(f"{{{A_NS}}}effectLst"):
+        spPr.remove(old)
+    effectLst = etree.SubElement(spPr, f"{{{A_NS}}}effectLst")
+    outerShdw = etree.SubElement(effectLst, f"{{{A_NS}}}outerShdw")
+    outerShdw.set("blurRad", "28575")
+    outerShdw.set("dist",    "28575")
+    outerShdw.set("dir",     "5400000")
+    outerShdw.set("rotWithShape", "0")
+    clr = etree.SubElement(outerShdw, f"{{{A_NS}}}srgbClr")
+    clr.set("val", "000000")
+    alpha = etree.SubElement(clr, f"{{{A_NS}}}alpha")
+    alpha.set("val", "30000")
+
+    # Brand-blue top stripe.
+    rep_stripe = s.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        px(rep_x), px(rep_y), px(rep_w), px(5),
+    )
+    rep_stripe.fill.solid()
+    rep_stripe.fill.fore_color.rgb = C.BLUE
+    rep_stripe.line.fill.background()
+
+    # Label "REPLICATION" left-aligned mid-blue 30pt bold.
+    rlbl_tb = s.shapes.add_textbox(
+        px(rep_x + 30), px(rep_y + 42), px(rep_w - 60), px(50),
+    )
+    rlbl_tf = rlbl_tb.text_frame
+    rlbl_tf.margin_left = rlbl_tf.margin_right = 0
+    rlbl_tf.margin_top = rlbl_tf.margin_bottom = 0
+    rlbl_tf.word_wrap = True
+    lp = rlbl_tf.paragraphs[0]
+    lp.alignment = PP_ALIGN.LEFT
+    lr = lp.add_run()
+    lr.text = "REPLICATION"
+    lr.font.name = "Aptos"
+    lr.font.size = Pt(30)
+    lr.font.bold = True
+    lr.font.color.rgb = C.BLUE_MID
+
+    # Body — two lines, left-aligned dark-grey 22pt.
+    rbdy_tb = s.shapes.add_textbox(
+        px(rep_x + 30), px(rep_y + 110), px(rep_w - 60), px(rep_h - 130),
+    )
+    rbdy_tf = rbdy_tb.text_frame
+    rbdy_tf.margin_left = rbdy_tf.margin_right = 0
+    rbdy_tf.margin_top = rbdy_tf.margin_bottom = 0
+    rbdy_tf.word_wrap = True
+    body_lines = [
         "Transfers a resolved component version from one OCM repository to another.",
         "Records status.lastTransferredDigest. Same digest → no-op.",
-    ]):
-        p2 = rtf.add_paragraph()
-        p2.alignment = PP_ALIGN.CENTER
-        p2.space_before = Pt(10) if j == 0 else Pt(6)
-        r2 = p2.add_run()
-        r2.text = line
-        r2.font.name = "Aptos"
-        r2.font.size = Pt(20)
-        r2.font.color.rgb = C.BLACK
+    ]
+    DARK_GREY = RGBColor(0x33, 0x33, 0x33)
+    for j, line in enumerate(body_lines):
+        p = rbdy_tf.paragraphs[0] if j == 0 else rbdy_tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        p.line_spacing = 1.25
+        r = p.add_run()
+        r.text = line
+        r.font.name = "Aptos"
+        r.font.size = Pt(22)
+        r.font.color.rgb = DARK_GREY
 
-    # Footer caption: equivalent of `ocm transfer cv`, in-cluster.
-    footer_tb, footer_tf = add_textbox(s, 120, rep_y + rep_h + 30, SLIDE_W_PX - 240, 50)
+    # Footer caption — at y=1010 (NOT y=1090; the PPT user had it off-
+    # slide at y=1090 which is below the 1080-px slide bottom). Mid-blue
+    # Pt20 centered, not bold. Footer states the mechanism (what the CR
+    # binds and what invariant it maintains) — the use cases (promotion,
+    # mirroring, in-cluster air-gap) are implicit because slide 10 has
+    # already named them as `ocm transfer cv` use cases.
+    footer_tb, footer_tf = add_textbox(
+        s, 120, 1010, SLIDE_W_PX - 240, 50,
+    )
     fp = footer_tf.paragraphs[0]
     fp.alignment = PP_ALIGN.CENTER
     fr = fp.add_run()
-    fr.text = ("Controller-shaped equivalent of `ocm transfer cv` — "
-               "mirroring, promotion, in-cluster air-gap.")
+    fr.text = ("Controller-shaped equivalent of the OCM CLI's `ocm transfer cv` — "
+               "point it at a source `Component` and a target `Repository`, "
+               "and it keeps them in sync.")
     fr.font.name = "Aptos"
     fr.font.size = Pt(20)
     fr.font.color.rgb = C.BLUE_MID
+
 
 
 # -----------------------------------------------------------------------------
