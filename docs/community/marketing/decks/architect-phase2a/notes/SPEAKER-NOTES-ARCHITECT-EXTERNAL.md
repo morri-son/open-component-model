@@ -24,7 +24,7 @@ Open with the observation, not the product. The subtitle does the targeting work
 
 Pause. Look at the room.
 
-> "You shipped pieces. Nothing carried the release. That's the gap I want to close in the next thirty minutes."
+> "You shipped pieces. Nothing carried the release. That's the gap I want to close. By the end of the deck you'll have a thirty-minute path to your first OCM component on a laptop — and an afternoon to one running on a cluster. Until then, here's why that matters."
 
 Move on. No brand pitch yet. The deck does that at the end.
 
@@ -36,15 +36,15 @@ Move on. No brand pitch yet. The deck does that at the end.
 
 **Speaker notes.**
 
-This is the slide that explains *why* the existing toolbox doesn't compose. Slow down. The footer is calibrated for cosign-attestation shops in the room — they're not wrong to sign each piece; they're missing the release-level envelope.
+This is the slide that explains *why* the existing toolbox doesn't compose. Slow down. The bullets concede the digest reality up front so a hostile reader can't dismiss the slide as a strawman against tag-based identity — the gap is at the *release* level, not at the per-artifact level. The footer is calibrated for cosign-attestation shops in the room — they're not wrong to sign each piece; they're missing the release-level envelope.
 
 > "Three artifact types you ship every day. Look at how each one is identified."
 
-**Point at OCI image.** "An OCI image is `registry/repo:tag` — or `repo@sha256:…` if you're disciplined. Mirror that image to a second registry, and every reference downstream has to be rewritten. The image is the same bytes. Its identity changed."
+**Point at OCI image.** "The digest pins the bytes. Even if you're using `repo:tag`, you can pin by digest and the bytes hold. But nothing pins the *release* the image belongs to. The digest names one artifact, not a release."
 
-**Point at Helm chart.** "A Helm chart is `repository URL plus chart name plus version`. Same problem, different vocabulary. You can't address the chart without naming its repo. Move the repo, every `helm install` breaks."
+**Point at Helm chart.** "The version pins the chart. Same story. The chart bytes are pinned by version, sometimes by digest with OCI charts. But nothing pins the chart to the image, the config, and the SBOM it ships with as one release unit."
 
-**Point at SBOM.** "An SBOM doesn't even have a stable identifier of its own. It's linked to its subject artifact by a path, a filename convention, an OCI referrer relationship. Repackage the subject, the SBOM dangles."
+**Point at SBOM.** "An SBOM referrer attaches to one subject digest — that part works, OCI 1.1 referrers are a real mechanism. But no referrer spans the whole release. You can attach an SBOM to an image; you cannot attach an SBOM to 'this product, this version, every artifact in it.'"
 
 Beat. Now the calibration for the cosign shops:
 
@@ -78,6 +78,10 @@ Beat. Land it.
 
 > "Move the artifact. The digest stays. Only the access changes. That's the whole trick."
 
+**Q&A backup on "globally unique."** A hostile architect will ask "who arbitrates component-name uniqueness — what stops me publishing `github.com/microsoft/azure-cli:1.0.0`?" The honest answer: *"'Globally unique' inherits from DNS-prefix naming — same model as Go import paths. We don't run a registry that arbitrates conflicts; uniqueness is delegated to DNS. Two parties claiming `acme.org/helloworld` is prevented the same way two parties claiming `acme.org` is prevented — by DNS delegation, not by OCM."*
+
+**Q&A backup on squatting / name-spoofing supply-chain attacks.** Follow-on: "what if someone forges a perfectly-signed component under my name?" The honest answer: *"Trust today is per-component — the verifier knows what trust anchor to apply to the descriptor in front of it, not what anchor to apply to a name prefix it hasn't seen yet. A regulated environment relies on (a) controlling which registry the controllers are configured to pull from, and (b) per-component verifier config. Per-name-prefix trust-anchor binding is not in the spec or the controllers today."* Don't overclaim a feature OCM doesn't have.
+
 ---
 
 ## SLIDE 4 — POSITIONING  (04:00 — 05:15, ~75 sec)
@@ -105,6 +109,7 @@ Beat. Land the definition.
 **Anticipated questions.**
 - *"How does OCM relate to OCI 1.1 referrers and sigstore bundles? If I already sign images with cosign and ship attestations, what does adopting OCM give me — and what do I have to give up?"* — We don't replace cosign / sigstore / OCI referrers. Existing per-artifact signatures travel inside the component descriptor untouched. OCM adds a *release-level envelope*: one signature over the canonicalized descriptor that covers the digests of every resource in every referenced component. If you cosign-sign your images today and ship a sigstore bundle per chart, keep doing that — OCM signs the wrapper above them. What you gain: one verifiable name for the release as a whole, location-independent identity (mirror without re-signing), and signed composition (the product signature transitively covers every child digest). What you give up: nothing in your current signing flow; you add OCM signing on top.
 - *"Are 'npm', 'maven', 'SBOM' really first-class resource types?"* — `type:` on a resource is a free-form string in v2 (see `bindings/go/descriptor/v2/descriptor.go:102`). An OCM component carries any of those today via `File/v1` or `LocalBlob/v1` access. Dedicated `NPM/v1` and `Maven/v1` access types: Maven is tracked under epic ocm-project#836 with GA target end of 2026; NPM is on the GA roadmap, also targeting end of 2026.
+- *"You called this the 'component descriptor'. I've seen 'Software Bill of Delivery' (SBOD) used elsewhere — is that the same thing?"* — Yes. "Software Bill of Delivery" — SBOD — is our positioning term against SBOM; you may have heard it in earlier presentations or on the website. Technically an SBOD is the same object architects call **the component descriptor**: the serialized form of an OCM component version. Different words, one object. The architect deck uses "descriptor" because that's the wire-format noun; the positioning conversations use "SBOD" because that's the marketing-shaped counterpart to SBOM.
 
 ---
 
@@ -188,10 +193,12 @@ Beat. Now deliver the payoff.
 > "Sign the descriptor hash, not the access. That sentence is the entire transport story compressed into seven words."
 
 **Anticipated questions.**
-- *"How is the canonical form defined?"* — Spec-defined normalisation (`jsonNormalisation/v4alpha1`). See the website's signing-and-verification doc; it's deterministic across implementations.
+- *"How is the canonical form defined?"* — Spec-defined normalisation (`jsonNormalisation/v4alpha1`). See the website's signing-and-verification doc; it's deterministic across implementations. Signatures are over canonical bytes — JSON/YAML field ordering and whitespace can't break verification.
 - *"What about layered signing — sign on build, re-sign on entry to a sovereign zone?"* — Yes. Add more entries to the `signatures` list. Each entry is independent. None of them invalidates the others.
 - *"What if a resource is mutated downstream?"* — Then its digest doesn't match the value in the descriptor, the descriptor hash check fails, and verification fails. That's the whole point.
 - *"What does `componentReferences` look like in the descriptor?"* — Same shape as a resource entry: `name`, `componentName`, `version`, plus a digest of the referenced descriptor. We introduce composition on slide 8.
+- *"You named RSASSA-PSS on the slide. What's the trust model — and why should I trust this more than sigstore?"* — Algorithm choice is plug-and-play; RSASSA-PSS shown here is one option. Sigstore (ECDSA-P256 + Fulcio short-lived cert + Rekor transparency log) is another, also GA on `v1alpha1` today. OpenPGP keyring is a third. The signed object is the canonicalized descriptor regardless of algorithm. Trust model is per-scheme: RSA-PSS uses bare public-key pinning (operator pins the public key); Sigstore uses OIDC issuer + Fulcio + Rekor (operator pins the issuer); OpenPGP uses a keyring (operator pins the key fingerprint). Pick the scheme that fits your environment.
+- *"What about transitive trust across `componentReferences`?"* — The signature transitively pins referenced components by digest. The product signature covers every `componentReferences` entry's descriptor digest, so re-signing or re-publishing a referenced component breaks the product signature. At deploy time the verifier checks each component against its own trust anchor: the referenced component against the referenced component's anchor, the product against the product's anchor. Per-component verifier config, not implicit fall-through.
 
 ---
 
@@ -263,6 +270,7 @@ Pivot to slide 12.
 - *"How do component identities compose? Is there a namespace collision risk?"* — Component identities are globally unique by DNS-style path plus SemVer. Two teams can each own `acme.org/<team>/...` and never collide.
 - *"Does the product's signature cover the children's bytes, or just their digests?"* — The product's signature covers the children's *descriptor digests*. Each child carries its own signature over its own resource digests. Verifying down the tree is what the controllers and the CLI do automatically.
 - *"Can a service reference another service?"* — Yes. `componentReferences:` is recursive. The conformance scenario uses a two-level graph; deeper graphs work the same way.
+- *"Walk me through the trust chain when product P references components signed by different teams with different keys."* — Per-component, not implicit fall-through. The product signature pins each reference's descriptor digest, so re-signing or re-publishing a referenced component breaks the product signature. At deploy time the verifier checks each component against the trust anchor configured for *that* Component CR: notes against the notes team's anchor, postgres against the postgres team's anchor, product against the product team's anchor. Without an explicit per-component policy on each Component CR, the controller pulls but does not verify (see slide 11). Production installs pin policy via admission.
 
 ---
 
@@ -292,9 +300,10 @@ CLI for the curious:
 
 **Anticipated questions.**
 - *"What about PEM-encoded RSA / certificate chains?"* — A fourth option exists: RSA with an X.509 certificate chain, PEM encoding. Still experimental — the CLI prints `experimental` warnings on every sign and verify. We didn't put it on the slide because it's not yet at the same stability bar as the other three. Watch the docs; we'll promote it when the encoding stabilizes.
-- *"Why call GPG a 'signing option' but not a 'trust model'?"* — GPG follows the same trust model as Plain RSA: key pinning. The relying party knows the public key out of band and pins it. GPG just uses OpenPGP key material instead of bare RSA keys. PEM and Sigstore introduce *different* trust models (cert-chain trust and identity-based trust, respectively).
+- *"Why call GPG a 'signing option' but not a 'trust model'?"* — GPG follows the same trust model as Plain RSA: key pinning. The relying party knows the public key out of band and pins it. GPG just uses OpenPGP key material instead of bare RSA keys. PEM and Sigstore introduce *different* trust models (cert-chain trust and identity-based trust, respectively). (Note: the column header says "OpenPGP" on the deck — GPG is one implementation of OpenPGP; Sequoia and RNP produce compatible signatures.)
 - *"Can I sign without modifying the descriptor?"* — No. The signature is part of the descriptor. That's by design — there's nothing to lose in transit.
 - *"What about post-quantum?"* — Spec is open to additional algorithm IDs. Today: RSA-PSS, GPG/OpenPGP, Sigstore ECDSA-P256. Roadmap covers ML-DSA when the standard stabilises.
+- *"Three options is bad for a security primitive. What's the policy floor — what stops me down-signing a component with a weak RSA key and bypassing the org's Sigstore policy?"* — The hardest question in this slot. Honest answer: all three schemes resolve against standard trust anchors — RSA against pinned public keys, OpenPGP against a keyring, Sigstore against a Fulcio root plus Rekor verifier. Verifier policy is **per-component**: the operator pins "this product accepts only scheme X with anchor Y" on the Component CR. Without explicit policy, the controller accepts any signature whose anchor matches the configured `verify:` entries on that CR. There's no implicit fall-through to a weakest scheme — but there's also no implicit floor: production installs SHOULD pin policy via admission (Kyverno, Gatekeeper, or an OCM-native admission webhook). The slide doesn't claim a built-in policy floor; the controller defers to operator configuration. Don't overclaim here — say "per-component, you pin the policy."
 
 ---
 
@@ -330,7 +339,8 @@ CLI examples:
 - *"What if the source has the resource and the destination has a different digest at the same component identity?"* — Transfer refuses. Digests are immutable identity; mismatch is a failure.
 - *"Can I transfer just one resource?"* — At the component level, no — the unit is the descriptor. At the resource level, you can `ocm download resource` for inspection, but you can't selectively re-pack without a new version.
 - *"What about size? CTF tarballs for a real product?"* — Hundreds of MB to several GB depending on what's inside. Real customers ship them on portable media or via approved transfer mechanisms.
-- *"Does `ocm transfer` copy the resource bytes by default?"* — No — flagged on slide 14. Transfer defaults to descriptor-only. Pass `--copy-resources` for the air-gap case where the bytes have to travel with the descriptor.
+- *"Does `ocm transfer` copy the resource bytes by default?"* — **No — and this is the footgun on the headline air-gap use case.** Default `ocm transfer` copies only the component descriptor; the access fields still point back at the source registry. For air-gap (CTF → Registry) you MUST pass `--copy-resources` so the bytes travel with the descriptor. Flagged on slide 14 as one of the three honest edges. Worth catching in a CI step the first time someone runs an air-gap export — silent failure mode otherwise is that verify-on-destination resolves access fields to the upstream registry the destination can't reach.
+- *"Sigstore signatures in an air-gap destination — does the verifier still have to call Rekor and Fulcio?"* — No, but you have to pre-distribute the trusted-root file once. For Sigstore specifically: the trusted-root file (Fulcio CA + Rekor public key for the configured OIDC issuer) must be distributed into the destination once, out of band — same way you'd pre-distribute any other trust anchor. After that, `ocm verify cv` runs offline. RSA and OpenPGP need only their pinned public keys, no trusted-root file. The air-gap property holds for all three signing schemes; Sigstore just has one extra pre-distribution step.
 
 ---
 
@@ -346,13 +356,13 @@ This is the slide where Kubernetes folks lean in. The four-card chain is verify-
 
 **Point at Repository (chain card 1).** "Repository. Where component versions live. One per source — an OCI registry, a CTF mounted from a PVC, an S3 bucket. The other controllers find descriptors through this object."
 
-**Point at Component (chain card 2).** "Component. Pulls one version. Verifies its signature against a trust anchor you give it — the public key, the GPG keyring, or the Sigstore identity policy. If verification fails, nothing downstream sees a verified descriptor. The whole chain stops here."
+**Point at Component (chain card 2).** "Component. Pulls one version. Verifies its signature against a trust anchor you give it — the public key, the OpenPGP keyring, or the Sigstore identity policy. **Verification is opt-in**: without a `verify:` entry on the Component CR pointing at a key or secret, the controller resolves and pulls but does not check signatures. Production installs should require verification via admission policy. If verification *is* configured and fails, nothing downstream sees a verified descriptor. The chain stops here."
 
 **Point at Resource (chain card 3).** "Resource. One artifact, by digest. The controller picks which resource — image, chart, raw manifest — out of the verified component, resolves its access record, and fetches the bytes. The resource is exposed to the cluster as a typed artifact."
 
-**Point at Deployer (chain card 4).** "Deployer. Applies it to the cluster — and *this* is where localization happens. The Deployer resolves image references and other deploy-time pointers from the *verified* component descriptor at apply time, not at transfer time. That's the v2 mechanism. It can apply raw manifests directly, or hand off to Flux for a HelmRelease. Pluggable at this tier — point your existing reconciliation engine at the Resource CRs and OCM doesn't fight your platform stack."
+**Point at Deployer (chain card 4).** "Deployer. Applies it to the cluster — and *this* is where localization happens. The Deployer resolves image references and other deploy-time pointers from the *verified* component descriptor at apply time, not at transfer time. That's the v2 mechanism. It can apply raw manifests directly, or hand off to your GitOps engine (Flux today, Argo CD path landing in the docs before this deck ships) for a HelmRelease. Pluggable at this tier — point your existing reconciliation engine at the Resource CRs and OCM doesn't fight your platform stack."
 
-> "Honest layering: for the Helm-deploy reference flow the chain feeds a `ResourceGraphDefinition` that kro reconciles, with Flux applying the resulting `HelmRelease`. The OCM controllers don't ship kro or Flux — bring your own. Slide 14 flags this as one of three honest edges."
+> "Honest layering, foreshadowed so slide 14 doesn't feel retroactive: the four-card chain on its own deploys raw Kubernetes manifests via the Deployer. For the Helm-deploy reference flow the chain feeds a `ResourceGraphDefinition` that kro reconciles, with Flux (or Argo CD) applying the resulting `HelmRelease`. The OCM controllers don't ship kro, Flux, or Argo CD — bring your own. Slide 14 names this as one of three honest edges."
 
 Beat. Land the title.
 
@@ -360,19 +370,19 @@ Beat. Land the title.
 
 Honesty pre-empts slide 14:
 
-> "One honest edge that we'll come back to in three slides: the controllers ship as v1alpha1. The CRD surface can move. Pin minor versions in your platform installs."
+> "Two honest edges that we'll come back to in three slides: the controllers ship as v1alpha1, so the CRD surface can move — pin minor versions in your platform installs. And the Helm-deploy reference flow needs kro plus your deployer of choice."
 
 Q&A backup — Replication appendix:
 
 > "If anyone asks about the controller equivalent of `ocm transfer` for mirroring between repositories — there is one. It's called `Replication`, it sits alongside the chain (not within it), and there's an appendix slide for it. Happy to walk through it in Q&A."
 
 **Anticipated questions.**
-- *"Does this replace Argo?"* — No. It replaces the manual `kubectl apply` step. Argo as an alternative to Flux is in flight — docs PR landing soon. Until merged, the documented Helm-deploy path is kro + Flux.
+- *"Does this replace Argo CD?"* — No. It replaces the manual `kubectl apply` step. Argo CD as an alternative to Flux for the Helm-deploy path is landing in the docs (additional tabs in the existing how-tos) before this deck ships. Until then, the canonical example is kro + Flux; Argo CD is symmetrical.
 - *"Do I need kro and Flux to use this?"* — For the Helm-deploy reference flow, yes — `deploy-helm-chart.md` walks Component → Resource (a `ResourceGraphDefinition`) → kro → Flux/`HelmRelease`. For the raw-manifest path, the Deployer is enough on its own. The OCM controllers don't ship kro or Flux; bring your existing GitOps engine.
 - *"Where does localization actually happen?"* — At the Deployer, at apply time. The Deployer resolves image refs and other templating from the verified descriptor and feeds them into the deployment tool (Flux/HelmRelease via kro for the Helm path, or raw manifest apply). Transfer doesn't rewrite resource bytes — that would change digests and invalidate signatures. The deploy-time injection is the v2 mechanism.
 - *"Is there a controller-shaped `ocm transfer`?"* — Yes — `Replication`. Pull the appendix slide if it comes up.
 - *"What about secret rendering at deploy time?"* — Workflow concern, not a model concern. Secrets-as-resources is supported via External Secrets / sealed-secrets patterns; the secrets themselves don't live in the descriptor.
-- *"How does verification config get to the Component controller?"* — Trust anchor lives in a Secret or a dedicated config object referenced from the ComponentCR. There's no single "TrustPolicyCR" yet — verification config lives next to the consumer.
+- *"How does verification config get to the Component controller? Is it always on?"* — Trust anchor lives in a Secret or a dedicated config object referenced from the Component CR's `verify:` field. There's no single global "TrustPolicyCR" yet — verification config is per-Component. Without a `verify:` entry the controller resolves and pulls but does not check signatures. Production installs SHOULD pin verification via admission policy (Kyverno / Gatekeeper). Don't assume the controller is verifying by default — it isn't.
 
 ---
 
@@ -432,9 +442,9 @@ End the technical section by handing them a starting point. Two paths, pick one.
 
 > "If you go home and prototype OCM tomorrow, there are two reasonable entry points. Both are real. Both are tested in our conformance suite on every release."
 
-**Point at FROM ZERO — CLI.** "From-zero path. You don't need any cluster. Install the CLI. Take one component you already ship — an image plus a chart, or whatever you have. Write the constructor. Pack it. Sign it with an RSA key. Export it as a CTF tarball. Carry the tarball to a second machine. Import it. Verify. Round trip in thirty minutes, one afternoon end-to-end. This is the path I recommend for the first hands-on contact, even if you eventually go to the cluster path."
+**Point at FROM ZERO — CLI.** "From-zero path. You don't need any cluster. Install the CLI. Write the constructor for one simple component — the website tutorial walks `github.com/acme.org/helloworld` end-to-end. Pack it. Sign it with an RSA key. Export it as a CTF tarball. Carry the tarball to a second machine. Import it. Verify. Cold-start budget: about thirty minutes — CLI install plus the simple pack/sign/verify documented in the signing tutorial. This is the path I recommend for the first hands-on contact, even if you eventually go to the cluster path."
 
-**Point at ON YOUR CLUSTER — CONTROLLERS.** "Cluster path. The OCM controllers are a Helm install. Drop them on any cluster you already operate — kind, k3s, EKS, OpenShift, doesn't matter. Point them at your registry with credentials. Apply a Component resource that names one component you've already packed. Watch it pull, verify, and resolve. That's a working OCM control loop in a single afternoon."
+**Point at ON YOUR CLUSTER — CONTROLLERS.** "Cluster path. Spin up a kind cluster (or use any cluster you already operate). Helm-install the OCM controllers, plus kro, plus your deployer of choice — Flux or Argo CD. Point them at your registry. Apply a Component resource that names one component you've already packed. Watch it pull, verify, and resolve. Cold-start budget: an afternoon — that's the bootstrap (kind + controllers + kro + Flux/Argo CD) plus a Helm-deploy of the simple component documented in the getting-started tutorial. The slide deliberately doesn't put marketing minutes on the bullets — these are the honest numbers."
 
 Beat.
 
@@ -445,13 +455,14 @@ Beat.
 **Anticipated questions.**
 - *"How long to org-wide adoption?"* — One team, one afternoon. One product, one sprint. Org-wide, a quarter to a year depending on scope and on how much pack-time work has to shift left.
 - *"Do I need OpenControlPlane?"* — No. The cluster path is a plain Helm install on any K8s cluster. OpenControlPlane is for organisations already running a multi-tenant control plane.
-- *"Do the controllers need anything else to deploy Helm charts?"* — For the Helm-deploy path you bring Flux alongside the OCM controllers — Flux reconciles the HelmRelease that the Deployer hands it. For raw manifests, the Deployer is enough on its own.
+- *"Do the controllers need anything else to deploy Helm charts?"* — For the Helm-deploy path you bring your deployer of choice (Flux today, Argo CD path landing in the docs before the deck ships) alongside the OCM controllers and kro — the deployer reconciles the `HelmRelease` that the Deployer-driven `ResourceGraphDefinition` hands it. For raw manifests, the Deployer is enough on its own.
+- *"Thirty minutes really? Cold-start?"* — Honest scope on the CLI side: install CLI (~5 min), write constructor for the `helloworld` example (~10 min), pack/sign/verify (~10 min), CTF round-trip if you walk to a second laptop (~5 min). That's the website signing tutorial verbatim. Cold-start with a more interesting component — one with a real OCI image and a Helm chart — adds time for resource collection but not for the OCM mechanics. On the cluster side, an afternoon is honest: ~15 min for the controller environment bootstrap (kind + kro + Flux/Argo CD + OCM controllers), ~30 min for the Helm-deploy walk-through. If you don't pre-install the controllers, "deploy a component" is closer to 45 minutes than 30.
 
 ---
 
 ## SLIDE 14 — WHAT'S SHARP  (26:30 — 28:00, ~90 sec)
 
-**On screen.** Eyebrow: WHAT'S SHARP. Title: "Three honest edges." Three bullets in a blue box — (1) Transfer defaults to descriptor-only; pass `--copy-resources` for air-gap. (2) Controllers are v1alpha1 — pin to specific release tags. (3) Helm-deploy adds kro + Flux — the OCM controllers don't ship them. Caption: "Honest now beats apologetic later. Plan for the trim edge."
+**On screen.** Eyebrow: WHAT'S SHARP. Title: "Three honest edges." Three bullets in a blue box — (1) Transfer defaults to descriptor-only; pass `--copy-resources` for air-gap. (2) Controllers are v1alpha1 — pin to specific release tags. (3) Helm-deploy adds kro + Flux or Argo CD — the OCM controllers don't ship them. Bring your existing GitOps engine. Caption: "Honest now beats apologetic later. Plan for the trim edge."
 
 **Speaker notes.**
 
@@ -463,7 +474,7 @@ This is the slide that earns trust. Architects do not believe a deck without a s
 
 **Bullet 2 — Controllers are v1alpha1.** "The Kubernetes controllers ship at v1alpha1. The CRD surface can still move between releases — fields renamed, behaviour adjusted. The mechanic — Repository, Component, Resource, Deployer — is settled. The exact shape of those CRDs isn't. Pin to specific release tags in your platform installs. Treat upgrades the way you'd treat any v1alpha1 — check the changelog, test in staging."
 
-**Bullet 3 — Helm-deploy adds kro + Flux.** "On slide 11 we walked through the four-controller chain. The honest layering you need to know: for the Helm-deploy reference flow, the chain feeds a `ResourceGraphDefinition` that kro reconciles, with Flux applying the resulting `HelmRelease`. That's three installs (OCM controllers + kro + Flux), not one. The OCM controllers don't ship kro or Flux; you bring your existing GitOps engine. For raw-manifest deploy paths the Deployer is enough on its own — kro + Flux are only required for the Helm/RGD pattern."
+**Bullet 3 — Helm-deploy adds kro + Flux or Argo CD.** "On slide 11 we walked the four-controller chain and foreshadowed the dependency. Here's the full picture. The four-card chain on its own deploys raw Kubernetes manifests via the Deployer. For the Helm-deploy reference flow, the Deployer feeds a `ResourceGraphDefinition` that kro reconciles, with your GitOps engine — Flux today, Argo CD path landing in the docs before this deck ships — applying the resulting `HelmRelease`. The OCM controllers don't ship kro, Flux, or Argo CD; you bring them. Three installs for Helm-deploy. Plan for it. Nuance for Q&A: kro is actually required for any non-raw-manifest deploy path (it reconciles the `ResourceGraphDefinition` regardless of whether the leaf is Helm or something else); the GitOps engine is the Helm-deploy-specific add. The bullet reads `kro + Flux or Argo CD` because that's the operational dependency tuple the platform team installs for the documented happy path."
 
 Beat.
 
@@ -521,6 +532,52 @@ Pull only on demand — typical triggers: "is there a controller for `ocm transf
 - *"Why isn't this in the main deck?"* — Because the four-card chain is the architectural message. Replication is a coda for a specific use case. We pull it when it matters.
 - *"Can Replication target a non-OCI repository?"* — The current shape references a `Repository` with a `repositorySpec` — the example in the docs uses `type: OCIRepository`. Recursion depth, copy mode, and credentials are configured via OCM configuration referenced from `spec.ocmConfig`, under the `transfer.config.ocm.software` key.
 - *"Status `ResolutionInProgress` / `TransferInProgress`?"* — Two phases per reconcile. First the resolution worker walks the reference graph; then the transfer executes. Standard controller-status pattern.
+
+---
+
+## SLIDE 18 — APPENDIX · HOW OCM COMPARES  (Q&A BACKUP, not in main 30-min flow)
+
+**Why this slide exists as appendix, not main flow.** This deck is for architects coming from different areas trying to find out what OCM *is*, not for an architecture-decision board. A comparative slide in the main arc would either (a) sit too early (before the audience knows what's being compared) or (b) sit too late (interrupt the closing posture after slides 14–15). It belongs nowhere good in the arc. It belongs here, as the answer to one specific question: "Why not just compose cosign + in-toto + OCI 1.1 referrers + my GitOps engine?"
+
+Pull this slide ONLY if a hostile architect asks the composition-of-existing-tools question in Q&A.
+
+**On screen.** Eyebrow: HOW OCM COMPARES. Title: "Composes with what's there." A three-row bordered table containing the per-artifact tools, with the OCM row sitting *outside* the box below it. Row labels and columns:
+
+```
+                       WHAT IT SIGNS              LOCATION-      AIR-GAP
+                                                  INDEPENDENT    NATIVE
+┌────────────────────┬────────────────────────┬──────────┬───────────┐
+│ cosign / sigstore  │ one OCI artifact       │ no       │ no        │
+│ SLSA / in-toto     │ one build's provenance │ no       │ partial   │
+│ SBOM / OCI 1.1 refs│ one artifact's contents│ partial  │ no        │
+└────────────────────┴────────────────────────┴──────────┴───────────┘
+
+OCM                     a component (the bundle)   yes        yes
+```
+
+The "out of the table" placement of OCM is the slide's whole argument made visual: the per-artifact tools form one comparison group; OCM is a *different unit* of analysis, not just a row in the same group. Bottom caption (mid-blue): "OCM rides on top. It doesn't replace the per-artifact tools — it adds the release-level envelope they don't."
+
+**Speaker notes (Q&A delivery).**
+
+> "Good question — and an honest answer. Each of those tools does one job well, and OCM doesn't replace any of them. Look at the unit each one operates on."
+
+**Point at row 1 — cosign / sigstore.** "Cosign signs one OCI artifact at a time. Per-image trust is strong. But the signature is tied to that artifact's digest in that registry — promote across registries with `cosign copy` and you have to re-sign or re-attach. OCM uses Sigstore as one of its three signing schemes for the component descriptor — same crypto, different unit."
+
+**Point at row 2 — SLSA / in-toto.** "SLSA attests the build process. Provenance, not bundling. Not natively air-gap — the attestation has to travel with its subject somehow, and that's your problem to solve. OCM carries SLSA and in-toto attestations as resources inside the component; the descriptor signature covers their digests."
+
+**Point at row 3 — SBOM / OCI 1.1 referrers.** "OCI 1.1 referrers attach an SBOM to a subject digest — that part works, real mechanism, digest-addressable. But no referrer spans a multi-artifact release. You can attach an SBOM to one image; you can't attach one to 'this product, this version, every artifact in it.' OCM carries SBOMs as resources; the descriptor names which SBOM belongs to which artifact."
+
+**Point at the OCM row outside the box.** "OCM operates one level up. It signs **the component** — a named, versioned bundle of artifacts plus access paths. One signature covers every digest. Location is rewritten on transfer; the signature still verifies. CTF round-trip with no callback to source — that's the air-gap property the rows inside the box don't have."
+
+Beat. Land the close.
+
+> "OCM rides on top. It doesn't replace the per-artifact tools — it adds the release-level envelope they don't. Every signature you already produce travels inside the component. We sign the wrapper above them. That's why the OCM row is outside the table on this slide — it's a different unit of conversation."
+
+**Anticipated follow-ups.**
+- *"Why is SLSA 'partial' on air-gap?"* — SLSA attestations CAN travel with their subject if you ship them together (in-toto bundles, OCI 1.1 referrers). No native air-gap transport in the SLSA spec itself; depends on the carrier. OCM's CTF round-trip is built in.
+- *"Why is SBOM 'partial' on location-independent?"* — OCI 1.1 referrers are digest-addressable, so attaching an SBOM to `image@sha256:abc...` works across registries that support referrers. Not every registry supports them, and the attachment is one artifact at a time, not release-wide.
+- *"What about Helm chart signing — `helm package --sign`?"* — Helm provenance signs one chart's tarball. Same pattern as cosign for OCI — per-artifact, location-bound. Carries inside an OCM component as a `Helm/v1` resource if you want it.
+- *"Are you claiming OCM replaces cosign?"* — No. We claim OCM signs a **different unit** — the release-as-bundle — that cosign can't sign. Most production setups will run both: cosign on each image, OCM on the component containing them.
 
 ---
 
