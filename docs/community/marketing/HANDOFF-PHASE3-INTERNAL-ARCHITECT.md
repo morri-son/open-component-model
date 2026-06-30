@@ -58,7 +58,7 @@ These are settled. Apply them to both variants identically; don't reopen:
 - Slide 2 bullets use the Option B wording (digest concedes, release gap names).
 - Slide 4 keeps "SBOMs, npm, maven" in the noun list; speaker notes carry the npm/maven access-binding nuance.
 - Slide 7 stays between 5/6 and 8–11. "THE FOUR MOVES" eyebrow.
-- Slide 9 = Transport, slide 10 = Sign in the rendered PDF order (PowerPoint reorder vs build-script numbering — see below).
+- Slide 9 = Sign, slide 10 = Transport — this matches the slide-7 mnemonic (Pack · Sign · Transport · Deploy) and the build-script order. An earlier PowerPoint reorder briefly swapped them in the rendered PDF; that has been corrected. All notes and the build script use the canonical order. Internal variant ships in the same order.
 - Slide 10 column header is "OpenPGP" (not "GPG"). Body says GPG-as-implementation in speaker notes.
 - Slide 11 deploy chain stays four cards; verification-opt-in disclosure lives in speaker notes.
 - Slide 12 day-2 highlights are brand-blue (changed values).
@@ -107,20 +107,16 @@ These are settled. Apply them to both variants identically; don't reopen:
 
 Don't re-verify Phase 2B technical claims (those were verified in the persona pass). Only verify *new* claims the internal deck introduces.
 
-## Slide-numbering trap — read this before editing
+## Slide order — canonical 9=Sign, 10=Transport
 
-**The external deck has a subtle slide-order swap that matters:**
+The four-moves mnemonic on slide 7 is **Pack · Sign · Transport · Deploy**. The technical-spine slides follow that order:
 
-- The Python build script (`build_pptx_architect_external.py`) builds slides in this order: 9=SIGN, 10=TRANSPORT.
-- The rendered PDF has them swapped: slide 9=TRANSPORT, slide 10=SIGN.
-- This is because the user manually reordered the slides in PowerPoint after the build script ran.
-- The `speaker_notes.py` dict uses the **build-script numbering** (9=SIGN, 10=TRANSPORT).
-- The Phase 2B hand-edit summaries use the **PDF numbering** (9=TRANSPORT, 10=SIGN).
+- Slide 8 = Pack
+- Slide 9 = Sign
+- Slide 10 = Transport
+- Slide 11 = Deploy
 
-When working on the internal deck:
-- If you edit the build script, you're using build-script numbering.
-- If you describe changes to the user for PowerPoint hand-editing, use PDF numbering.
-- If you regenerate from scratch and don't reorder, the new internal deck will have 9=SIGN, 10=TRANSPORT — which may or may not match the external deck the audience has seen. Decide early which order the internal variant ships with.
+An earlier rendered PDF had slides 9 and 10 swapped because they were reordered in PowerPoint after the build script ran. That swap was unintentional and has been corrected in the SharePoint copy. The build script, `speaker_notes.py`, the long-form speaker notes, and the Phase 2B hand-edit summaries all use this canonical order. The internal-architect variant must ship in the same order — don't reintroduce the swap.
 
 ## Suggested session sequence
 

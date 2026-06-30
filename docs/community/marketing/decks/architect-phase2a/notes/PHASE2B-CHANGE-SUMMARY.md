@@ -81,11 +81,29 @@ No changes.
 **Slide text:** No change.
 
 **Speaker notes — add one Q&A backup paragraph:**
-> *"Q&A on transitive trust: `componentReferences` are pinned by digest of the referenced component's descriptor. The product signature covers each reference's digest — re-signing a referenced component breaks the product signature. At deploy time the verifier checks each component against its own trust anchor: notes against the notes team's anchor, postgres against the postgres team's anchor, product against the product team's anchor. Without an explicit per-component policy, the controller applies whatever trust anchor was configured on the Component CR for that name."*
+> *"Q&A on transitive trust: `componentReferences` are pinned by digest of the referenced component's descriptor. The product signature covers each reference's digest — re-signing a referenced component breaks the product signature. At deploy time the verifier checks each component against the public key pinned for its signature name. In v1alpha1 the Component CR's `verify:` entries pin signature **name → public key** (RSA today; OpenPGP and Sigstore are CLI-only and on the controller roadmap). Per-component-name anchor binding beyond that is not in the controller; global enforcement is BYO Kyverno/Gatekeeper."*
 
 ---
 
-## SLIDE 9 (TRANSPORT)
+## SLIDE 9 (SIGN)
+
+### ★ SLIDE TEXT CHANGE — column header rename
+
+**Middle column header:** change **`GPG`** → **`OpenPGP`**
+
+(The column body text stays as-is. GPG is one implementation; OpenPGP is the standard. Sequoia and RNP produce compatible signatures.)
+
+**Speaker notes — add one Q&A backup paragraph (the policy-floor question is the hardest in this slot).** The earlier draft of this paragraph was technically wrong on three points and has been corrected against the controller source (`kubernetes/controller/api/v1alpha1/component_types.go`, `kubernetes/controller/internal/resolution/workerpool/workerpool.go`):
+
+- The Component CR `verify:` entry pins a signature **name + public key**, not a scheme or trust anchor — re-worded accordingly.
+- The v1alpha1 controller implements **RSA only** today; OpenPGP and Sigstore are CLI-only and on the roadmap — the answer now says so plainly rather than implying all three are wired in.
+- No admission webhook ships with OCM — the "Production installs SHOULD pin policy via admission" sentence has been re-framed as BYO Kyverno/Gatekeeper/custom rather than implying an OCM-native option exists.
+
+The corrected note text lives in `build-pptx/speaker_notes.py` key `9` (canonical) and in `notes/SPEAKER-NOTES-ARCHITECT-EXTERNAL.md` slide 9 section (prose, updated in parallel). Copy from there into PowerPoint — do **not** paste the earlier policy-floor paragraph that referenced "scheme/anchor pinning on the Component CR" or "implicit fall-through to a weakest scheme."
+
+---
+
+## SLIDE 10 (TRANSPORT)
 
 **Slide text:** No change.
 
@@ -94,19 +112,6 @@ No changes.
 1. *"Q&A on the air-gap default footgun: default `ocm transfer` copies only the descriptor — the access fields still point back at the source registry. For air-gap (CTF → Registry) you MUST pass `--copy-resources` so the bytes travel with the descriptor. Slide 14 names this as one of the three honest edges. Worth catching in a CI step the first time someone runs an air-gap export."*
 
 2. *"Q&A on Sigstore air-gap specifically: Sigstore verification at the destination is offline IF the trusted-root file (Fulcio CA + Rekor public key for the configured issuer) has been distributed into the destination once, out of band. After that, `ocm verify cv` runs without contacting Rekor or Fulcio. RSA and OpenPGP need only their pinned public keys — no trusted-root file."*
-
----
-
-## SLIDE 10 (SIGN)
-
-### ★ SLIDE TEXT CHANGE — column header rename
-
-**Middle column header:** change **`GPG`** → **`OpenPGP`**
-
-(The column body text stays as-is. GPG is one implementation; OpenPGP is the standard. Sequoia and RNP produce compatible signatures.)
-
-**Speaker notes — add one Q&A backup paragraph (the policy-floor question is the hardest in this slot):**
-> *"Q&A on the policy floor — what stops me down-signing with a weak RSA key and bypassing Sigstore policy? Honest answer: all three schemes resolve against standard trust anchors. Verifier policy is **per-component**: the operator pins 'this product accepts only scheme X with anchor Y' on the Component CR. Without explicit policy, the controller accepts any signature whose anchor matches the configured `verify:` entries on that CR. No implicit fall-through to a weakest scheme — but no implicit floor either. Production installs SHOULD pin policy via admission (Kyverno, Gatekeeper, or an OCM-native admission webhook)."*
 
 ---
 
@@ -212,10 +217,10 @@ Bottom caption (mid-blue): *"OCM rides on top. It doesn't replace the per-artifa
 
 These were settled in this Phase 2B pass; do not re-litigate during the PPTX edit:
 
-- Sigstore "GA" claim on slide 10 (SIGN) is **gated by the website PR** removing the early-access callout. Don't ship the deck until that PR merges. (No deck-side edit; just timing.)
+- Sigstore "GA" claim on slide 9 (SIGN) is **gated by the website PR** removing the early-access callout. Don't ship the deck until that PR merges. (No deck-side edit; just timing.)
 - The `ociImage` (artifact type) vs `OCIImage/v1` (access type) casing on slides 5 + 6 is **intentionally different** per spec — these are two different nouns. The deck is correct as-is.
 - No new "Our recommendation" slide. The deck is for architects evaluating OCM, not an architecture-decision board.
-- No comparative footer added to slide 10 (SIGN). Policy-floor disclosure is speaker-notes-only.
+- No comparative footer added to slide 9 (SIGN). Policy-floor disclosure is speaker-notes-only — and the disclosure was rewritten to match the v1alpha1 controller reality (RSA-only today; `verify:` pins name + public key, not scheme/anchor; production global enforcement is BYO Kyverno/Gatekeeper, no OCM-native admission webhook ships).
 - CTAs across decks don't ladder, but external vs internal decks are explicitly distinct audiences — no anchor-line added.
 - Day-2 visual diff pointers already exist (changed values are in brand blue) — no further change.
 - The comparison slide ("How OCM compares") lives as a post-CTA Q&A backup at slide 18 — not in the main arc. Main-arc slides keep their current numbering.

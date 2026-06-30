@@ -2,8 +2,6 @@
 
 **How to use this file.** Each section below is one PDF slide. Click into the slide's Notes pane in PowerPoint, **select all existing text and replace** with the block under that section. Slide numbers below match the rendered PDF order you see in SharePoint.
 
-**Slide-order note.** In the rendered deck, slide 9 = TRANSPORT and slide 10 = SIGN. That's the opposite of the Python build script's internal numbering (the script has SIGN=9, TRANSPORT=10) — but the speaker notes below are indexed by what you see in the PDF, so paste them where the visible slide titles match.
-
 **No main-arc renumbering.** The "How OCM compares" slide is a post-CTA Q&A backup at slide 18. Main-arc slides (1–16) keep their current numbering.
 
 ---
@@ -128,7 +126,26 @@ Q&A backup on transitive trust: `componentReferences` are pinned by the digest o
 
 ---
 
-## SLIDE 9 — TRANSPORT ("Three patterns. One command.")
+## SLIDE 9 — SIGN ("Same signed object. Three signing options.")
+
+**Slide text change first:** middle column header `GPG` → `OpenPGP`.
+
+```
+Same signed object - the canonical descriptor digest - in all three. How you prove the key is what varies. All three schemes are stable in the CLI on the v1alpha1 API surface today:
+• RSA / RSASSA-PSS - bare public-key pinning. The key you already rotate. No PKI required. Trust model: key pinning.
+• OpenPGP - OpenPGP key material; trust model is the same as RSA Plain (key pinning), just with a different key format. Fits orgs already running web-of-trust keyrings. (Slide header says 'OpenPGP' - GPG is one implementation; Sequoia and RNP produce compatible signatures.)
+• Sigstore - keyless via OIDC + Rekor transparency log; trust anchor is your OIDC issuer. Fits CI workloads and any signer that can present an OIDC identity.
+Three things to land. Same signed object - the canonical descriptor digest. Verifiers can require multiple in parallel (RSA from release team + Sigstore from CI). Pick what your org already runs.
+Q&A backup on verifier policy on the Kubernetes Component CR: the Component CR has an optional `verify:` field - a list of {signature-name, public-key} pairs. Verification is opt-in: with NO `verify:` entries the controller resolves and pulls but does not check signatures. With `verify:` entries the controller looks for signatures with those names in the descriptor and verifies them against the provided keys. There is no scheme-pinning on the CR; the scheme is derived from each signature's algorithm field in the descriptor itself.
+Honest scope note (the question a security architect actually asks): the v1alpha1 Kubernetes controller TODAY implements RSA (RSASSA-PSS, RSASSA-PKCS1V15) only. OpenPGP and Sigstore verification work in the CLI - the three columns on this slide are the CLI surface. The controller will reject a non-RSA signature with an 'unsupported signature algorithm' error rather than fall through silently, so the safety property holds, but the practical answer for an audience running the controllers in production today is: RSA on the CR, CLI for the broader scheme set, OpenPGP and Sigstore controller support on the roadmap.
+Q&A backup on global enforcement: there is no admission webhook shipping with the OCM controllers. Verification policy lives on each Component CR. Production installs that want global enforcement bring their own admission policy - Kyverno, Gatekeeper, or a custom webhook against the Component resource.
+Q&A backup on PEM / cert chains: A fourth option exists - RSA with X.509 certificate chain, PEM encoding. Still experimental: the CLI prints `experimental` warnings on every sign and verify. Watch the docs; we'll promote it when the encoding stabilizes.
+CLI: `ocm sign cv ./archive//github.com/acme/widget:v1.4.2 --signature acme-release-key --private-key ./release-key.pem`. Idempotent.
+```
+
+---
+
+## SLIDE 10 — TRANSPORT ("Three patterns. One command.")
 
 ```
 One mechanic, three patterns - covers every delivery topology you will see.
@@ -138,23 +155,6 @@ One mechanic, three patterns - covers every delivery topology you will see.
 Same command in all three: `ocm transfer cv <src> <dst>`. Access changes; digests do not. Signature covers digests, so it survives every hop. Verification is purely local at the destination - that is the air-gap property.
 Q&A backup on the air-gap default footgun: default `ocm transfer` copies only the component descriptor - the access fields still point back at the source registry. For air-gap (CTF -> Registry) you MUST pass `--copy-resources` so the bytes travel with the descriptor. Slide 14 names this as one of the three honest edges. Worth catching in a CI step the first time someone runs an air-gap export.
 Q&A backup on Sigstore air-gap specifically: Sigstore verification at the destination is offline IF the trusted-root file (Fulcio CA + Rekor public key for the configured issuer) has been distributed into the destination once, out of band. After that, `ocm verify cv` runs without contacting Rekor or Fulcio. RSA and OpenPGP need only their pinned public keys - no trusted-root file.
-```
-
----
-
-## SLIDE 10 — SIGN ("Same signed object. Three signing options.")
-
-**Slide text change first:** middle column header `GPG` → `OpenPGP`.
-
-```
-Same signed object - the canonical descriptor digest - in all three. How you prove the key is what varies. All three are stable on the v1alpha1 API surface today:
-• RSA / RSASSA-PSS - bare public-key pinning. The key you already rotate. No PKI required. Trust model: key pinning.
-• OpenPGP - OpenPGP key material; trust model is the same as RSA Plain (key pinning), just with a different key format. Fits orgs already running web-of-trust keyrings. (Slide header says 'OpenPGP' - GPG is one implementation; Sequoia and RNP produce compatible signatures.)
-• Sigstore - keyless via OIDC + Rekor transparency log; trust anchor is your OIDC issuer. Fits CI workloads and any signer that can present an OIDC identity.
-Three things to land. Same signed object - the canonical descriptor digest. Verifiers can require multiple in parallel (RSA from release team + Sigstore from CI). Pick what your org already runs.
-Q&A backup on verifier policy floor (the security architect's hardest question): all three schemes resolve against standard trust anchors - RSA against pinned public keys, OpenPGP against an OpenPGP keyring, Sigstore against a Fulcio root plus Rekor verifier. Verifier policy is per-component: an operator pins 'this product accepts only scheme X with anchor Y' on the Component CR. Without explicit policy, the controller accepts any signature whose anchor matches the configured `verify:` entries on that Component CR. Production installs SHOULD pin policy via admission. There's no implicit fall-through to a weakest scheme.
-Q&A backup on PEM / cert chains: A fourth option exists - RSA with X.509 certificate chain, PEM encoding. Still experimental: the CLI prints `experimental` warnings on every sign and verify. Watch the docs; we'll promote it when the encoding stabilizes.
-CLI: `ocm sign cv ./archive//github.com/acme/widget:v1.4.2 --signature acme-release-key --private-key ./release-key.pem`. Idempotent.
 ```
 
 ---
@@ -268,7 +268,7 @@ Close with the band line: 'OCM rides on top. It doesn't replace the per-artifact
 Three slide-text changes plus one appendix slide. See `PHASE2B-CHANGE-SUMMARY.md` for the full per-slide rationale; the short list:
 
 1. **Slide 2** — replace the three bullets with the new Option-B wording (see slide-text in PHASE2B-CHANGE-SUMMARY.md, "SLIDE 2 — DIAGNOSIS" section).
-2. **Slide 10 (SIGN)** — middle column header `GPG` → `OpenPGP`.
+2. **Slide 9 (SIGN)** — middle column header `GPG` → `OpenPGP`.
 3. **Slide 13 (ADOPTION)** — delete the two "Thirty minutes …" closing lines from both cards.
 4. **Slide 14 (WHAT'S SHARP)** — third bullet rewrite (see above section).
 5. **Slide 18 (appendix)** — drag-insert `OCM-Story-Architect-External-Slide-4b.pptx` AFTER slide 16 in the deck. Pulled on demand in Q&A; not in the main 30-min flow.
