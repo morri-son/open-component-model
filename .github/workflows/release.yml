@@ -168,6 +168,7 @@ jobs:
         env:
           CANONICAL_TAG: ${{ needs.prepare.outputs.new_tag }}
           ADDITIONAL_TAGS: ${{ needs.prepare.outputs.cli_module_rc_tag }},${{ needs.prepare.outputs.controller_module_rc_tag }}
+          SKIP_GPG_SIGN: "true"  # FORK-TEST: no OCMBot GPG key on fork
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -405,6 +406,7 @@ jobs:
           RC_TAG: ${{ needs.prepare.outputs.new_tag }}
           NEW_RELEASE_TAG: ${{ needs.prepare.outputs.promotion_tag }}
           ADDITIONAL_TAGS: ${{ needs.prepare.outputs.cli_module_promotion_tag }},${{ needs.prepare.outputs.controller_module_promotion_tag }},${{ needs.prepare.outputs.website_module_promotion_tag }}
+          SKIP_GPG_SIGN: "true"  # FORK-TEST: no OCMBot GPG key on fork
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

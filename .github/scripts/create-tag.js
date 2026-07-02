@@ -47,10 +47,12 @@ export function resolveTagCommit(tag, execGit = defaultExecGit) {
  * @param {function} [opts.execGit] - Git executor (for testing).
  */
 export function createAndPushTag({ tag, commit, message, execGit = defaultExecGit }) {
+  // FORK-TEST: allow unsigned tags when SKIP_GPG_SIGN=true (fork test where no GPG key is loaded).
+  const signFlag = process.env.SKIP_GPG_SIGN === "true" ? "-a" : "-s";
   if (commit === "HEAD") {
-    execGit(["tag", "-s", tag, "-m", message]);
+    execGit(["tag", signFlag, tag, "-m", message]);
   } else {
-    execGit(["tag", "-s", tag, commit, "-m", message]);
+    execGit(["tag", signFlag, tag, commit, "-m", message]);
   }
   execGit(["push", "origin", `refs/tags/${tag}`]);
 }
