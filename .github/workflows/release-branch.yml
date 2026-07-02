@@ -18,9 +18,8 @@ jobs:
   create-release-branch:
     name: Create Release Branch from ${{ github.event.inputs.source_branch }} to ${{ github.event.inputs.target_branch }}
     runs-on: ubuntu-24.04-arm
-    environment:
-      name: automation
-      deployment: false
+    permissions:
+      contents: write  # FORK-TEST: was permissions:read + OCMBot app token; now GITHUB_TOKEN
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -28,23 +27,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Generate App Token
-        id: get_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.OCMBOT_APP_ID }}
-          private-key: ${{ secrets.OCMBOT_PRIV_KEY }}
-          repositories: ${{ github.event.repository.name }}
-          # Create the release branch via GitHub API.
-          permission-contents: write
-
       - name: Create release branch
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
           SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
         with:
-          github-token: ${{ steps.get_token.outputs.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
