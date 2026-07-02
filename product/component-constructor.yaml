@@ -1,0 +1,14 @@
+# OCM product component-version: references ocm.software/cli + /controller.
+# ${VERSION} is substituted by the OCM CLI at publish time (os.Expand, ADR 0006).
+components:
+  - name: ocm.software/ocm
+    version: "${VERSION}"
+    provider:
+      name: ocm.software
+    componentReferences:
+      - name: cli
+        componentName: ocm.software/cli
+        version: "${VERSION}"
+      - name: controller
+        componentName: ocm.software/controller
+        version: "${VERSION}"
