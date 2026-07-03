@@ -2,195 +2,285 @@
 
 ## Slide 1: Your supply chain has
 
-(no notes)
+The words "blind spots" on the slide are the whole payload. Don't read the slide.
+
+Say roughly: "Your supply chain has blind spots. In the next fifteen minutes I'll show you three of them, and the model that closes them."
+
+Don't preview the answer. Slide 2 discharges the promise.
+
 
 ## Slide 2: THREE BLIND SPOTS
 
-Deliver on the promise from slide 1. Three picturable failures the audience can recognise in their own delivery chain. The slide is intentionally sparse - let the audience read; you fill in the colour.
-> "Three blind spots. Each one is a place the current model literally cannot see."
+Discharge the promise from slide 1. Three concrete failure modes in the delivery chain the audience is already running.
 
-**Column 1 - Identity drift.** "You signed an artifact at source. Then it moved - to a mirror, to a customer's registry, into an air gap. Each of those transfers changed its reference, because location is part of the name. Downstream verifies a reference you never signed - and most chains don't notice."
+Frame: signed at source, broken by the time it lands. Three places that happens.
 
-**Column 2 - No release envelope.** "A release is twelve things - images, charts, configs, manifests, an SBOM. Today, those get signed separately, if at all. So when a regulator asks for proof that *the release* is what you said it is, you hand them twelve signatures and an explanation."
+Identity drift. Every artifact reference carries its location. Push the image to a mirror, to a customer's registry, into an air-gapped archive, and the reference changes at each hop. The signature was on the old reference. Downstream verifies the new reference, and either the check fails or, more commonly, silently trusts a reference that was never signed. Most chains never notice, because nothing checks end-to-end.
 
-**Column 3 - Unverified arrival.** "Sovereign-cloud and regulated environments forbid upstream traffic. So either verification ships with the release, or it doesn't happen. In most chains, it doesn't - and the gap shows up at audit time."
+No release envelope. A release is twelve things: images, charts, config, manifests, an SBOM, sometimes a database migration. Today those get signed individually, when they get signed at all. A regulator asks "prove this release is what you shipped" and the honest answer is twelve signatures and a spreadsheet.
 
-> "Those are the blind spots. Now - why now."
+Unverified arrival. Sovereign zones, air-gapped estates, regulated financial environments forbid callbacks upstream. If verification depends on reaching Rekor, Fulcio, an internal PKI, or the source registry, verification does not happen inside the boundary. Either the release travels with everything needed to verify itself, or the audit catches the gap.
 
-Hand off to slide 3.
+Land: those are the blind spots. Now why they matter this quarter.
+
+Q&A:
+"Doesn't cosign solve identity drift?" No. Cosign signs by digest but the reference still includes registry. OCM signs the canonical descriptor, which is location-independent.
+"Isn't in-toto a release envelope?" In-toto attests to build-pipeline steps. OCM signs the delivered artifact set. Compatible layers, different jobs.
+
 
 ## Slide 3: WHY NOW
 
-Don't read the columns. Frame them. The audience has just been shown what is broken; now name why it matters this quarter, not next year.
+Time-pressure. Not sequential, converging.
 
-> "Three things are converging right now, and they're not going away."
+Frame: three forces. All of them push toward the same decision, and none of them are going away.
 
-- Column 1 - Sovereignty pressure. "The law draws boundaries - by jurisdiction, by sector, by air-gap.
-Software must be deliverable inside each one. If your delivery model can't survive 'no callback to source' inside
-a regulated environment, you're not in those markets anymore."
+Sovereignty pressure. The law draws boundaries by jurisdiction (EU, US, national), by sector (finance, defence, health), and physical (air-gap). If the delivery model cannot survive "no callback to source" inside one of those boundaries, the release does not ship into those markets. Already true for federal work in Germany and France. Becomes true for most regulated EU customers through 2026 and 2027.
 
-- Column 2 - Regulation tightening. "EU DORA, NIS2, CRA - all want provable supply-chain control.
-Not 'best effort'. Provable. Machine-readable evidence, at the artifact level, traceable end-to-end."
+Regulation tightening. DORA is in force. NIS2 transposition is landing across member states. CRA obligations phase in through 2027. All three demand provable supply-chain control at the artifact level. Machine-readable evidence, traceable end-to-end. Most delivery chains produce spreadsheets, not evidence.
 
-- Column 3 - Supply-chain attacks. "SolarWinds. xz. log4shell.
-These weren't theoretical risks - they were live in production.
-The lesson the industry took: signatures must survive the journey, or compliance is theatre."
+Supply-chain attacks. SolarWinds, xz, log4shell. All three signed. Signatures did nothing because verification never ran at the destination. The lesson: signatures must survive the journey and be verified where the software lands, or destination verification fails.
 
-> "This is what's pushing the industry toward something different. Not faster pipelines. Different mechanics."
+Land: not faster pipelines. Different mechanics.
+
+Q&A:
+"Does CRA mandate SBOMs?" Yes for products with digital elements from 2027. The bigger obligation is provable due diligence on components across the lifecycle. OCM covers both.
+"NIS2 vs DORA?" NIS2 is horizontal cybersecurity baseline for essential entities. DORA is finance-sector-specific with more prescriptive obligations. OCM's evidence model satisfies the technical parts of both.
+
 
 ## Slide 4: THE ANSWER
 
-Wait two seconds before talking. Let people read the diagram.
+Pivot from problem to solution. The diagram carries the slide.
 
-> "OCM is one model that ties three things together - your artifacts, your deployment boundaries, and the regulations you're delivering against."
+Left: every artifact type. OCI images, Helm charts, npm packages, binaries, config. OCM does not care about the shape.
 
-> "On the left: every artifact type. Container images, Helm charts, configuration files, binaries. OCM doesn't care what shape your software comes in."
+Right: every deployment boundary. EU, US, sovereign, customer-owned. Same identity in each.
 
-> "On the right: every boundary. EU, US, sovereign cloud, customer-owned. Same identity, same signature, regardless of where the component lives."
+Bottom: every compliance framework. DORA, NIS2, CRA today. FedRAMP, BSI C5, SecNumCloud tomorrow. Same evidence model, whichever regime applies.
 
-> "And underneath: every compliance regime. DORA, NIS2, CRA - plus the sector-specific ones. OCM gives you the evidence model the regulators are asking for."
+Bottom-right: v1.0.0. Released, in production. Not a research paper.
 
-> "Meet OCM. One identity, every boundary."
+Land: one identity, every boundary.
 
-That's the headline. Move on.
+Q&A:
+"Is OCM a registry?" No. OCM is a specification and tooling above the registry. Any OCI-compliant registry stores an OCM component.
+"Is this SAP-only?" No. OCM is at NeoNephos Foundation under Linux Foundation Europe. Vendor-neutral. SAP is the largest contributor.
+
 
 ## Slide 5: THE SHIFT
 
-This slide does the conceptual work the rest of the deck builds on. Slow down here.
+Conceptual pivot the rest of Act 2 depends on.
 
-> "There's a category shift happening in how we think about delivery. SBOMs - Software Bills of Materials - were designed for inventory. They tell you what's inside a piece of software. That's useful, but it's not enough."
+SBOM. Software Bill of Materials. Designed for inventory. Answers what is inside a piece of software. Useful for vulnerability lookup, licence compliance, provenance. Not designed to describe delivery.
 
-> "A Software Bill of Delivery - SBOD - tells you what you actually delivered. How to verify it, how to transport it, how to operate it. The container images, the Helm chart, the configuration, the manifest of how to deploy."
+SBOD. Software Bill of Delivery. What you delivered, how to verify it, how to transport it, how to operate it. Not just the code. The Helm chart, the config, the deployment manifest, the signature, the verification metadata. Everything the destination needs to receive and run the release.
 
-> "An SBOM lists. An SBOD delivers. The SBOM lives inside the SBOD."
+The line: SBOMs describe. SBOD delivers.
 
-Read the third bullet only if the audience is reading it. Otherwise paraphrase:
+The SBOM lives inside the SBOD. OCM does not replace SBOM tooling. It gives the SBOM an envelope with a name and a signature.
 
-> "The point is: OCM doesn't replace your SBOM tooling. It gives the SBOM an envelope."
+Q&A:
+"Is SBOD a standard?" It's the marketing-facing name. On the wire it's the OCM component descriptor. Same object. Defined in the spec at ocm.software.
+"Does the SBOM live literally inside the descriptor?" Yes. As a resource with a defined type (SPDX or CycloneDX). One digest of the descriptor covers the SBOM plus everything else in the bundle.
+
 
 ## Slide 6: THE SHIFT - SBOM INSIDE SBOD
 
-The diagram is the point. Don't talk over it.
+The diagram is the whole slide. Container images, Helm charts, deployment manifests, configuration, the SBOM. One envelope. One identity at the top. One signature on the right.
 
-> "Visually: this is what an SBOD contains. Container images, charts, manifests, configs, the SBOM itself. One signed envelope. One identity at the top. Everything you delivered."
+The identity line matters: github.com/acme/app:v1.0.0. Same reference in the dev registry, in a customer's cloud registry, in an air-gapped archive. That is location-independent. This becomes load-bearing on slide 9.
 
-Pause. Let people look.
+If they take one picture home, this is it.
 
-> "If you take one thing from this talk, take this picture."
+Q&A:
+"5 GB Helm chart?" OCM stores by digest in an OCI registry. Blob deduplication works normally. Size is a registry concern.
+"Signature format?" Default is RSASSA-PSS over the canonical descriptor. OpenPGP and Sigstore in the CLI. K8s controller v1alpha1 is RSA-only. OpenPGP and Sigstore on the controller roadmap.
+
 
 ## Slide 7: HOW OCM COMPOSES
 
-This is the objection-handling slide. Almost everyone in the room is thinking "we already have signing / registries / scanners". Address that head-on.
+Objection-handling. Everyone is thinking: we already sign, we have registries, we run scanners. Address it head-on.
 
-> "Disarm something first. You probably hear me say 'OCM' and think - we already have signing. We have registries. We have scanners. Why do I need another thing?"
+OCM does not replace any of that. OCM composes around what is there.
 
-> "OCM doesn't replace any of that. OCM composes around what you already have."
+Signing. Cosign for images, package signatures for charts, GPG for tarballs. Every tool signs a different thing. No two verifiers do the same check. OCM signs the release as one unit. Every downstream verifier does the same check whatever the artifact mix.
 
-Walk through the columns. One sentence each. The slide gives you setup; you deliver the punchline.
+Transport. Registries differ: cloud vendor, on-prem, air-gapped archive. Moving a release today means re-tagging, re-signing, re-referencing. OCM moves the descriptor plus every referenced blob in one operation. Identity stays the same at every stop.
 
-> "Signing: you sign artifacts today. OCM signs the release as a whole - one signature, every digest. So the signature you check at the destination is one check, not twelve."
+Compliance. Scanners look at one artifact at a time. OCM correlates findings to the release, because every artifact carries the release identity. The question shifts from "which images are affected" to "which shipped releases contain an affected artifact."
 
-> "Transport: your registries differ - by vendor, by location, sometimes air-gapped archives. OCM moves the release across all of them. The identity stays."
+Land: same tools. OCM sits between them and gives the release one name.
 
-> "Compliance: your scanners look at one artifact at a time. OCM correlates findings to the release. Compliance becomes continuous - not a project that starts every quarter."
+Q&A:
+"Does OCM replace cosign?" No. Cosign remains valid for per-artifact signing. OCM adds a release-level signature over the descriptor.
+"Policy engines (Kyverno, Gatekeeper)?" OCM ships no admission webhook. Global enforcement is BYO: Kyverno, Gatekeeper, or custom, verifying the OCM signature at admission. Some SAP-internal teams already run this in production.
 
-> "Same tools. New connective tissue."
 
 ## Slide 8: OCM IN ONE PICTURE
 
-Big diagram, four verbs, this is the demo replacement.
+Payoff of Act 2. Four verbs, one arrow.
 
-> "Here's the whole flow on one slide. Four verbs."
+Pack. Bundle whatever the release needs. Image, chart, config, manifest. Into one named, versioned component. One source of truth.
 
-**Point at PACK.** "Pack. You bundle whatever your software actually needs - the image, the chart, the config - into one named, versioned component. One source of truth."
+Sign. One signature covers every artifact in the bundle, by digest. If anything changes, the signature breaks.
 
-**Point at SIGN.** "Sign. One signature covers every artifact in the bundle. By digest. So if anything changes, the signature breaks."
+Transport. The component moves across registry boundaries. Cloud to cloud, region to region, air-gapped archive. Signature intact throughout.
 
-**Point at TRANSPORT.** "Transport. The component moves across registry boundaries. Cloud to cloud, region to region, even into an air-gapped archive - without the signature breaking."
+Deploy. At the destination, the receiver verifies the signature, unpacks the bundle, deploys. GitOps or OCM K8s controllers. No callback upstream.
 
-**Point at DEPLOY.** "Deploy. At the destination, the receiver verifies the signature, unpacks the bundle, deploys it. GitOps or OCM K8s controllers - your choice. No callback upstream."
+Land: pack, sign, transport, deploy. That's the whole model.
 
-> "Pack, sign, transport, deploy. That's OCM in operation."
+This slide is byte-identical across all four OCM decks. The most portable asset in the whole talk.
+
+Q&A:
+"Which controller?" ocm-k8s-toolkit, v1alpha1. Reconciles Component resources by verifying and deploying referenced artifacts. RSA today.
+"Must I use the K8s controllers?" No. Flux and Argo CD both consume OCM components with community adapters. The CLI does the same job scripted.
+
 
 ## Slide 9: SOVEREIGN-READY
 
-This is the slide for the regulator-and-CISO conversation.
+Regulator and CISO slide. They are deciding whether the model survives inside their compliance perimeter.
 
-> "Sovereign-ready isn't a checkbox. It's a property of the delivery model. Four things have to be true."
+Sovereign-ready is not a feature that gets turned on. It is a property of the delivery model. Four properties.
 
-**Bullet 1 - Identity.** "Location-independent. The component carries its name regardless of registry. Same identity in your dev cluster and in a customer's air-gapped data centre."
+Identity is location-independent. Same reference (github.com/acme/app:v1.0.0) in a public registry, a customer's air-gapped registry, or a dev cluster. Location is not part of the name because the name is not a URL.
 
-**Bullet 2 - Signatures.** "Location-independent. Sign once at source, verify anywhere downstream. No callback upstream."
+Signatures are location-independent. Sign once at source. Verify anywhere downstream. In the sovereign target, the K8s controller verifies without callbacks to Rekor, Fulcio, or an internal PKI, provided the trusted-root file has been delivered once, out of band.
 
-**Bullet 3 - Day-2 ops.** "Inside the boundary. Once a component is in the sovereign environment, subscribe to it, pull upgrades, scale across regions. Still no callback."
+Transfer is self-contained. ocm transfer --copy-resources moves the descriptor plus every referenced blob into the destination registry as one operation. Nothing left behind, nothing fetched later.
 
-**Bullet 4 - Transfer.** "Self-contained. Every artifact travels with the component. The destination needs nothing more."
+Day-2 ops stay inside the boundary. Subscribes, upgrades, horizontal scale all run against the local registry. Never leaves.
 
-> "Trust, but verify. The component is the trust boundary - not the registry, not the network."
+The refrain across the four bullets is "no callback upstream". Repeat it deliberately.
+
+Land: the component is the trust boundary. Not the registry, not the network, not the certificate chain.
+
+Q&A:
+"Bring our own KMS?" RSA today. OpenPGP and Sigstore in the CLI. K8s controller v1alpha1 is RSA-only. Other schemes on the controller roadmap for v1alpha2.
+"Air-gap Sigstore verify?" Works offline once the trusted-root file (Fulcio CA plus Rekor public key for your OIDC issuer) has been delivered once.
+"Different digest algorithm at destination?" Doesn't matter. OCM signs the canonical descriptor, not the storage form.
+"Global enforcement?" No admission webhook ships with OCM. BYO with Kyverno or Gatekeeper.
+
 
 ## Slide 10: SOVEREIGN-READY - AIR-GAP
 
-Reinforce the previous slide visually.
+Visual proof of the previous slide.
 
-> "On the left: source side. You pack and sign. Public registry, your dev environment, doesn't matter."
+Left, source. Public registry, dev registry, doesn't matter. Where the release is packed and signed. Upstream-connected, normal operation.
 
-> "Down the middle: the trust boundary. This is the air gap, the sovereign cloud edge, the regulated network perimeter. No traffic crosses it without explicit transfer."
+Middle, the trust boundary. Air gap, sovereign cloud edge, regulated network perimeter. No traffic crosses this without explicit transfer. The transfer is deliberate, auditable, one-time.
 
-> "On the right: sovereign target. The component lands. The local registry receives it. Verification happens locally - same signature, same identity, no upstream traffic. The K8s cluster pulls from the local registry. Auditor signs off based on the component's own evidence."
+Right, sovereign target. The component lands in a local registry inside the boundary. Verification runs locally against the trusted-root file already present. The K8s cluster pulls from the local registry, not from outside. The auditor signs off based on the component's own evidence, which travelled with the release.
 
-> "Same identity. Same signature. Any location. That's the property."
+Land: same identity, same signature, any location. That is the property.
+
+If asked about customers: BWI runs this pattern for German federal workloads. SAP NS2 for regulated US workloads. Both in production.
+
+Q&A:
+"Trusted-root delivery?" One-time, out of band. Same way a root CA gets delivered today. Once inside the boundary, no update path needed until roots rotate.
+"Fully offline target?" Same model. ocm transfer produces a signed self-contained archive that crosses the air gap on physical media. Verified and unpacked at destination.
+
 
 ## Slide 11: SCAN
 
-Brief stop here. Don't go deep - this is the "and there's tooling around it" slide.
+Tooling slide. Brief.
 
-> "There's an open-source compliance engine that runs on top of OCM. It's called Open Delivery Gear - ODG. Built on the same primitives as the rest of OCM."
+There is an open-source compliance engine on top of OCM: Open Delivery Gear (ODG). Same primitives as the rest of OCM.
 
-> "ODG scans every component continuously, even after release, and correlates findings by component identity. Auditors get evidence, not spreadsheets."
+Continuous scanning of every OCM component in the landscape. Findings correlate by component identity, not artifact path. Rescoring picks up context: is this artifact actually deployed, is it network-facing, is a patch already committed. Important findings surface. The dashboard is one view across every release.
 
-> "What that means in practice: when CVE-something-2026 drops at 11pm, you don't ask 'which of our products is affected'. You query the OCM coordinate system, you get a list, and you see the rescored risk for each one - patch what matters, not the noise."
+The scenario that makes this concrete: a CVE lands at 11pm with CVSS 9.8. Instead of asking "which of our products contains this library", query the OCM component graph. Get a list of shipped releases affected. Rescored priority on each. Patch what matters. Not the fleet.
 
-> "Compliance becomes a property of the system. Not a Q3 deliverable."
+Land: continuous compliance. Not quarterly audits.
+
+Q&A:
+"Must I run ODG?" No. OCM works standalone. ODG is complementary, using OCM as substrate.
+"Where does ODG live?" GitHub, at open-component-model. Apache-2.0.
+"How does rescoring work?" ODG combines vulnerability data, deployment reachability, and configurable business context. Rules are declarative, versioned in the same repo as the OCM components.
+
 
 ## Slide 12: WHAT YOU GET
 
-Pause. Let them read the tiles. Two seconds. They will read them whether you talk or not.Then one line to frame:"Six outcomes. All of them coming from the same model. That's the point of the slide. Not that OCM does six things, but that all six come out of one primitive."Now walk the tiles. One concretising sentence each. Not the tile title again. What the tile title doesn't say.- Artifact signing across stacks. "Today you have cosign for images, package signatures for charts, something else for SBOMs. Every tool signs a different thing, no two verify the same way. With OCM the whole release is signed once and every downstream verifier does the same check."- Air-gapped delivery. "Regulated customers don't just want signatures. They want to run the verification themselves, offline, on their own hardware. OCM was designed for that from day one. Nothing in the verify path calls upstream."- Kubernetes-native deployment. "The OCM K8s controllers verify and apply components directly. No shell scripts around your Helm install to bolt on integrity. The check is the deploy path."- Asynchronous security scans. "A CVE dropping two months after release used to mean 'rebuild the world'. With OCM the finding attaches to the component identity, so you know exactly which shipped release is affected and where it went. You patch the affected components, not the fleet."- One source of truth. "When a landscape has to be rebuilt, from scratch, in a new region, or after a compliance decision, today it's manual archaeology across tickets and configs. With OCM: one signed descriptor per delivery, and the landscape rebuilds from that."- Automated compliance reporting. "Auditors ask for SBOMs, VEX, provenance, attestations. Today those live in spreadsheets that go stale the moment they're produced. With OCM the reports are composed from the SBOD metadata itself, so they don't drift from what actually shipped."Land it:"Six outcomes. One model. That's what OCM unlocks."
+Payoff. Six tiles. All fall out of the same signed descriptor. Not six features bolted together, one primitive doing six jobs.
+
+Artifact signing across stacks. Cosign for images, package signatures for charts, something separate for SBOMs. Every tool signs a different thing. OCM signs the release once; every downstream verifier does the same check.
+
+Air-gapped delivery. Regulated customers do not just want signatures. They want to run the verify themselves, offline, on their hardware. OCM was designed for that from day one. Nothing in the verify path calls upstream.
+
+Kubernetes-native deployment. The OCM K8s controllers verify and apply components directly. No shell scripts wrapped around Helm install to bolt on integrity. The check is the deploy path.
+
+Asynchronous security scans. A CVE dropping two months after release used to mean "rebuild the world". With OCM the finding attaches to the component identity. The affected shipped release is known, and where it went. Patch the affected components, not the fleet.
+
+One source of truth. Rebuilding a landscape (new region, compliance decision, incident recovery) is manual archaeology across tickets and configs today. With OCM: one signed descriptor per delivery. The landscape rebuilds from that.
+
+Automated compliance reporting. Auditors ask for SBOMs, VEX, provenance, attestations. Those live in spreadsheets that go stale the moment they are produced. With OCM the reports compose from the SBOD metadata itself. They cannot drift from what actually shipped.
+
+Land: six outcomes. All from one signed descriptor.
+
+Q&A:
+"VEX?" VEX documents can be resources inside the OCM component, signed with the rest. Auditors verify VEX and artifact together, from one signature.
+"Does OCM produce the compliance report?" No. OCM provides the metadata. ODG composes reports on top. Teams also plug in their own reporting layer.
+
 
 ## Slide 13: TRUSTED IN PRODUCTION
 
-Ground the credibility. Be honest about scale; don't oversell. The title carries four claims - let it speak; you fill in the colour.
+Credibility. Specificity is the credibility, not scale claims.
 
-> "OCM isn't a research project. SAP stewards the engineering investment. NeoNephos - the foundation - governs the standard. The result is in production today."
+OCM is not a research project. SAP stewards the engineering. NeoNephos governs the standard. Real teams run this in production.
 
-**Point at the top row.** "BWI is Germany's federal IT service. SAP NS2 handles regulated US workloads. Both run on OCM. That's the production proof."
+Top row:
 
-**Point at the bottom row.** "And a peer ecosystem has converged around the model. Gardener - SAP's open-source Kubernetes orchestrator, in production for over five years. Kyma. OpenControlPlane. Platform Mesh. Each does something different; each builds on the OCM primitive."
+BWI. Germany's federal IT service provider. Runs OCM for regulated workloads inside the Bundeswehr estate. Air-gapped, sovereign, verified locally, no callback upstream.
 
-> "Aligned with NeoNephos. Open source. Production-grade."
+SAP NS2. Handles regulated US workloads under FedRAMP-adjacent frameworks. Same model as BWI, different jurisdiction.
+
+Bottom row:
+
+Gardener. SAP's open-source Kubernetes orchestrator. Five years in production, thousands of clusters. Consumes OCM for release delivery.
+
+Kyma. SAP-originated open-source runtime for Kubernetes extensions. On OCM.
+
+OpenControlPlane. Open-source control plane. Replaces Landscaper for Sovereign Cloud deployment through 2027. On OCM.
+
+Platform Mesh. Federated multi-runtime platform. Same open ecosystem.
+
+Land: aligned with NeoNephos. Open source. Production-grade.
+
+Q&A:
+"How many components in production?" BWI and NS2 do not publish counts. SAP-internal OCM usage is in hundreds of components across five internal teams. Growing quarter over quarter.
+"Kubernetes required?" No. OCM works for anything that ships as artifacts. Kubernetes is the dominant target, not the only one.
+"Spec governance?" NeoNephos Foundation, hosted under Linux Foundation Europe. Spec changes go through open steering. SAP contributes; SAP does not decide alone.
+
 
 ## Slide 14: Start delivering with confidence.
 
-Close with the ask. Plain language. The asks are exec-shaped - pilot a delivery, hear back from the team that ran it, bring your delivery problem to the standard while it's being shaped. The CLI and the GitHub repo are still in the footer for any platform lead in the room, but they are not the headline.
+Close. Three asks, all small, all this quarter.
 
-> "Three asks."
+Pilot. Pick one regulated delivery already shipping. Something already grinding through compliance friction. Pack it as an OCM component this quarter. Not a sandbox proof-of-concept. Something real, where the payoff is visible in one review cycle.
 
-> "Pilot. Pick one regulated delivery you're already shipping. Pack it as an OCM component this quarter. Not a proof of concept in a sandbox - something real, something that's already going through compliance friction. That's where the early payoff is."
+Evaluate. Platform-engineering and security leads brief back on what they found. If the model fits the delivery, they come back saying so without prompting. If it does not, that is useful too. Answer within eight weeks.
 
-> "Evaluate. Have your platform-engineering and security leads brief you on what they found. If the model fits your delivery, they'll come back saying so without prompting.."
+Engage. The standard is open and being shaped right now. Bring the delivery problem to the steering conversation. The reality of what ships is the input the working group needs.
 
-> "Engage. Bring your delivery problem to the steering conversation. The standard is open and being shaped right now. The reality of what you ship is the input we need. ocm.software for the entry point - github dot com slash open-component-model for the code - community Slack and steering meetings linked from the website."
+Entry points on the slide: ocm.software for the site. github.com/open-component-model for the code. Community channels linked from both.
 
-> "Pilot. Evaluate. Engage. That's the ask. Thank you – Time for questions
+Land: pilot, evaluate, engage. That is the ask.
+
+Q&A:
+"Timeline for controller v1?" Controller is v1alpha1 today. RSA path stable. OpenPGP and Sigstore paths targeted for v1alpha2 within 2026. No date commitments in the room; refer to the roadmap on GitHub.
+"Cost model?" Open source. No licence fees. Adoption cost is engineering time to pack existing releases and wire verify into the deploy path. Typical pilot is two to four engineers, four to eight weeks.
+"Vendor lock-in?" OCM is at NeoNephos Foundation. Spec is open. Multiple implementations. Adoption does not tie the customer to SAP tooling.
+
 
 ## Slide 15: APPENDIX - ABBREVIATIONS
 
-(no notes slide)
+(no notes; reference slide)
+
 
 ## Slide 16: TRADEMARK & LICENSE NOTICES (1/2)
 
-(no notes slide)
+(no notes; reference slide)
+
 
 ## Slide 17: TRADEMARK & LICENSE NOTICES (2/2)
 
-(no notes)
-
+(no notes; reference slide)
