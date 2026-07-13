@@ -43,7 +43,7 @@ The DNS domain at the start of the name (e.g., `acme.org` in `acme.org/webshop/b
 
 | Component Name | Owner |
 | --- | --- |
-| `github.com/open-component-model/ocm` | OCM project |
+| `ocm.software/cli` | OCM project |
 | `acme.org/webshop/backend` | Acme Corp |
 | `acme.org/webshop/frontend` | Acme Corp |
 
