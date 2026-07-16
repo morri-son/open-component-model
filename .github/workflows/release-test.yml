@@ -46,6 +46,8 @@ jobs:
   prepare:
     name: Prepare Release Metadata
     runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
     outputs:
       new_tag: ${{ steps.compute.outputs.new_tag }}
       new_version: ${{ steps.compute.outputs.new_version }}
@@ -137,6 +139,17 @@ jobs:
           script: |
             const script = await import('${{ github.workspace }}/.github/scripts/release-versioning.js');
             await script.determineLatestRelease({ core, github, context });
+
+      - name: Pre-create RC tag so pipeline.yml checkout succeeds (tag_rc is disabled)
+        env:
+          TAG: ${{ steps.compute.outputs.new_tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git tag "$TAG"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" "refs/tags/${TAG}"
 
   # passes both CANONICAL_TAG and a comma-separated ADDITIONAL_TAGS list
   # so cli/v* and kubernetes/controller/v* are emitted on the same commit
