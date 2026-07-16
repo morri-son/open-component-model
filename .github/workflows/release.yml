@@ -276,55 +276,8 @@ jobs:
             ${{ runner.temp }}/chart-assets/chart-*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Summarize RC release
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        env:
-          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
-          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
-          CLI_MODULE_RC_TAG: ${{ needs.prepare.outputs.cli_module_rc_tag }}
-          CONTROLLER_MODULE_RC_TAG: ${{ needs.prepare.outputs.controller_module_rc_tag }}
-          IMAGE_DIGEST: ${{ needs.build_and_test.outputs.controller_image_digest }}
-          CHART_DIGEST: ${{ needs.build_and_test.outputs.controller_chart_digest }}
-          CLI_IMAGE_DIGEST: ${{ needs.build_and_test.outputs.cli_image_digest }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: process.env.RC_TAG,
-            });
-            const assetsCount = release.data.assets?.length || 0;
-
-            // OCM component-versions the publish_components_rc job pushes for this RC,
-            // so the release manager can verify the expected coordinates are in place.
-            // The // separates the OCM repository from the component name (the CLI
-            // maps it to the component-descriptors path internally).
-            const owner = context.repo.owner.toLowerCase();
-            const repo = `ghcr.io/${owner}/`;
-            const ver = process.env.RC_VERSION;
-
-            await core.summary
-              .addHeading('RC Release Published')
-              .addTable([
-                [{ data: 'Field', header: true }, { data: 'Value', header: true }],
-                ['RC Tag', process.env.RC_TAG],
-                ['CLI Module RC Tag', process.env.CLI_MODULE_RC_TAG],
-                ['Controller Module RC Tag', process.env.CONTROLLER_MODULE_RC_TAG],
-                ['Version', process.env.RC_VERSION],
-                ['CLI Image Digest', (process.env.CLI_IMAGE_DIGEST || 'N/A').substring(0, 19) + '...'],
-                ['Controller Image Digest', (process.env.IMAGE_DIGEST || 'N/A').substring(0, 19) + '...'],
-                ['Chart Digest', (process.env.CHART_DIGEST || 'N/A').substring(0, 19) + '...'],
-                ['Uploaded Assets', String(assetsCount)],
-                ['OCM Product Component', `${repo}/ocm.software/ocm:${ver}`],
-                ['OCM CLI Component', `${repo}/ocm.software/cli:${ver}`],
-                ['OCM Controller Component', `${repo}/ocm.software/kubernetes/controller:${ver}`],
-              ])
-              .addEOL()
-              .addLink('View Release', release.data.html_url)
-              .write();
   # === cli-release.yml::release_rc + controller-release.yml::release_rc ===
+
 
   # Publishes ocm.software/{cli,kubernetes/controller,ocm} for the RC, referencing
   # the just-pushed CLI image, controller image and chart by digest and the CLI
@@ -346,6 +299,64 @@ jobs:
       controller_image_digest: ${{ needs.build_and_test.outputs.controller_image_digest }}
       controller_chart_digest: ${{ needs.build_and_test.outputs.controller_chart_digest }}
       conflict_policy: replace
+
+  # Summarizes the RC only after the components are published, so the release
+  # manager sees the summary (with the OCM component coordinates) exactly when
+  # everything is actually in place. Depending on publish_components_rc means a
+  # failed publish leaves no misleading "RC Release Published" summary behind.
+  summarize_rc:
+    name: Summarize RC Release
+    if: ${{ github.event.inputs.dry_run == 'false' && needs.tag_rc.outputs.pushed == 'true' }}
+    needs: [prepare, tag_rc, build_and_test, release_rc, publish_components_rc]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+    steps:
+      - name: Summarize RC release
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          RC_TAG: ${{ needs.prepare.outputs.new_tag }}
+          RC_VERSION: ${{ needs.prepare.outputs.new_version }}
+          CLI_MODULE_RC_TAG: ${{ needs.prepare.outputs.cli_module_rc_tag }}
+          CONTROLLER_MODULE_RC_TAG: ${{ needs.prepare.outputs.controller_module_rc_tag }}
+          IMAGE_DIGEST: ${{ needs.build_and_test.outputs.controller_image_digest }}
+          CHART_DIGEST: ${{ needs.build_and_test.outputs.controller_chart_digest }}
+          CLI_IMAGE_DIGEST: ${{ needs.build_and_test.outputs.cli_image_digest }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: process.env.RC_TAG,
+            });
+            const assetsCount = release.data.assets?.length || 0;
+
+            // OCM component-versions the publish_components_rc job pushed for this RC,
+            // so the release manager can verify the expected coordinates are in place.
+            const owner = context.repo.owner.toLowerCase();
+            const repo = `ghcr.io/${owner}`;
+            const ver = process.env.RC_VERSION;
+
+            await core.summary
+              .addHeading('RC Release Published')
+              .addTable([
+                [{ data: 'Field', header: true }, { data: 'Value', header: true }],
+                ['RC Tag', process.env.RC_TAG],
+                ['CLI Module RC Tag', process.env.CLI_MODULE_RC_TAG],
+                ['Controller Module RC Tag', process.env.CONTROLLER_MODULE_RC_TAG],
+                ['Version', process.env.RC_VERSION],
+                ['CLI Image Digest', (process.env.CLI_IMAGE_DIGEST || 'N/A').substring(0, 19) + '...'],
+                ['Controller Image Digest', (process.env.IMAGE_DIGEST || 'N/A').substring(0, 19) + '...'],
+                ['Chart Digest', (process.env.CHART_DIGEST || 'N/A').substring(0, 19) + '...'],
+                ['Uploaded Assets', String(assetsCount)],
+                ['OCM Product Component', `${repo}/ocm.software/ocm:${ver}`],
+                ['OCM CLI Component', `${repo}/ocm.software/cli:${ver}`],
+                ['OCM Controller Component', `${repo}/ocm.software/kubernetes/controller:${ver}`],
+              ])
+              .addEOL()
+              .addLink('View Release', release.data.html_url)
+              .write();
 
   # ===========================================================================
   # PHASE 2: FINAL RELEASE (after environment gate)
