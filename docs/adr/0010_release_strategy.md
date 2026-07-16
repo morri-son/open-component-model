@@ -192,7 +192,7 @@ All three carry the same bare semver as the GitHub release, and are published on
 
 **Resource form:** OCI artefacts (images, chart) are pinned by digest via `access.ociArtifact`. CLI binaries use `wget` access (`relation: external`) pointing at the release download URLs.
 
-See [RELEASE_PROCESS.md § OCM components produced](../../RELEASE_PROCESS.md#ocm-components-produced) for consumer-facing pull commands.
+See also [RELEASE_PROCESS.md § OCM components produced](../../RELEASE_PROCESS.md#ocm-components-produced).
 
 ### Roles and Responsibilities
 
