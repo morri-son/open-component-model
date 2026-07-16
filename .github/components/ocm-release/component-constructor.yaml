@@ -1,9 +1,7 @@
 components:
   # The six CLI executables are referenced by their GitHub release download URL
   # via the wget access type, so the GitHub release carrying ${RELEASE_TAG} must
-  # already exist when this constructor is published. Each entry is spelled out
-  # in full (rather than sharing a YAML anchor) so the file stays obvious to read
-  # and edit; the platforms differ only in extraIdentity and the download URL.
+  # already exist when this constructor is published.
   - name: ocm.software/cli
     version: "${VERSION}"
     provider:
