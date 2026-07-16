@@ -217,7 +217,7 @@ jobs:
       artifact-metadata: write
     uses: ./.github/workflows/pipeline.yml
     with:
-      ref: ${{ github.ref_name }}
+      ref: ${{ needs.prepare.outputs.new_tag }}
       build_version: ${{ needs.prepare.outputs.base_version }}
 
   # Combines into one pre-release containing both CLI assets (binaries + OCI tarballs)
