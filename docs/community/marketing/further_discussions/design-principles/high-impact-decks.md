@@ -16,12 +16,25 @@ Ask of every slide: **what one thing does the audience know after seeing this th
 Every slide has a closing beat. A stop-sentence, a punchline, a phrase the speaker can land and then pause. Without it, slides run into each other and the audience doesn't know when to breathe.
 
 Examples from Phase 2B decks:
-- Slide 2 (Cause): *"Diagnosis: identity is bound to location."*
+- Slide 2 (Cause): *"You can't sign, ship, or audit what you can't name."*
 - Slide 3 (Insight): *"Move the artifact. The digest stays. Only the access changes. That is the whole trick."*
 - Slide 6 (Descriptor): *"Sign the descriptor hash, not the access. Seven words; whole transport story."*
 - Slide 14 (What's sharp): *"Honest now beats apologetic later. Plan for the trim edge."*
 
 If a slide doesn't have a stop-sentence, ask "what does the speaker actually say last on this slide?" If the answer is "reads the last bullet," the slide isn't ready.
+
+### Stop-line formatting: colour carries valence
+
+Stop-lines are set at **28pt, non-bold, no fill**, one line set apart from the body by whitespace. The landing is carried by position and silence, not by weight. Do not bold a stop-line; do not put a highlight box behind it.
+
+Colour is the one variable that carries meaning, and it is consistent by **valence**, not "all stop-lines one colour":
+
+- **Brand-blue (`#0F6BFF`) = payoff / resolution beat.** The answer landed, the reassurance, the win. Slide 3 ("Move the artifact. The digest stays. Only the access changes."), Slide 12 ("The cluster cannot drift.").
+- **Black = problem / cost / honest-edge beat.** The pain stated sharply, the trim edge, the diagnosis. Slide 2 ("You can't sign, ship, or audit what you can't name."), Slide 14 honest edges.
+
+The rule: pick blue or black by whether the line is a win or a cost, then hold that meaning across the whole deck. An architect won't consciously decode it, but the deck oscillating between black (what's broken) and blue (the fix) reinforces the problem↔solution S-curve.
+
+**Grey is NOT a stop-line colour.** Grey is reserved for comments and explanations at the bottom of a page (footnotes, glosses, the `CTF = ...` gloss line, footer text). A grey stop-line reads as a caption or aside, which de-emphasises the one line the slide most wants remembered. Stop-lines are black or blue, never grey.
 
 ## The eyebrow is optional, not mandatory
 

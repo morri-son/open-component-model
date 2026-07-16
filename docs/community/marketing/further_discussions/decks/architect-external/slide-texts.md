@@ -13,15 +13,16 @@ Open Component Model. Open source. NeoNephos Foundation.
 ## Slide 2: DIAGNOSIS
 
 DIAGNOSIS
-In every existing tool, identity is bound to location.
-▪  OCI image: digest pins the bytes. Nothing pins the release the image belongs to.
-▪  Helm chart: version pins the chart. Nothing pins it to the image, config, and SBOM it ships with.
-▪  SBOM: referrer attaches to one digest. No referrer spans the whole release.
+Every tool identifies one artifact. Nothing identifies the release.
+▪  OCI image: the digest identifies the image's bytes. Nothing says which release it belongs to.
+▪  Helm chart: the version identifies the chart. Nothing says which release the chart is part of.
+▪  SBOM and signatures: each covers one artifact. Nothing links them to the release those artifacts form.
+You can't sign, ship, or audit what you can't name.
 
 ## Slide 3: THE HINGE
 
 THE HINGE
-Identity that travels with the artifact.
+Identity that travels with the release.
 ▪  Component identity: name and version of the component. Globally unique. Location-agnostic.
 ▪  Digest: every resource inside the component carries a content hash. Computed once.
 ▪  Access: where the resource currently lives. Rewritten on transfer. Digest stays.

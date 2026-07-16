@@ -4,33 +4,46 @@
 
 **Purpose.** The rules the two architect decks follow, in one file. When a session works on either deck, this is the rubric.
 
-## Arc shape (locked)
+## Arc shape (locked): CORE spine and SURVEY tier
 
-Every architect deck follows the same 16-slide arc plus appendices. Slide numbers here are the canonical order:
+Every architect deck follows the same 18-slide sequence plus appendices. The slides are still all present and all built. What changed (2026-07-15): the 30-minute *narration* no longer treats all 18 as equal-weight. Each slide has a **tier** that tells the speaker how much of the attention budget it earns in the main pass.
+
+Why the tier model replaces the old flat "walk every slide" arc: the technical story is both deep and broad. Depth (YAML, signatures, day-2) is what architects came for and is not the problem. Breadth is: slides 9, 10, 11 are three consecutive parallel-structure slides (three schemes, three topologies, four CRs) landing in the attention-fatigue zone the marketing canon warns about. Walking all three in full is what overwhelms. The fix is not to cut them, it is to narrate the argument-carrying CORE slides in full and skim the SURVEY slides unless the room engages. Same deck, same slides, thinner talk.
 
 ```
- 1  Pain / Opener        Why-does-this-matter setup
- 2  Diagnosis            In every existing tool, identity is bound to location.
- 3  The Hinge            Identity that travels with the artifact.
- 4  Positioning          Wraps every artifact. Signs the whole release.
- 5  Constructor          What you write. (YAML)
- 6  Descriptor           What gets signed and travels. (YAML)
- 7  Overview             THE FOUR MOVES — Pack · Sign · Transport · Deploy.
- 8  Compose              Service carries resources. Product carries references.
- 9  Sign                 Same signed object. Three signing options.
-10  Transport            Three patterns. One command.
-11  Deploy               Repository → Component → Resource → Deployer.
-12  Composition          One product. Three components. One line to upgrade.
-13  Adoption             (audience-shaped)
-14  What's Sharp         Three honest edges.
-15  (Adopter proof)      [Internal only]
-16  CTA                  (audience-shaped verbs)
+ #  Slide                Tier     Job
+ 1  Pain / Opener        CORE     Why-does-this-matter setup
+ 2  Diagnosis + Stakes   CORE     Nothing identifies the release, and here is what that costs
+ 3  The Hinge            CORE     Identity that travels with the release. (pivot beat)
+ 4  Positioning          CORE     Wraps every artifact. Signs the whole release. (+ compare one-liner)
+ 5  Constructor          CORE     What you write. (YAML)
+ 6  Descriptor           CORE     What gets signed and travels. (YAML)
+ 7  Overview             CORE     THE FOUR MOVES, Pack · Sign · Transport · Deploy. (mnemonic anchor)
+ 8  Compose              CORE     Service carries resources. Product carries references.
+ 9  Sign                 SURVEY   Same signed object. Three signing options. (skim; schemes = depth-on-demand)
+10  Transport            CORE     Three patterns. One command. (air-gap is the emotional peak; narrate it)
+11  Deploy               SURVEY   Repository → Component → Resource → Deployer. (skim; per-CR = depth-on-demand)
+12  Composition          CORE     One product. Three components. One line to upgrade. (the payoff)
+13  Adoption             CORE     (audience-shaped)
+14  What's Sharp         CORE     Three honest edges.
 
-Appendices (pull-on-demand, not in main narration):
-17  Replication          Alongside the chain. Not within it.
-18  (external) Compare   How OCM compares (cosign, in-toto, OCI referrers)
-18  (internal) Glossary  Acronyms used in this deck
+The payoff-and-appendix tail diverges by deck (external has no adopter-proof slide, so it is one shorter in the main arc):
+
+  EXTERNAL                          INTERNAL
+  15  CTA          CORE             15  Adopter proof   CORE
+  --- appendices ---                16  CTA             CORE
+  16  Replication  pull-on-demand   --- appendices ---
+  17  Compare      FIRST-PULL       17  Replication     pull-on-demand
+  18  Glossary     pull-on-demand   18  Glossary        pull-on-demand
 ```
+
+**CORE** slides carry the argument. Narrate in full even under time pressure. Cutting one breaks the arc.
+**SURVEY** slides carry breadth the argument does not strictly need in one pass. Point at the structure, land one sentence, advance. The detail lives in the speaker notes as depth-on-demand and is walked only when a persona in the room engages that specific slide.
+**FIRST-PULL** appendix: not narrated in sequence, but high-demand. The speaker expects to pull it and should know it cold. Distinct from a pull-on-demand appendix (Replication, Glossary) that may never come up.
+
+CORE / SURVEY / FIRST-PULL are **authoring vocabulary for this file**, not presenter-facing. The speaker notes never say "SURVEY tier"; they give the plain instruction ("Skim this slide in a 30-minute talk, don't walk it. ..."). Slide 1's notes carry a one-paragraph pacing preface that explains the walk-vs-skim approach once, so the presenter meets the idea before Slide 9.
+
+Note on numbering: the external and internal appendix order differs. External appendix 17 is the Compare table (FIRST-PULL); internal has no Compare slide (its SAP-stack comparison lives in Slide 4 notes) so its 17 is Replication and 18 is the Glossary. Do not add a Compare slide to the internal deck: the internal composability question is "does this replace RBSC / Hyperspace / ODG?", already answered in Slide 4 notes. A shared Compare slide can't serve both audiences (external compares against CNCF tools, internal against the SAP stack), and internal doesn't need a table.
 
 ## Slide-7 is the mnemonic anchor
 
@@ -57,6 +70,12 @@ YAML colour discipline:
 - Signature-related lines: brand-blue (Slide 6 highlight)
 - Structure (`:`, `-`): darker grey
 
+## Slide 2 (Diagnosis + Stakes): name the gap, then name the cost
+
+Headline: `Every tool identifies one artifact. Nothing identifies the release.` Three bullets, one per artifact type (OCI image, Helm chart, SBOM/signatures), each ending on the absent release. No "pins" verb, no on-slide "referrer" jargon (see A26).
+
+The slide does two jobs, gap and cost. The bullets prove the gap. The stop-line proves the cost: `You can't sign, ship, or audit what you can't name.` Speaker notes carry the three concrete failures the website names (broken deployment, stalled audit, half-shipped air-gap transfer) so the audience feels the consequence before the mechanics start. Without the cost beat, Act 1 is a clean puzzle with no stakes, which reads as high-level to an architect. The mechanism on Slide 5 onward has to be owed something.
+
 ## Slide 4 (Positioning): the "does not replace" beat
 
 Every architect deck sets this before walking mechanics. Three columns:
@@ -64,14 +83,16 @@ Every architect deck sets this before walking mechanics. Three columns:
 - ANY LOCATION, component identity travels; no registry in the name
 - ONE SIGNATURE, covers every digest; survives transport
 
-This is where "OCM does not replace X" gets defended. Notes carry the "what does this replace?" Q&A backup, CNCF-flavoured for external, SAP-stack-flavoured for internal.
+This is where "OCM does not replace X" gets defended. Notes carry the "what does this replace?" Q&A backup, CNCF-flavoured for external, SAP-stack-flavoured for internal. The compose-vs-OCM one-liner lives in the notes here (`those tools sign artifacts; OCM signs the release they can't name as a unit, different unit of analysis`), because the hostile architect raises the composability objection here, not at the end. For external, this is the trigger to pull the Compare appendix (Slide 17) out of order; see the FIRST-PULL note below.
 
-## Slide 9 (Sign): three signing options
+## Slide 9 (Sign): three signing options [SURVEY tier]
 
 Three columns (locked wording):
 - **RSA**, bare public-key pinning
 - **OpenPGP**, OpenPGP keys, ASCII-armored (NOT "GPG")
 - **Sigstore**, keyless via OIDC + Rekor
+
+**Tier:** SURVEY. In the 30-minute talk, skim: point at the three headers, land "one signed object, three ways to prove the key, pick what your org runs," advance. The three schemes are breadth the argument does not need in the main pass; Slide 7 already carried "Sign." Walk the detail only when a security architect engages.
 
 **Q&A discipline:** the columns are CLI-surface, not controller-surface. Controller v1alpha1 today = RSA only. This is on the speaker-notes level, not the slide.
 
@@ -83,9 +104,11 @@ Three columns (locked wording):
 
 One command: `ocm transfer cv <src> <dst>`. Same command across all three. Air-gap footgun (`--copy-resources`) named on Slide 14, not here.
 
-## Slide 11 (Deploy): the four-CR chain
+## Slide 11 (Deploy): the four-CR chain [SURVEY tier]
 
 Repository → Component → Resource → Deployer. Card family (four cards). Verification-opt-in disclosure lives in speaker notes for the Component card.
+
+**Tier:** SURVEY. In the 30-minute talk, name the chain and land one property: the controllers verify before they apply. The per-CR walk is depth-on-demand for a Kubernetes-platform architect. Two beats stay in the main pass even when skimming: verification-opt-in on the Component card, and the BYO-GitOps dependency (kro + Flux/Argo), because Slide 14 pays both off.
 
 ## Slide 12 (Composition): Day-2 upgrade mechanic
 
@@ -130,6 +153,12 @@ Pull-on-demand. Not in main narration. Shows: dimmed chain echo (grey four-card 
 
 - External: cosign/SLSA/SBOM/OCM comparison matrix (built by separate `build_slide_4b_compare.py`)
 - Internal: Acronym glossary (12 terms, two columns, only terms that appear on other slides in this deck)
+
+## Appendix tiers: FIRST-PULL vs pull-on-demand
+
+Not all appendices are equal. The external Compare slide (Slide 17) is **FIRST-PULL**: the composability objection is the hostile architect's opening move and it lands on Slide 4, so the speaker should expect to jump to Compare out of order and must know it cold. Replication and the Glossary are **pull-on-demand**: they may never come up. This distinction is narration guidance, not a build difference; all appendices are built the same way and sit after the main arc.
+
+Internal has no Compare slide. Its composability question is "does this replace RBSC / Hyperspace / ODG?", answered in Slide 4 notes (SAP-stack Q&A). A shared Compare slide cannot serve both decks: external compares against CNCF tools (cosign, SLSA, SBOM, OCI referrers), internal against the SAP stack. Different comparison sets, so two treatments, and internal's is light enough to live in notes. Do not add a Compare slide to the internal deck.
 
 ## Speaker notes discipline
 

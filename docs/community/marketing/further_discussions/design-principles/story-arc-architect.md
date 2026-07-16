@@ -13,6 +13,8 @@ Read this alongside `marketing-canon.md`, the four lenses are the tools; this fi
 
 Total narrated: ~28 minutes. Slide 7 sits at the exact middle. That is not coincidence, it is the mnemonic anchor.
 
+**Narration tiers (added 2026-07-15, see A27 and `architect-deck-conventions.md`).** The act structure below is unchanged, but the 30-minute talk no longer narrates all slides at equal weight. CORE slides carry the argument and are walked in full: 1-8, 10, 12-16. SURVEY slides carry breadth the argument does not need in one pass and are skimmed unless the room engages: Slide 9 (Sign, three schemes) and Slide 11 (Deploy, four-CR chain), their detail is depth-on-demand in the speaker notes. This is the fix for "deep AND broad overwhelms": tier the narration, do not cut slides. The pivot (S3), mnemonic (S7), air-gap peak (S10), day-2 payoff (S12), and trust-earning (S14) are all CORE and protected.
+
 ## Act 1: Setup (slides 1–4)
 
 ### Slide 1: Pain / Opener

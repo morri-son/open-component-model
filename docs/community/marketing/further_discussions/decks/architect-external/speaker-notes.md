@@ -10,20 +10,24 @@ Thread the arc: by the end of the deck the audience has a thirty-minute path to 
 
 No brand pitch yet. The deck does that at the end.
 
+Pacing for the whole deck: this is a 30-minute talk, and not every slide gets equal time. Most slides you walk in full: point at each element, land the closing line, pause. Two you deliberately skim, Slide 9 (signing schemes) and Slide 11 (the deploy chain), because they carry breadth the argument doesn't need in one pass. On those two, name the structure, say one framing sentence, and move on; the detail is in the notes as backup for when someone in the room asks. When a note says "skim this slide," that is what it means.
+
 
 ## Slide 2: DIAGNOSIS
 
-Existing toolbox doesn't compose.
+Existing toolbox doesn't compose. Every tool names one artifact well. None of them names the release.
 
-OCI. The digest pins bytes. Nothing pins the release those bytes belong to.
+OCI. The digest identifies the image's bytes. Nothing in that digest says which release the image belongs to.
 
-Helm. The chart version pins the chart. Nothing binds it to the image, config, and SBOM shipped alongside.
+Helm. The version identifies the chart. Nothing says which release the chart is part of, which image and config ship with it.
 
-SBOMs and OCI 1.1 referrers. Attach to one digest. No referrer spans the whole release.
+SBOMs and signatures. In OCI they attach through the 1.1 Referrers API: the artifact names one manifest digest as its subject. So an SBOM refers to one image, a signature covers one artifact. A release is not a single digest, it's a set of them, so there is no subject a single referrer can point the whole release at.
 
 Calibration for a cosign audience: cosign updates the digest after an explicit "cosign copy". Keeps signing each piece. What's missing is a name for the release as one unit, signable, verifiable in a sovereign zone with no callback.
 
-Diagnosis in one line: identity is bound to location.
+Name the cost before advancing. No name for the release means three failures the audience has lived: a deployment breaks because one artifact shipped mismatched or missing, and nothing said the four belonged together. An audit stalls because no single record says what "release 1.4" actually contained. An air-gap transfer carries the descriptor but leaves the bytes behind, and nothing checked the set arrived whole. This is the stop-line on the slide: you can't sign, ship, or audit what you can't name.
+
+Diagnosis in one line: the release has no identity of its own. Slide 3 gives it one.
 
 
 ## Slide 3: THE HINGE
@@ -63,7 +67,7 @@ Q&A:
 "Cosign, Sigstore, OCI 1.1 referrers?" OCM does not replace per-artifact signatures; they travel inside the component. OCM adds a release-level envelope: one signature over the canonicalized descriptor that covers every resource digest. If the team cosign-signs every image and ships a Sigstore bundle per chart today, keep doing that. OCM signs the wrapper above them.
 "The term SBOD?" If the audience has heard SBOM they may have heard SBOD (Software Bill of Delivery) in earlier OCM material or on the website. Same object architects call the component descriptor. Different word for the same serialized OCM component version.
 
-Land: a component is the unit you sign, transport, and deploy.
+Land: a component is the unit you sign, transport, and deploy. The one-liner for the "why not just compose cosign + in-toto + referrers?" reflex, which a hostile architect raises here, not at the end: those tools sign artifacts; OCM signs the release they can't name as a unit. Different unit of analysis. If the room presses, this is the trigger to pull Slide 17 (HOW OCM COMPARES) now, out of order. It is a first-pull appendix, not a last-resort one. The full table lives there so this slide stays clean.
 
 
 ## Slide 5: CONSTRUCTOR
@@ -134,6 +138,8 @@ Q&A:
 
 ## Slide 9: SIGN
 
+Skim this slide in a 30-minute talk, don't walk it. Point at the three column headers, say "one signed object, three ways to prove the key, pick what your org already runs," and advance. The per-scheme detail below is depth-on-demand for when a security architect engages. Teaching all three schemes in the main pass spends attention the argument doesn't need; the mnemonic on Slide 7 already carried "Sign."
+
 Same signed object across all three schemes: the canonical descriptor digest. What varies is how the key is proven. All three schemes are stable in the CLI on the v1alpha1 API surface today.
 
 RSA / RSASSA-PSS. Bare public-key pinning. The key already rotated in ops. No PKI required.
@@ -170,19 +176,22 @@ Q&A:
 
 ## Slide 11: DEPLOY
 
+Skim this slide in a 30-minute talk, don't walk it. Name the chain and land the one property that matters: Repository to Component to Resource to Deployer, and the controllers verify before they apply. The per-CR walk below is depth-on-demand for a Kubernetes-platform architect who leans in. Two things stay in the main pass even when skimming: the verification-opt-in disclosure on the Component card, and the BYO-GitOps dependency, because Slide 14 pays both off.
+
 Four CRs, one chain. The controllers verify and apply the component.
 
 Repository. Names where component versions live. OCI registry, mounted CTF, S3, local FS.
 
 Component. Names a specific component version. Pulls the descriptor and verifies its signature against the trust anchor configured on the Component CR. Verification is opt-in: without a verify entry the controller resolves and pulls but doesn't check signatures. Production installs should require verification via admission policy.
 
-Resource. Picks one artifact from the verified component, by digest. Helm chart, OCI image, raw manifest, blob.
+Resource. Picks one artifact from the component, by digest. Helm chart, OCI image, raw manifest, blob. The digest is the content hash written into the descriptor at pack time, the same one the component signature covers. On fetch the Resource controller recomputes the hash over the actual bytes and compares. A match confirms the content is exactly what the signature vouched for. This is the last link in the chain: the Component card proves the descriptor is trusted; the Resource card proves the bytes match the descriptor.
 
 Deployer. Applies the resource to the cluster. Resolves image refs and other deploy-time pointers from the verified descriptor at apply time. This is where localization happens in v2.
 
 Say the dependency out loud now, so slide 14 doesn't feel retroactive: the four-card chain on its own deploys raw Kubernetes manifests. For Helm-deploy, the chain feeds a ResourceGraphDefinition that kro reconciles, with Flux or Argo CD applying the resulting HelmRelease. OCM controllers don't ship kro, Flux, or Argo CD. BYO.
 
 Q&A:
+"Is the resource check always on?" verificationPolicy defaults to Always, so yes by default; Never turns it off. Two honest edges though. It is best-effort per access type: the check needs a digest processor plugin for that access type, and where none exists yet the controller logs and moves on without verifying. And a matching digest only means trusted content if the Component signature was actually verified upstream, which is opt-in. The signature check and the digest check are independent switches.
 "Controller-shaped ocm transfer?" Yes. There's a Replication CR for in-cluster repo-to-repo mirroring. Appendix slide 16.
 
 
@@ -256,7 +265,7 @@ Kept off the main deck because the four-card chain is the load-bearing story for
 
 ## Slide 17: HOW OCM COMPARES
 
-The comparative anchor an architect audience will look for. Each tool operates on a different unit; OCM operates one level up.
+First-pull appendix. This is the highest-demand appendix in the deck: the composability objection ("why not compose cosign + in-toto + referrers?") is the hostile architect's opening move, and it tends to land on Slide 4, not at the end. Slide 4's notes carry the one-liner; when the room wants the full picture, jump here out of order, then return. The comparative anchor an architect audience will look for. Each tool operates on a different unit; OCM operates one level up.
 
 cosign and Sigstore sign one OCI artifact. Strong per-image trust. They do not bundle. They do not travel across registries without re-sign or cosign copy. OCM uses Sigstore as one of its signing schemes, for the descriptor, not per-image.
 

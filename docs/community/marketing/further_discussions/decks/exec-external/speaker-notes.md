@@ -68,15 +68,15 @@ Q&A:
 
 ## Slide 5: THE SHIFT
 
-Conceptual pivot the rest of Act 2 depends on.
+Conceptual pivot the rest of Act 2 depends on. Slow down here.
 
-SBOM. Software Bill of Materials. Designed for inventory. Answers what is inside a piece of software. Useful for vulnerability lookup, licence compliance, provenance. Not designed to describe delivery.
+SBOM. Software Bill of Materials. Designed for inventory: what is inside a piece of software. Useful for vulnerability lookup, licence compliance, provenance. Not designed to describe delivery.
 
-SBOD. Software Bill of Delivery. What you delivered, how to verify it, how to transport it, how to operate it. Not just the code. The Helm chart, the config, the deployment manifest, the signature, the verification metadata. Everything the destination needs to receive and run the release.
+SBOD. Software Bill of Delivery. What you delivered, how to verify it, how to transport it, how to operate it. Designed for delivery, not just inventory.
 
-The line: SBOMs describe. SBOD delivers.
+The SBOM lives inside the SBOD. OCM does not replace SBOM tooling. It wraps it. That's the disarm: keep saying that until someone in the room visibly relaxes.
 
-The SBOM lives inside the SBOD. OCM does not replace SBOM tooling. It gives the SBOM an envelope with a name and a signature.
+Land the stop-line: "Your SBOM still runs. Now it travels with a name and a signature." Pause. Slide 6 shows what that looks like.
 
 Q&A:
 "Is SBOD a standard?" It's the marketing-facing name. On the wire it's the OCM component descriptor. Same object. Defined in the spec at ocm.software.
@@ -85,7 +85,7 @@ Q&A:
 
 ## Slide 6: THE SHIFT - SBOM INSIDE SBOD
 
-The diagram is the whole slide. Container images, Helm charts, deployment manifests, configuration, the SBOM. One envelope. One identity at the top. One signature on the right.
+The diagram is the answer to "what does the SBOD actually contain?": container images, Helm charts, deployment manifests, configuration, the SBOM. One envelope, one identity at the top, one signature on the right.
 
 The identity line matters: github.com/acme/app:v1.0.0. Same reference in the dev registry, in a customer's cloud registry, in an air-gapped archive. That is location-independent. This becomes load-bearing on slide 9.
 
@@ -140,17 +140,19 @@ Q&A:
 
 Regulator and CISO slide. They are deciding whether the model survives inside their compliance perimeter.
 
-Sovereign-ready is not a feature that gets turned on. It is a property of the delivery model. Four properties.
+The title is the claim. The two bullets prove it. Land the title first, pause, then walk the bullets.
 
-Identity is location-independent. Same reference (github.com/acme/app:v1.0.0) in a public registry, a customer's air-gapped registry, or a dev cluster. Location is not part of the name because the name is not a URL.
+Bullet 1: the release lands as one unit. Identity (the name, not a URL, so it doesn't encode a registry), signature (one hash over every artifact in the bundle), artifacts (images, charts, config, SBOM), and day-2 metadata. Everything the destination needs arrives together.
 
-Signatures are location-independent. Sign once at source. Verify anywhere downstream. In the sovereign target, the K8s controller verifies without callbacks to Rekor, Fulcio, or an internal PKI, provided the trusted-root file has been delivered once, out of band.
+Bullet 2: the consequence. Verification runs locally against the signature and the pinned public key. The K8s controller verifies without callbacks to Rekor, Fulcio, or an internal PKI, provided the trusted-root file has been delivered once, out of band. Upgrades, patches, and horizontal scale all run against the local registry. The boundary is never crossed after initial delivery.
 
-Transfer is self-contained. ocm transfer --copy-resources moves the descriptor plus every referenced blob into the destination registry as one operation. Nothing left behind, nothing fetched later.
+The refrain: nothing reaches back upstream. Say it after each bullet if the room is a regulated-industry one.
 
-Day-2 ops stay inside the boundary. Subscribes, upgrades, horizontal scale all run against the local registry. Never leaves.
+Slide 10 shows the same story as a diagram. Don't pre-explain the diagram here; let it land on its own.
 
-The refrain across the four bullets is "no callback upstream". Repeat it deliberately.
+Q&A:
+"Can't cosign do this?" cosign verifies one image. What's missing is one signature over the complete set: this image, this chart, this config, this SBOM, as the intended release. OCM signs the bundle. cosign signs the piece.
+"What about the trusted-root for Sigstore air-gap?" Works offline once the trusted-root file (Fulcio CA plus Rekor public key) has been distributed to the destination out of band. After that, no callback. RSA and OpenPGP need only the pinned public key, no trusted-root file.
 
 Land: the component is the trust boundary. Not the registry, not the network, not the certificate chain.
 
@@ -251,7 +253,25 @@ Q&A:
 "Spec governance?" NeoNephos Foundation, hosted under Linux Foundation Europe. Spec changes go through open steering. SAP contributes; SAP does not decide alone.
 
 
-## Slide 14: Start delivering with confidence.
+## Slide 14: STRATEGIC POSITION
+
+The credibility-and-sustainability slide. Answers the question "why isn't this going to disappear in two years?"
+
+Apeiro is short for ApeiroRA, the Apeiro Reference Architecture. EU-funded blueprint for the sovereign cloud-edge continuum. Part of IPCEI-CIS, Important Projects of Common European Interest on Cyber and Information Security. NextGenerationEU funds it. Germany's BMWK co-funds it. Seventeen open-source projects across three layers.
+
+OCM sits in the Cloud OS layer. Alongside Gardener, OpenControlPlane, and Platform Mesh, three of the peer projects from the previous slide. Not coincidence. Slide 13 named the peers; this slide names their umbrella. They are pieces of the same reference architecture.
+
+Governance sits in NeoNephos, Linux Foundation Europe. Neutral by design. Long-term sustainability requires that flagship projects outlive any single funding cycle.
+
+Land: this is an EU strategic asset, not a vendor tool.
+
+Q&A:
+"Is Apeiro time-limited?" IPCEI-CIS is the funding vehicle, time-bound. The flagship projects live in NeoNephos exactly so they outlive the funding.
+"Who runs the consortium?" Multiple European vendors and research partners. SAP is the lead partner but does not decide alone; NeoNephos governance is open.
+"Can I contribute?" Yes. Every project is open source. Community channels are on the project sites.
+
+
+## Slide 15: Start delivering with confidence.
 
 Close. Three asks, all small, all this quarter.
 
@@ -271,16 +291,16 @@ Q&A:
 "Vendor lock-in?" OCM is at NeoNephos Foundation. Spec is open. Multiple implementations. Adoption does not tie the customer to SAP tooling.
 
 
-## Slide 15: APPENDIX - ABBREVIATIONS
+## Slide 16: APPENDIX - ABBREVIATIONS
 
 (no notes; reference slide)
 
 
-## Slide 16: TRADEMARK & LICENSE NOTICES (1/2)
+## Slide 17: TRADEMARK & LICENSE NOTICES (1/2)
 
 (no notes; reference slide)
 
 
-## Slide 17: TRADEMARK & LICENSE NOTICES (2/2)
+## Slide 18: TRADEMARK & LICENSE NOTICES (2/2)
 
 (no notes; reference slide)

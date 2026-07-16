@@ -135,11 +135,9 @@ No callback upstream.
 ## Slide 9: SOVEREIGN-READY
 
 SOVEREIGN-READY
-Trust, but verify.
-▪  Identity: location-independent. The component carries its name regardless of registry.
-▪  Signatures: location-independent. Sign once at source, verify anywhere downstream. No callback upstream.
-▪  Transfer: self-contained. Every artifact travels with the component. 
-▪  Day-2 ops: happen inside the boundary. Subscribe, pull upgrades, scale across regions. Still no callback.
+The release arrives complete. Verify it where it lands.
+▪  The release lands at the boundary as one unit: artifacts, signature, identity, day-2 metadata.
+▪  Verification, deployment, and upgrades run entirely inside. Nothing reaches back upstream.
 
 ## Slide 10: SOVEREIGN-READY - AIR-GAP
 
@@ -208,7 +206,18 @@ Kyma
 [IMAGE]
 OpenControlPlane
 
-## Slide 14: Start delivering with confidence.
+## Slide 14: STRATEGIC POSITION
+
+STRATEGIC POSITION
+OCM is one piece of the EU sovereign cloud stack.
+▪  ApeiroRA: EU-funded reference architecture for the sovereign cloud-edge continuum. 17 open-source projects across three layers.
+▪  OCM sits in the Cloud OS layer. Alongside Gardener, OpenControlPlane, and Platform Mesh, three names from the previous slide.
+▪  Funded through NextGenerationEU and BMWK under IPCEI-CIS. Housed in NeoNephos (Linux Foundation Europe) for long-term neutrality.
+[IMAGE]
+is part of
+[IMAGE]
+
+## Slide 15: Start delivering with confidence.
 
 Start delivering with confidence.
 Try it - ocm.software (QR code)
@@ -218,7 +227,7 @@ Talk to us - community channels on the website
 [IMAGE]
 [IMAGE]
 
-## Slide 15: APPENDIX - ABBREVIATIONS
+## Slide 16: APPENDIX - ABBREVIATIONS
 
 APPENDIX - ABBREVIATIONS
 Quick reference for the acronyms used in this deck.
@@ -245,7 +254,7 @@ SPDX  -  Software Package Data Exchange - ISO/IEC 5962 standard format for SBOM 
 SWID  -  Software Identification Tags - ISO/IEC 19770-2 standard for software inventory.
 Trivy  -  Open-source security scanner for containers, IaC, and code (Aqua Security).
 
-## Slide 16: TRADEMARK & LICENSE NOTICES (1/2)
+## Slide 17: TRADEMARK & LICENSE NOTICES (1/2)
 
 TRADEMARK & LICENSE NOTICES (1/2)
 Logos and trademarks named for technical reference.
@@ -254,7 +263,7 @@ Logos and trademarks named for technical reference.
 ▪  Gardener, Platform Mesh, NeoNephos Foundation - Linux Foundation Europe artwork; usage governed by the Linux Foundation trademark usage guidelines (linuxfoundation.org/legal/trademark-usage). gardener.cloud · platform-mesh.io · neonephos.org
 ▪  Konfidence - SAP-supported open project; logo from konfidence.cloud. Editorial use only; verify with the Konfidence project before external publication. konfidence.cloud
 
-## Slide 17: TRADEMARK & LICENSE NOTICES (2/2)
+## Slide 18: TRADEMARK & LICENSE NOTICES (2/2)
 
 TRADEMARK & LICENSE NOTICES (2/2)
 Logos and trademarks named for technical reference.
