@@ -5,7 +5,7 @@
 [IMAGE]
 You ship pieces.
 Nothing carries the release.
-You sign the pieces. Nothing signs the release.
+The model that makes it one, the mechanic, the honest edges.
 Open Component Model. Open source. NeoNephos Foundation.
 [IMAGE]
 [IMAGE]

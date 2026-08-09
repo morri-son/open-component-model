@@ -13,16 +13,13 @@ Open Component Model. Open source. NeoNephos Foundation. Stewarded by SAP.
 ## Slide 2: WHY NOW
 
 WHY NOW
-Compliance and sovereignty are given. Our strategic position is a choice.
-ECOSYSTEM VELOCITY
-Peer projects are converging.
-The biggest contributor shapes the standard.
-THE WINDOW
-The rails are being laid now.
-Late entrants pay migration cost.
-DISINVESTMENT COST
-Walking away costs more than staying.
-The standard gets shaped without us.
+The market is moving. Our position is a choice.
+THE FIELD IS MOVING
+Kyma. OpenControlPlane. Gardener. The open ecosystem is converging on OCM. The biggest contributor shapes what comes next.
+COMPLIANCE DOESN'T WAIT
+CRA. NIS2. Sovereign cloud. Every LoB faces these. A shared model costs less than five separate ones.
+SAP SETS THE STANDARD
+SAP is OCM's largest contributor. NeoNephos governs it. Our standard. Our ecosystem. Our call to use it.
 
 ## Slide 3: THE ANSWER
 

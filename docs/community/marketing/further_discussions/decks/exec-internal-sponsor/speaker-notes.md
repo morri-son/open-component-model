@@ -15,17 +15,24 @@ Today: why that matters now, where SAP already is, and what the choice in front 
 
 ## Slide 2: WHY NOW
 
-Don't read the columns. Frame the choice.
+Don't read the columns. Frame the choice first.
 
-The title is the pitch in one line. Compliance and sovereignty are given. Not up for debate. DORA, NIS2, sovereign-cloud delivery are real, and they are table stakes for the markets SAP serves. The strategic question is what shape SAP shows up in.
+The subtitle is the pitch in one line: the market is moving, SAP's position is a choice. Not a foregone conclusion, a decision that is being made right now, by everyone in this room.
 
-Ecosystem Velocity. The peer ecosystem is converging. Gardener, Kyma, OpenControlPlane, Konfidence, Platform Mesh. All aligned around the OCM primitive. SAP is currently the biggest contributor, by a comfortable margin. The biggest contributor shapes the standard. That is true today. It will also be true in two years, about whoever the biggest contributor is then.
+Three forces. All independent. All pointing the same direction.
 
-The Window. The rails are being laid right now. NeoNephos governance is forming. CRA enforcement starts. The sovereign-cloud market is taking shape. Late entrants pay migration cost. Early stewards keep optionality and shape the standard around their own use cases.
+The field is moving. This is not an internal SAP initiative. Kyma, OpenControlPlane, Gardener are already on OCM. These are real projects, in production, operated by teams in this building. The open ecosystem is converging. SAP is currently the biggest contributor by a comfortable margin. That is true today. It will be true in two years about whoever the biggest contributor is then.
 
-Disinvestment. Walking away costs more than staying. Each LoB that builds its own retrofit pays the cost OCM was supposed to amortise. The standard gets shaped without SAP. Competitors that keep investing get the standard built around their preferences.
+Compliance doesn't wait. CRA mandates provable delivery evidence for every EU product by 2027. NIS2 is landing across member states now. Sovereign cloud is on every LoB roadmap. Each LoB solving this independently pays the cost twice: once to build it, once to maintain it. OCM amortises that cost across all of them.
 
-Land: the choice is not whether to adopt OCM. SAP already did. The choice is whether SAP keeps the steering position or hands it over.
+SAP sets the standard. OCM is a category SAP created. NeoNephos governs it for long-term neutrality. SAP is not adopting someone else's standard. The question is whether SAP actively stewards the position it already holds, or lets it drift.
+
+Land: the choice is not whether to adopt OCM. SAP already did. The choice is whether this LoB shapes what comes next or inherits it.
+
+Q&A:
+"Is NeoNephos just a SAP vehicle?" No. Linux Foundation Europe hosts it. Governance is open. SAP contributes; SAP does not decide alone.
+"CRA timeline?" Obligations phase in through 2027. The tooling to meet them needs to be in place before enforcement, not after.
+"What does 'largest contributor' mean in practice?" Spec authorship, reference implementation, tooling. The teams that built OCM are SAP teams. That is the position.
 
 
 ## Slide 3: THE ANSWER
