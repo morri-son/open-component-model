@@ -35,11 +35,7 @@ Air-gap
 access: registry.local/...
 Move the artifact. The digest stays. Only the access changes.
 
-## Slide 4: THE HINGE (diagram step)
-
-[IMAGE - animation step of slide 3 diagram]
-
-## Slide 5: WHERE OCM SITS
+## Slide 4: WHERE OCM SITS
 
 WHERE OCM SITS
 Wraps every artifact. Signs the whole release.
@@ -53,7 +49,7 @@ ONE SIGNATURE
 Covers every digest in the component.
 Survives transport.
 
-## Slide 6: CONSTRUCTOR
+## Slide 5: CONSTRUCTOR
 
 CONSTRUCTOR
 What you write.
@@ -75,7 +71,7 @@ components:
         type: OCIImage/v1
         imageReference: ghcr.io/stefanprodan/podinfo:6.9.1
 
-## Slide 7: DESCRIPTOR
+## Slide 6: DESCRIPTOR
 
 DESCRIPTOR
 What gets signed and travels.
@@ -100,7 +96,7 @@ signatures:                             # signature: one hash over the canonical
       algorithm: RSASSA-PSS
       value: <hex-encoded signature>
 
-## Slide 8: OCM IN ONE PICTURE
+## Slide 7: OCM IN ONE PICTURE
 
 OCM IN ONE PICTURE
 Pack · Sign · Transport · Deploy
@@ -126,7 +122,7 @@ CLOUD
 Verify at destination.
 No callback upstream.
 
-## Slide 9: COMPOSE
+## Slide 8: COMPOSE
 
 COMPOSE
 Service carries resources. Product carries references.
@@ -160,7 +156,7 @@ components:
         version: 1.0.0
 # no resources of its own - pure composition
 
-## Slide 10: SIGN
+## Slide 9: SIGN
 
 SIGN
 Same signed object. Three signing options.
@@ -175,7 +171,7 @@ Keyless via OIDC + Rekor.
 If you already trust your identity provider.
 CTF = Common Transport Format - a filesystem-based OCM repository, portable via any transfer mechanism.
 
-## Slide 11: TRANSPORT
+## Slide 10: TRANSPORT
 
 TRANSPORT
 Three patterns. One command.
@@ -191,7 +187,7 @@ Verify on arrival. No callback to source.
 AIR-GAP
 ocm transfer ghcr.io/myrepo//mycomponent target.registry [--copy-resources]
 
-## Slide 12: DEPLOY
+## Slide 11: DEPLOY
 
 DEPLOY
 OCM controllers verify and apply.
@@ -205,7 +201,7 @@ One artifact. Content checked against the signed digest.
 DEPLOYER
 Applies it to the cluster.
 
-## Slide 13: DAY 2
+## Slide 12: DAY 2
 
 DAY 2
 Bump the product version. Everything follows.
@@ -254,7 +250,7 @@ signatures:
 bumpversion
 Every digest pinned by the signature. The cluster cannot drift.
 
-## Slide 14: ADOPTION
+## Slide 13: ADOPTION
 
 ADOPTION
 Two paths to a first OCM component.
@@ -267,7 +263,7 @@ Helm-install the OCM controllers.
 Point them at your registry.
 Deploy a component.
 
-## Slide 15: BEFORE YOU PILOT
+## Slide 14: BEFORE YOU PILOT
 
 BEFORE YOU PILOT
 Three honest edges.
@@ -275,21 +271,21 @@ Three honest edges.
 ▪  Controllers are v1alpha1 - the CRD surface can move. Pin to specific release tags in your platform installs.
 ▪  Helm-deploy adds kro + Flux or ArgoCD - the OCM controllers don't ship them. Bring your existing GitOps engine.
 
-## Slide 16: Ship the release as one unit.
+## Slide 15: Ship the release as one unit.
 
 Ship the release as one unit.
 Evaluate - ocm.software (QR code) · run conformance/scenarios/sovereign
 Pilot - github.com/open-component-model · one product, one team
 Engage - community channels on the website · NeoNephos Foundation
 
-## Slide 17: HOW OCM COMPARES
+## Slide 16: HOW OCM COMPARES
 
 HOW OCM COMPARES
 Composes with what's there.
 OCM rides on top. It doesn't replace the per-artifact tools - it adds the release-level envelope they don't.
 [IMAGE]
 
-## Slide 18: APPENDIX · REPLICATION
+## Slide 17: APPENDIX · REPLICATION
 
 APPENDIX · REPLICATION
 Alongside the chain. Not within it.
@@ -305,7 +301,7 @@ One artifact, by digest.
 DEPLOYER
 Applies it to the cluster.
 
-## Slide 19: APPENDIX · ABBREVIATIONS
+## Slide 18: APPENDIX · ABBREVIATIONS
 
 APPENDIX · ABBREVIATIONS
 Quick reference for terms used in this deck.
