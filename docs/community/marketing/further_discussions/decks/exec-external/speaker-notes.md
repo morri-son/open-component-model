@@ -202,25 +202,24 @@ Q&A:
 
 ## Slide 12: WHAT YOU GET
 
-Payoff. Six tiles. All fall out of the same signed descriptor. Not six features bolted together, one primitive doing six jobs.
+Arc closure. The three columns answer the three blind spots from slide 2. Don't say that out loud. Let the audience see it.
 
-Artifact signing across stacks. Cosign for images, package signatures for charts, something separate for SBOMs. Every tool signs a different thing. OCM signs the release once; every downstream verifier does the same check.
+Pause two beats. They're reading.
 
-Air-gapped delivery. Regulated customers do not just want signatures. They want to run the verify themselves, offline, on their hardware. OCM was designed for that from day one. Nothing in the verify path calls upstream.
+Frame once: "One model. Three things it buys you that the current delivery stack can't."
 
-Kubernetes-native deployment. The OCM K8s controllers verify and apply components directly. No shell scripts wrapped around Helm install to bolt on integrity. The check is the deploy path.
+Column one. The business consequence of air-gap and sovereign-ready: markets that are currently closed open. Regulated federal procurement, EU sovereign cloud, financial sector air-gap requirements. Those are real revenue doors. OCM is the key that fits all of them.
 
-Asynchronous security scans. A CVE dropping two months after release used to mean "rebuild the world". With OCM the finding attaches to the component identity. The affected shipped release is known, and where it went. Patch the affected components, not the fleet.
+Column two. The auditor scenario is already in every CISO's head. Today the answer to "prove what you shipped" is a war room, a spreadsheet, and a prayer. With OCM it's one signed record that was produced at build time and hasn't changed since.
 
-One source of truth. Rebuilding a landscape (new region, compliance decision, incident recovery) is manual archaeology across tickets and configs today. With OCM: one signed descriptor per delivery. The landscape rebuilds from that.
+Column three. This is the stability claim. Delivery models that are environment-specific create lock-in and rework every time a customer's zone, compliance framework, or infrastructure differs from the last. OCM absorbs the variation. The team ships once.
 
-Automated compliance reporting. Auditors ask for SBOMs, VEX, provenance, attestations. Those live in spreadsheets that go stale the moment they are produced. With OCM the reports compose from the SBOD metadata itself. They cannot drift from what actually shipped.
-
-Land: six outcomes. All from one signed descriptor.
+Land: "Same model. Every zone. That's the ask."
 
 Q&A:
-"VEX?" VEX documents can be resources inside the OCM component, signed with the rest. Auditors verify VEX and artifact together, from one signature.
-"Does OCM produce the compliance report?" No. OCM provides the metadata. ODG composes reports on top. Teams also plug in their own reporting layer.
+"What zones specifically?" Any OCI-compliant registry, sovereign or not. BWI runs this for German federal workloads. SAP NS2 for regulated US workloads. Both in production.
+"What does 'signed record' include?" Everything in the SBOD: artifacts, SBOM, signatures, provenance. All covered by one digest. The auditor verifies one thing.
+"What about existing delivery pipelines?" OCM composes around them. Slide 8 covered that. No rip-and-replace.
 
 
 ## Slide 13: TRUSTED IN PRODUCTION

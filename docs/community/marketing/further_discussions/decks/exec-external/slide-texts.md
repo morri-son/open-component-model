@@ -5,36 +5,33 @@
 [IMAGE]
 Your supply chain has
 blind spots.
-Three minutes from now, you'll know what they are.
+In the next fifteen minutes, we'll name them and show you the model that closes them.
 Open Component Model. Open source. NeoNephos Foundation.
 [IMAGE]
 [IMAGE]
 
 ## Slide 2: THREE BLIND SPOTS
 
-THREE BLIND SPOTS
-What today's delivery model can't see.
+Three blind spots
+Three places your chain fails. Silently.
 IDENTITY DRIFT
-You signed the artifact at source.
-Each transfer changes its reference. Downstream verifies a reference you never signed.
+You can show the signature from build time. You can't show it still applies to what's running at the destination.
 NO RELEASE ENVELOPE
-You sign artifacts. You don't sign the release.
-Twelve pieces, twelve signatures -  if you're lucky.
-UNVERIFIED ARRIVAL
-Sovereign zones forbid upstream traffic.
-Verification ships with the release - or it doesn't happen.
+A regulator asks: prove this exact release is what you shipped. Your answer is twelve separate signatures and a spreadsheet.
+PROOF STOPS AT THE BORDER
+Your verification requires reaching back upstream. In sovereign zones, that reach is forbidden.
 
 ## Slide 3: WHY NOW
 
 WHY NOW
-Sovereignty is no longer optional
+Sovereignty is no longer optional.
 SOVEREIGNTY PRESSURE
-The law draws boundaries - jurisdiction, sector, air-gap.
-Software must be deliverable inside each one.
+The law draws boundaries – between jurisdictions, sector, environments. Software must span them all.
 REGULATION TIGHTENING
 EU DORA · NIS2 · CRA. Provable supply-chain control, not best effort.
 SUPPLY-CHAIN ATTACKS ARE REAL
-SolarWinds. xz. log4shell. Signatures must survive the journey, or compliance is theatre.
+SolarWinds · xz · log4shell. Signatures must survive the journey, or destination verification fails.
+Three forces. None of them are waiting.
 
 ## Slide 4: THE ANSWER
 
@@ -46,11 +43,11 @@ Helm
 npm
 Binary
 Config
+… any artifact type
 EVERY DEPLOYMENT BOUNDARY
 EU
 US
-Sovereign
-Cloud
+Sovereign Cloud
 EVERY COMPLIANCE FRAMEWORK
 DORA
 NIS2
@@ -63,19 +60,19 @@ THE SHIFT
 SBOM lists. SBOD delivers.
 ▪  SBOM: what's inside your software. Built for inventory.
 ▪  A Software Bill of Delivery (SBOD): what you delivered, how to verify, transport, operate. Built for delivery.
-▪  SBOD contains SBOM. OCM doesn't replace your SBOM tooling. OCM gives the SBOM an envelope.
-
+▪  The SBOD contains your SBOM. OCM wraps your SBOM, it doesn't replace it.
+Your SBOM still runs. Now it travels with a name and a signature.
 
 ## Slide 6: THE SHIFT - SBOM INSIDE SBOD
 
 THE SHIFT - SBOM INSIDE SBOD
-What the envelope holds.
+What the envelope holds.
 github.com/acme/app:v1.0.0
-Location-independent name. Same identity, every registry.
+Location-independent name · Same identity, every registry.
 [IMAGE]
 [IMAGE]
 ARTIFACTS
-What you delivered.  How to verify it · how to operate it. 
+What you delivered · How to verify it · How to operate it.
 
 [IMAGE]
 Docker Images
@@ -93,23 +90,9 @@ SOFTWARE BILL OF DELIVERY (SBOD)
 SBOM
 [IMAGE]
 
-## Slide 7: HOW OCM COMPOSES
+## Slide 7: OCM IN ONE PICTURE
 
-HOW OCM COMPOSES
-Composes around your existing stack.
-SIGNING
-You sign artifacts.
-OCM signs the release.
-TRANSPORT
- Your registries differ.
-OCM moves the release across them.
-COMPLIANCE
-Your scanners see one artifact at a time.
-OCM correlates findings to the release.
-
-## Slide 8: OCM IN ONE PICTURE
-
-OCM IN ONE PICTURE 
+OCM IN ONE PICTURE
 Pack · Sign · Transport · Deploy
 [IMAGE]
 PACK
@@ -125,12 +108,27 @@ Across any boundary.
 Even air-gapped.
 [IMAGE]
 DEPLOY
-Verify · Unpack · DeployOCM K8s Controllers.
+Verify · Unpack · Deploy
+OCM K8s Controllers.
 [IMAGE]
 SOVEREIGN
 CLOUD
 Verify at destination.
 No callback upstream.
+
+## Slide 8: HOW OCM COMPOSES
+
+HOW OCM COMPOSES
+Your tools stay. OCM covers the release.
+SIGNING
+You sign artifacts.
+OCM signs the release.
+TRANSPORT
+Your registries differ.
+OCM moves the release across them.
+COMPLIANCE
+Your scanners see one artifact at a time.
+OCM correlates findings to the release.
 
 ## Slide 9: SOVEREIGN-READY
 
@@ -158,40 +156,33 @@ K8s cluster
 [IMAGE]
 Auditor
 Verify locally. Day-2 ops included.
+SAME IDENTITY · SAME SIGNATURE · ANY LOCATION
 Transport
+github.com/acme/webshop:v1.0.0
 
 ## Slide 11: SCAN
 
 SCAN
-Compliance as a system property -
-not a quarterly retrofit.
-▪  The Compliance Dashboard: every component, every finding, one view. 
-▪  Continuous scans: asynchronous, even post-release. 
-▪  Contextual rescoring: patch what matters, not the noise. 
+Continuous compliance. Not quarterly audits.
+▪  Open Delivery Gear (ODG): every component, every finding, one compliance dashboard.
+▪  Continuous scans: asynchronous, even post-release.
+▪  Contextual rescoring: patch what matters, not the noise.
 ▪  Identity-correlated evidence: auditors get answers, not spreadsheets.
 
 ## Slide 12: WHAT YOU GET
 
 WHAT YOU GET
-Six outcomes. One model.
-Artifact signing across stacks
-Sign once at source. Verify everywhere, with no per-stack tooling.
-Air-gapped delivery
-Walk a complete component across an air gap. Verify at destination.
-Kubernetes-native deployment
-OCM controllers deploy components directly into clusters.
-Asynchronous security scans
-Continuous scanning, even after release. Findings tied to component identity.
-One source of truth
-Rebuild any landscape from a single signed descriptor.
-Automated compliance reporting
-Reports composed from SBOD metadata - no spreadsheet drift.
-[IMAGE]
-[IMAGE]
-[IMAGE]
-[IMAGE]
-[IMAGE]
-[IMAGE]
+Three blind spots. Three answers.
+EVERY ZONE IS REACHABLE
+Sovereign requirements and air-gap rules currently close markets to software that can't verify locally.
+OCM delivers into all of them.
+Same model, every zone.
+AUDITORS GET A SIGNED ANSWER
+A regulator asks: prove this exact release is what you shipped.
+The answer is a signed, traceable record of exactly what shipped. Not a spreadsheet assembled the night before.
+ONE MODEL, EVERY CONTEXT
+The zone changes. The compliance framework changes. The customer changes. The model doesn't.
+One way to ship, regardless of where it lands.
 
 ## Slide 13: TRUSTED IN PRODUCTION
 
@@ -205,19 +196,9 @@ SAP stewards. NeoNephos governs. Production-grade. Sovereign-ready.
 Kyma
 [IMAGE]
 OpenControlPlane
+Part of the NeoNephos Foundation
 
-## Slide 14: STRATEGIC POSITION
-
-STRATEGIC POSITION
-OCM is one piece of the EU sovereign cloud stack.
-▪  ApeiroRA: EU-funded reference architecture for the sovereign cloud-edge continuum. 17 open-source projects across three layers.
-▪  OCM sits in the Cloud OS layer. Alongside Gardener, OpenControlPlane, and Platform Mesh, three names from the previous slide.
-▪  Funded through NextGenerationEU and BMWK under IPCEI-CIS. Housed in NeoNephos (Linux Foundation Europe) for long-term neutrality.
-[IMAGE]
-is part of
-[IMAGE]
-
-## Slide 15: Start delivering with confidence.
+## Slide 14: Start delivering with confidence.
 
 Start delivering with confidence.
 Try it - ocm.software (QR code)
@@ -227,7 +208,7 @@ Talk to us - community channels on the website
 [IMAGE]
 [IMAGE]
 
-## Slide 16: APPENDIX - ABBREVIATIONS
+## Slide 15: APPENDIX - ABBREVIATIONS
 
 APPENDIX - ABBREVIATIONS
 Quick reference for the acronyms used in this deck.
@@ -254,7 +235,7 @@ SPDX  -  Software Package Data Exchange - ISO/IEC 5962 standard format for SBOM 
 SWID  -  Software Identification Tags - ISO/IEC 19770-2 standard for software inventory.
 Trivy  -  Open-source security scanner for containers, IaC, and code (Aqua Security).
 
-## Slide 17: TRADEMARK & LICENSE NOTICES (1/2)
+## Slide 16: TRADEMARK & LICENSE NOTICES (1/2)
 
 TRADEMARK & LICENSE NOTICES (1/2)
 Logos and trademarks named for technical reference.
@@ -263,7 +244,7 @@ Logos and trademarks named for technical reference.
 ▪  Gardener, Platform Mesh, NeoNephos Foundation - Linux Foundation Europe artwork; usage governed by the Linux Foundation trademark usage guidelines (linuxfoundation.org/legal/trademark-usage). gardener.cloud · platform-mesh.io · neonephos.org
 ▪  Konfidence - SAP-supported open project; logo from konfidence.cloud. Editorial use only; verify with the Konfidence project before external publication. konfidence.cloud
 
-## Slide 18: TRADEMARK & LICENSE NOTICES (2/2)
+## Slide 17: TRADEMARK & LICENSE NOTICES (2/2)
 
 TRADEMARK & LICENSE NOTICES (2/2)
 Logos and trademarks named for technical reference.
@@ -271,5 +252,3 @@ Logos and trademarks named for technical reference.
 ▪  Kyma - SAP-originated open-source project at kyma-project.io. Editorial use only. kyma-project.io
 ▪  Hyperspace, RBSC, CSI, Greenhouse, Steampunk - internal SAP delivery infrastructure named for context; not third-party marks.
 ▪  Trivy, Grype, Sigstore, Helm, OCI, Kubernetes, kro, Flux, Argo CD - third-party trademarks named for technical reference; ownership remains with their respective projects and organisations.
-
-
