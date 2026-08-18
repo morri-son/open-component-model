@@ -1,0 +1,53 @@
+# T3: compile-time validation proof. The child node carries a deliberate CEL
+# syntax error ("${image.ref + }"). The parent Graph must go Accepted=False /
+# Ready=False without creating ANY cluster resource.
+apiVersion: kro.run/v1alpha1
+kind: Graph
+metadata:
+  name: podinfo-bad
+  namespace: default
+spec:
+  nodes:
+    - id: resourceImage
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: graph-bad-image-resource
+        spec:
+          componentRef:
+            name: bootstrap-component
+          resource:
+            byReference:
+              resource:
+                name: image-resource
+          additionalStatusFields:
+            oci: resource.access.toOCI()
+    - id: image
+      def:
+        ref: ${resourceImage.status.additional.oci.registry}
+    - id: app
+      graph:
+        nodes:
+          - id: deployment
+            template:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: podinfo-bad
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: podinfo-bad
+                template:
+                  metadata:
+                    labels:
+                      app: podinfo-bad
+                  spec:
+                    containers:
+                      - name: podinfo
+                        # CEL syntax error, must fail compilation of the parent
+                        image: ${image.ref + }
+                        ports:
+                          - containerPort: 9898

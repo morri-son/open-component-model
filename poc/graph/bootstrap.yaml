@@ -1,0 +1,48 @@
+# Bootstrap chain: Repository -> Component -> Resource (graph blob) -> Deployer.
+# Applied via: envsubst < bootstrap.yaml | kubectl apply -f -
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Repository
+metadata:
+  name: bootstrap-repository
+spec:
+  repositorySpec:
+    baseUrl: $OCM_REPO
+    type: OCIRegistry
+  interval: 1m
+  ocmConfig:
+    - kind: Secret
+      name: ghcr-secret
+---
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Component
+metadata:
+  name: bootstrap-component
+spec:
+  component: ocm.software/ocm-k8s-toolkit/graph
+  repositoryRef:
+    name: bootstrap-repository
+  semver: 1.0.0
+  interval: 1m
+---
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Resource
+metadata:
+  name: bootstrap-graph
+  namespace: default
+spec:
+  componentRef:
+    name: bootstrap-component
+  resource:
+    byReference:
+      resource:
+        name: graph
+---
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Deployer
+metadata:
+  name: bootstrap-deployer
+spec:
+  resourceRef:
+    name: bootstrap-graph
+    # Deployer is cluster-scoped; namespace of the referenced Resource is explicit.
+    namespace: default

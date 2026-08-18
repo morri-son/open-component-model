@@ -1,0 +1,90 @@
+# Graph (KREP-024, kro PR #1355) replacing the tutorial's ResourceGraphDefinition.
+# Parent scope:
+#   - resourceImage: OCM Resource CR for the image-resource of the bootstrap component
+#     (identical shape to the tutorial's resourceImage RGD node, incl. additionalStatusFields)
+#   - image: def: node computing the localized image coordinates
+#   - app: nested graph: child scope with podinfo Deployment + Service that CAPTURES
+#     the parent's image def (child-scope evaluation == the RGD-of-RGDs analog)
+apiVersion: kro.run/v1alpha1
+kind: Graph
+metadata:
+  name: podinfo-bootstrap
+  namespace: default
+spec:
+  nodes:
+    # Same as the tutorial's resourceImage node: resolved against the bootstrap
+    # Component CR created by the bootstrap chain.
+    - id: resourceImage
+      readyWhen:
+        - ${resourceImage.status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: graph-image-resource
+        spec:
+          componentRef:
+            name: bootstrap-component
+          resource:
+            byReference:
+              resource:
+                name: image-resource
+          additionalStatusFields:
+            # toOCI() converts the resource access to an OCI reference object
+            # containing registry, repository, tag, and digest
+            oci: resource.access.toOCI()
+          ocmConfig:
+            - kind: Secret
+              name: ghcr-secret
+    # def: node (KREP-011 variables) mapping the localized image reference.
+    # Hard references to resourceImage.status.additional.oci.* keep this pending
+    # until the OCM Resource is Ready and localized.
+    - id: image
+      def:
+        registry: ${resourceImage.status.additional.oci.registry}
+        repository: ${resourceImage.status.additional.oci.registry}/${resourceImage.status.additional.oci.repository}
+        digest: ${resourceImage.status.additional.oci.digest}
+        # digest-pinned pull reference, localization proof target
+        ref: ${resourceImage.status.additional.oci.registry}/${resourceImage.status.additional.oci.repository}@${resourceImage.status.additional.oci.digest}
+    # Nested child scope. Its Deployment CAPTURES the parent's `image` def value
+    # (single-frame expression, parent frame). This is impossible in kro 0.9.3 RGDs.
+    - id: app
+      graph:
+        nodes:
+          - id: deployment
+            readyWhen:
+              - ${deployment.status.availableReplicas == 1}
+            template:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: podinfo-graph
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: podinfo-graph
+                template:
+                  metadata:
+                    labels:
+                      app: podinfo-graph
+                  spec:
+                    imagePullSecrets:
+                      - name: ghcr-secret
+                    containers:
+                      - name: podinfo
+                        image: ${image.ref}
+                        ports:
+                          - containerPort: 9898
+          - id: service
+            template:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: podinfo-graph
+              spec:
+                selector:
+                  app: podinfo-graph
+                ports:
+                  - port: 9898
+                    targetPort: 9898
