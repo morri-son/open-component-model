@@ -5,48 +5,35 @@ an OCM component, replacing the `ResourceGraphDefinition` blob of the tutorial
 `website/content/docs/tutorials/deploy-helm-chart-bootstrap.md` (kro inline-manifests
 variant: podinfo via plain Deployment + Service, no Helm/Flux). The nested `graph:`
 child node replaces the "RGD of RGDs" construction tested in
-`poc/rgd-of-rgds` (branch `poc/rgd-of-rgds`), which is structurally broken on kro 0.9.3.
+`poc/rgd-of-rgds` (branch `poc/rgd-of-rgds`, not pushed), which is structurally broken
+on kro 0.9.3.
 
 **All checks passed.** Graph nesting with child-scope capture works end to end through
 the real OCM bootstrap flow (transfer to ghcr, Deployer applies blob). Compile-time
 validation of child scopes and lifecycle cascade behave as designed.
 
+Setup and reproduction steps: [README.md](README.md).
+
 ## Environment
 
 - kro source: PR #1355 head `9b0a56d` ("test: de-serialize GraphRevision specs..."),
-  worktree `../../../../kubernetes-sigs/kro-pr-1355`, no kro code modified
-- kind cluster `kro-graph` (kept running), Kubernetes v1.36.1, colima on Apple Silicon
-- kro controller: PR image `ko.local/kro:pr-1355` built with `ko` (see "Setup path"),
-  installed via the PR's own `helm/` chart with `config.featureGates.GraphKind=true`
+  no kro code modified
+- kind cluster `kro-graph`, Kubernetes v1.36.1, colima on Apple Silicon
+- kro controller: PR image `ko.local/kro:pr-1355` built with `ko`, installed via the
+  PR's own `helm/` chart with `config.featureGates.GraphKind=true` (gate off by
+  default)
 - OCM controllers: `oci://ghcr.io/open-component-model/kubernetes/controller/chart`
   release `ocm-k8s-toolkit` (website getting-started setup), plus `custom-rbac.yaml`
   granting `graphs.kro.run` to the controller service account
-- Registry: `ghcr.io/morri-son/ocm-graph-poc`, packages kept **private**; cluster used
-  the tutorial's `ghcr-secret` pattern (Repository `ocmConfig`, Graph template
+- Registry: `ghcr.io/morri-son/ocm-graph-poc`, packages private at test time; cluster
+  used the tutorial's `ghcr-secret` pattern (Repository `ocmConfig`, Graph template
   `ocmConfig`, Deployment `imagePullSecrets`)
 - Timestamps: `date +%H:%M:%S.%3N` (CEST, UTC+2); `lastTransitionTime` values are Z.
   Single-run wall clock, unscientific but real.
 
-## Setup path
+## KREP-024 vs. the PR code (source of truth: `api/v1alpha1/graph_types.go`)
 
-Preferred path (helm + image) worked; no fallback to `go run` needed.
-
-1. `make build-image` in the kro worktree. Gotcha: the Makefile's `ko build --local`
-   with `.ko.yaml` `defaultPlatforms: [linux/arm64, linux/amd64]` loaded an index into
-   the colima docker daemon that resolved to **linux/amd64 only** on the arm64 VM:
-   `exec /ko-app/controller: exec format error`, CrashLoopBackOff. Fixed by rebuilding
-   single-platform with `./bin/ko build --bare ... --local --platform=linux/arm64
-   --tags pr-1355`, then `kind load docker-image ko.local/kro:pr-1355 --name kro-graph`.
-2. `helm install kro ./helm -n kro-system --set image.repository=ko.local/kro
-   --set image.tag=pr-1355 --set config.featureGates.GraphKind=true`. Controller log
-   confirms: `GraphKind feature enabled; starting Graph controller`.
-3. `kubectl get crd` shows `graphs.kro.run` (plus `graphrevisions.internal.kro.run`).
-4. OCM controllers per website guide + `custom-rbac.yaml` (`graphs` verbs for the
-   `ocm-k8s-toolkit-controller-manager` SA). Verified:
-   `kubectl auth can-i create graphs.kro.run --as=system:serviceaccount:ocm-k8s-toolkit-system:ocm-k8s-toolkit-controller-manager` → `yes`.
-
-Graph engine API notes (from `api/v1alpha1/graph_types.go`, source of truth; the design
-proposal `docs/design/proposals/graph.md` is stale in parts):
+The design proposal `docs/design/proposals/graph.md` is stale in parts:
 
 - Node keywords implemented: `template`, `ref`, `def`, `graph` (+ `readyWhen`,
   `includeWhen`, `forEach`). `watch:` and `patch:` from the KREP text did **not** make
@@ -77,15 +64,6 @@ and a `blob` resource `graph` containing `graph.yaml`. The Graph spec:
 Files: `component-constructor.yaml`, `graph.yaml`, `bootstrap.yaml`
 (Repository → Component → Resource → Deployer, envsubst for `$OCM_REPO`),
 `bad-graph.yaml` (T3), `custom-rbac.yaml`.
-
-```bash
-ocm add cv
-ocm transfer cv --copy-resources --upload-as ociArtifact \
-  transport-archive//ocm.software/ocm-k8s-toolkit/graph:1.0.0 $OCM_REPO
-ocm get cv $OCM_REPO//ocm.software/ocm-k8s-toolkit/graph:1.0.0 -o yaml | grep imageReference
-# → imageReference: ghcr.io/morri-son/ocm-graph-poc/stefanprodan/podinfo:6.11.1   (localized)
-envsubst < bootstrap.yaml | kubectl apply -f -
-```
 
 ## Results — verbatim
 
@@ -220,7 +198,7 @@ comments).
 Deployer applies before reporting its own Ready condition.
 
 Cold `Ready` includes the ghcr pull of the freshly pushed podinfo image by the kind
-node (imagePullSecret path exercised: package is private).
+node (imagePullSecret path exercised: package was private at test time).
 
 ## Comparison: RGD-of-RGDs @ kro 0.9.3 (poc/rgd-of-rgds) vs Graph @ PR #1355
 
@@ -235,9 +213,9 @@ node (imagePullSecret path exercised: package is private).
 
 ## Blockers encountered
 
-None against kro/OCM. One environment-only issue: ko's multi-arch `--local` image load
-picking amd64 on an arm64 colima VM (fixed by `--platform=linux/arm64`). Not counted as
-an infrastructure blocker against the PR.
+None against kro/OCM. One environment-only issue during setup: ko's multi-arch
+`--local` image load picking amd64 on an arm64 colima VM (fix in README.md). Not
+counted as an infrastructure blocker against the PR.
 
 ## ghcr leftovers (cleanup)
 
