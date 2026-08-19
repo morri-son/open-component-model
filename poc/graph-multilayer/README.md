@@ -1,16 +1,21 @@
-# POC: OCM component + Deployer + kro Graph (KREP-024) as the multi-layer stack installer
+# POC: OCM multi-layer stack — Graph composition + RGD product APIs (KREP-024, PR #1355)
 
-Combines the Graph engine from the sibling POC `poc/graph` (branch `poc/graph`,
-kro PR kubernetes-sigs/kro#1355 @ `9b0a56d`) with the productive multi-RGD
-layering pattern ("one leaf-installer RGD per product, one stack-installer RGD
-on top"). The hypothesis under test:
+Empirical validation of the layering hypothesis
 
 > OCM component = the shippable unit, OCM Deployer = the entry point,
-> Graph = the composition layer, RGD = the product API layer.
+> Graph = the composition layer, RGD = the product API layer
+
+on a minimal 2-product stack. Combines the Graph engine of the sibling POC
+`poc/graph` (branch `poc/graph-krep024`, kro PR kubernetes-sigs/kro#1355 @
+`9b0a56d`) with the productive multi-RGD layering pattern ("one leaf-installer
+RGD per product, one stack-installer RGD on top" — see
+`task-center-core/tc-product-stack/public/task-center-installer.yaml` and
+`shared/cf-services-installer.yaml` in NDBS-Automation-Development), minimized
+here to two products.
 
 **Status: all tests ran; claims 1–5 PROVEN, claim 6 PROVEN WITH CAVEAT
-(backoff-driven, not event-driven recovery).** Verbatim evidence and timings:
-[FINDINGS.md](FINDINGS.md).
+(recovery is automatic but backoff-driven, not CRD-event-driven).** Verbatim
+evidence and timings: [FINDINGS.md](FINDINGS.md).
 
 ## Contents
 
@@ -32,16 +37,18 @@ on top"). The hypothesis under test:
 
 ## Prerequisites
 
-Same as `poc/graph`: kind, helm, kubectl, ko, `ocm` CLI, GitHub PAT with
-`write:packages`, kro PR #1355 checkout pinned at `9b0a56d`. This POC **reuses
-the cluster built by `poc/graph`** (kind `kro-graph`, Kubernetes v1.36.1, kro
-with `GraphKind=true`, OCM controllers, `ghcr-secret` in default). If that
-cluster is gone, recreate it following `../../graph/poc/graph/README.md`
-§Setup-1/2/3 EXACTLY — including the `ko --platform=linux/arm64` trap on
-Apple Silicon + colima and the inotify budget fix (the colima VM resets
-`fs.inotify.max_user_instances` to 128 on docker restart; symptom after VM
-restart: `kube-proxy` CrashLoopBackOff with `too many open files`, then every
-controller pod loses API connectivity):
+Same as `poc/graph` ([../graph/README.md](../graph/README.md)): kind, helm,
+kubectl, ko, `ocm` CLI, GitHub PAT with `write:packages`, kro source checkout
+of PR #1355 pinned at head `9b0a56d`. This POC **reuses the cluster built by
+`poc/graph`** (kind `kro-graph`, Kubernetes v1.36.1, Apple Silicon + colima,
+kro with `config.featureGates.GraphKind=true`, OCM controllers, `ghcr-secret`
+in default). If that cluster is gone, recreate it following `../graph/README.md`
+§Setup-1/2/3 EXACTLY, including the `ko --platform=linux/arm64` trap and the
+inotify budget fix. The colima VM resets `fs.inotify.max_user_instances` to 128
+on every docker restart; symptom afterwards: `kube-proxy` CrashLoopBackOff with
+`too many open files`, then every controller pod loses API connectivity (this
+POC's run started with exactly that incident — see FINDINGS.md §Environment).
+Fix on the running VM:
 
 ```bash
 docker run --rm --privileged --pid=host busybox \
@@ -49,56 +56,98 @@ docker run --rm --privileged --pid=host busybox \
 ```
 
 ```bash
-export OCM_REPO=ghcr.io/<your-user>/ocm-graph-multilayer
-kubectl config use-context kind-kro-graph   # pass --context kind-kro-graph if unset
+export OCM_REPO=ghcr.io/<your-user>/ocm-graph-multilayer   # transfer target + source in bootstrap.yaml
+# every kubectl below wants: --context kind-kro-graph
 ```
 
-## Test flow (order matters — T2/T5 need the late-CRD window open)
+## Setup
+
+Order matters: T2/T5 occupy the window in which the product CRDs do not exist
+yet, so they must be applied BEFORE the installer (stage 2) runs.
+
+### 1. Grant Graph + RGD RBAC, create the test namespaces
+
+`custom-rbac.yaml` extends the `poc/graph` grant: the OCM controller SA gets
+verbs for `graphs` AND `resourcegraphdefinitions` (kro.run). Namespaces
+t2/t4/t5 isolate the late-CRD and negative tests from the main chain
+(namespace `default`).
 
 ```bash
-# 0. RBAC (Deployer applies Graphs AND RGDs), namespaces, bootstrap stage 1
 kubectl apply -f custom-rbac.yaml
 kubectl create ns t2; kubectl create ns t4; kubectl create ns t5
+```
+
+### 2. Build, publish, and verify the component
+
+```bash
 ocm add cv
 ocm transfer cv --copy-resources --upload-as ociArtifact \
   transport-archive//ocm.software/graph-multilayer/stack:1.0.1 $OCM_REPO
-envsubst < bootstrap.yaml | kubectl apply -f -     # Repository + Component only
+ocm get cv $OCM_REPO//ocm.software/graph-multilayer/stack:1.0.1 -o yaml | grep name
+# → installer-graph / composition-graph / product-a-rgd / product-b-rgd
+```
+
+Immutability note: if you change a blob, BUMP the version (`component-constructor.yaml`
+and the `semver:` field in `bootstrap.yaml`). Re-transferring an overwritten tag
+did not propagate to the in-cluster Component CR within 6+ min (FINDINGS.md T0).
+
+### 3. Apply the bootstrap chain — stage 1 (Repository + Component)
+
+```bash
+envsubst < bootstrap.yaml | kubectl apply -f -
 kubectl wait --for=condition=Ready component/stack-component --timeout=120s
+```
 
-# 1. T2 (late-CRD, Graph path): composition into t2 BEFORE product CRDs exist
+### 4. Occupy the late-CRD window (T2 + T5)
+
+```bash
+# T2 (Graph path): composition into ns t2 BEFORE the product CRDs exist
 sed 's/namespace: default/namespace: t2/' composition-graph.yaml | kubectl apply -f -
-kubectl -n t2 get graph stack-composition -o yaml   # Accepted=False InvalidGraph, ~0s
+kubectl -n t2 get graph stack-composition          # Accepted=False InvalidGraph, same second
+kubectl -n t2 get all                              # empty — zero child resources
 
-# 2. T5 (late-CRD, RGD path): oldstyle RGD BEFORE product CRDs exist
-kubectl apply -f stack-rgd-minimal.yaml             # state Inactive, "schema not found"
+# T5 (RGD path): the oldstyle stack BEFORE the product CRDs exist
+kubectl apply -f stack-rgd-minimal.yaml            # state Inactive, "schema not found"
+```
 
-# 3. Start the installer (stage 2) => product CRDs register;
-#    watch t2 Graph and oldstyle RGD recover (poll 2s, expect minutes: backoff)
-kubectl apply -f installer-deploy.yaml
-kubectl wait graph/stack-installer --for=jsonpath='{.status.conditions[?(@.type=="Ready")].status}'=True --timeout=120s
+### 5. Start the installer — stage 2 (and watch T2/T5 recover)
 
-# 4. T5 instance
-kubectl apply -f oldstyle-instance.yaml
+Recovery is backoff-driven; lag grows with the failure streak (observed
++150..185 s after an 8.5–11 min streak, seconds for short ones). Poll tight.
 
-# 5. T3 (composition via OCM path, CRDs present)
-kubectl apply -f composition-deploy.yaml
-kubectl -n default get graph stack-composition -w
+```bash
+kubectl apply -f installer-deploy.yaml             # Resource + Deployer for installer-graph
+kubectl -n t2 get graph stack-composition -w       # Accepted flips True automatically
+kubectl get rgd oldstyle-stack -w                  # Inactive → Active automatically
+kubectl wait graph/stack-installer --for=jsonpath='{.status.conditions[?(@.type=="Ready")].status}'=True --timeout=600s
+kubectl get crd | grep kro.run                     # backendservices/frontendservices registered
+kubectl apply -f oldstyle-instance.yaml            # T5 instance (ns t5)
+```
 
-# 6. T4 (fail-fast): CEL typo variant in ns t4
-kubectl apply -f bad-composition-graph.yaml         # Accepted=False same second, 0 children
+### 6. Composition via OCM + negative test (T3 + T4)
 
-# 7. T6 (lifecycle) — see FINDINGS.md; order: instances before Deployers before RGDs
+```bash
+kubectl apply -f composition-deploy.yaml           # stage 3, CRDs present now
+kubectl get graph stack-composition -w             # Accepted/ResourcesConverged/Ready
+kubectl get pods -l app=frontend -o jsonpath='{.spec}...' # env BACKEND_REF = backend endpoint
+
+kubectl apply -f bad-composition-graph.yaml        # T4: CEL typo, ns t4
+kubectl -n t4 get graph bad-composition            # Accepted=False same second
+kubectl get all -n t4                              # empty
 ```
 
 ## Teardown
 
-Delete **Deployers**, not Graphs (the Deployer re-applies a directly deleted
-Graph in ~1 s; observed again here). Cascade took ~1 s per delete.
+Delete **Deployers**, not Graphs: the Deployer re-applies a directly deleted
+Graph in ~1 s (GitOps drift protection, same as `poc/graph`; observed again
+here). Deleting the Deployer cascades in ~1 s via `status.managedResources`.
+RGD path: instances BEFORE RGDs (finalizer trap otherwise).
 
 ```bash
 kubectl delete deployer stack-composition stack-installer
-kubectl delete oldstylestack t5-stack -n t5   # instances BEFORE RGDs
-kubectl -n t2 delete graph stack-composition  # kubectl-applied, no Deployer above it
+kubectl delete oldstylestack t5-stack -n t5        # instances BEFORE RGDs
+kubectl -n t2 delete graph stack-composition       # kubectl-applied, no Deployer above it
+kubectl -n t4 delete graph bad-composition
 kubectl delete rgd oldstyle-stack
 # product CRDs persist (allowCRDDeletion off) — delete manually if wanted:
 kubectl delete crd backendservices.kro.run frontendservices.kro.run oldstylestacks.kro.run
@@ -106,13 +155,19 @@ kubectl delete crd backendservices.kro.run frontendservices.kro.run oldstylestac
 
 ## Authoring notes (delta vs `poc/graph`)
 
-- **forEach readyWhen uses the `each` keyword** (`${each.status...}`), evaluated
-  per item. The `graph_types.go` doc comment that suggests `.all()` on the
-  collection value does NOT compile for a self-referencing collection node
-  (`unexpected failed resolution of '__type_<id>.@idx'`). See FINDINGS.md.
-- `watch:`/`patch:` nodes in `examples/graph/singleton.yaml` and
-  `namespace-decorator.yaml` are NOT in the PR's `Node` XValidation
-  (template/ref/def/graph only) — those two examples are stale.
+- **forEach `readyWhen` uses the `each` keyword** (`${each.status...}`),
+  evaluated per element. The `graph_types.go` doc comment suggesting CEL list
+  functions like `.all()` on the collection value does NOT compile for a
+  collection self-reference (`unexpected failed resolution of
+  '__type_<id>.@idx'`). Working idiom found via the PR's integration tests
+  (`compiler/typecheck.go`). Worth PR feedback. See FINDINGS.md T1.
+- `watch:`/`patch:` nodes in the PR's `examples/graph/singleton.yaml` and
+  `namespace-decorator.yaml` are NOT in the `Node` XValidation
+  (template/ref/def/graph only) — those examples are stale.
+- A Graph has **no schema and no custom status fields**: computed cross-node
+  status (the productive `status.ready` conjunction) exists only as the
+  intrinsic `Ready` condition. Keep computed status on the RGD layer.
 - Same-tag OCI overwrite (re-transfer of version 1.0.0 with a changed blob)
-  did NOT propagate to the in-cluster Component CR within 6+ min. Bump the
-  component version (this repo ships as 1.0.1 for that reason).
+  did NOT propagate in-cluster within 6+ min. Treat component versions as
+  immutable; bump on every payload change (this component is 1.0.1 for that
+  reason).
