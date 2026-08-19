@@ -1,0 +1,64 @@
+# installer Graph "stack-installer": replaces one leaf-installer RGD per product.
+# One def lists the product RGD blob resource names of the stack component;
+# TWO forEach nodes then create the OCM Resource + Deployer pair per product.
+# Compare: cf-services-installer.yaml in the productive stack hand-writes 13
+# such pairs (~700 lines) plus a 13-term && conjunction in status.
+#
+# The Resource CRs resolve the product RGD blobs against the stack Component CR
+# (componentRef.name: stack-component); each Deployer applies one RGD, which
+# registers the product CRD (BackendService / FrontendService) cluster-wide.
+apiVersion: kro.run/v1alpha1
+kind: Graph
+metadata:
+  name: stack-installer
+  namespace: default
+spec:
+  nodes:
+    # Product RGD blob resource names inside ocm.software/graph-multilayer/stack.
+    # Adding a product to the stack = adding one string here (plus the blob in
+    # the component constructor).
+    - id: products
+      def:
+        names: [product-a-rgd, product-b-rgd]
+
+    # One OCM Resource CR per product blob.
+    - id: rgdResource
+      forEach:
+        - product: ${products.names}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Resource
+        metadata:
+          name: ${product}
+        spec:
+          componentRef:
+            name: stack-component
+          resource:
+            byReference:
+              resource:
+                name: ${product}
+          ocmConfig:
+            - kind: Secret
+              name: ghcr-secret
+      # forEach node readyWhen is evaluated PER ITEM via the `each` keyword
+      # (a collection self-reference with .all() does NOT compile on the
+      # Graph engine: "unexpected failed resolution of '__type_<id>.@idx'")
+      readyWhen:
+        - ${each.status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')}
+
+    # One OCM Deployer per product RGD. Deployer is cluster-scoped;
+    # resourceRef.namespace = the namespace this Graph runs in (default).
+    - id: rgdDeployer
+      forEach:
+        - product: ${products.names}
+      template:
+        apiVersion: delivery.ocm.software/v1alpha1
+        kind: Deployer
+        metadata:
+          name: ${product}
+        spec:
+          resourceRef:
+            name: ${product}
+            namespace: default
+      readyWhen:
+        - ${each.status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')}

@@ -1,0 +1,29 @@
+# Bootstrap chain, stage 2: Resource + Deployer for the installer Graph blob.
+# Applying this file STARTS the installer: Deployer applies installer-graph.yaml,
+# whose forEach nodes create one Resource+Deployer pair per product RGD blob,
+# and those Deployers apply the RGDs that register the product CRDs.
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Resource
+metadata:
+  name: stack-installer-graph
+  namespace: default
+spec:
+  componentRef:
+    name: stack-component
+  resource:
+    byReference:
+      resource:
+        name: installer-graph
+  ocmConfig:
+    - kind: Secret
+      name: ghcr-secret
+---
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Deployer
+metadata:
+  name: stack-installer
+spec:
+  resourceRef:
+    name: stack-installer-graph
+    # Deployer is cluster-scoped; namespace of the referenced Resource is explicit.
+    namespace: default

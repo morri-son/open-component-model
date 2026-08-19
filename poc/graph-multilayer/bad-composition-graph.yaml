@@ -1,0 +1,31 @@
+# T4 negative test: copy of composition-graph.yaml with a deliberate CEL typo
+# (frontend readyWhen references a nonexistent status field). Expect:
+# Accepted=False reason InvalidGraph ~1s after apply, ZERO child resources.
+apiVersion: kro.run/v1alpha1
+kind: Graph
+metadata:
+  name: stack-composition-bad
+  namespace: t4
+spec:
+  nodes:
+    - id: backend
+      template:
+        apiVersion: kro.run/v1alpha1
+        kind: BackendService
+        metadata:
+          name: backend
+        spec:
+          hostname: backend
+      readyWhen:
+        - ${backend.status.ready}
+    - id: frontend
+      template:
+        apiVersion: kro.run/v1alpha1
+        kind: FrontendService
+        metadata:
+          name: frontend
+        spec:
+          backendRef: ${backend.status.endpoint}
+      readyWhen:
+        # deliberate typo: 'readyness' does not exist on FrontendService status
+        - ${frontend.status.readyness}

@@ -1,0 +1,41 @@
+# composition Graph "stack-composition": the top composition layer.
+# Replaces the productive task-center-installer RGD (which fakes its topo edge
+# via an annotation carrying ${string(cfServices.status.ready)}). Here the edge
+# is a real CEL data flow: frontend.spec.backendRef is literally
+# backend.status.endpoint, so the Graph engine derives backend -> frontend
+# ordering AND the value transfer from ONE expression. Zero annotations.
+#
+# readiness: deep — readyWhen gates on the RGD-instance status.ready of BOTH
+# products, and the Graph's own Ready aggregates them.
+#
+# NOTE for tests: T2 applies a namespace-sed'ed copy of this file to ns t2
+# (before the product CRDs exist); T4 applies a typo'ed copy to ns t4.
+# The OCM blob path (T3) applies this file as-is.
+apiVersion: kro.run/v1alpha1
+kind: Graph
+metadata:
+  name: stack-composition
+  namespace: default
+spec:
+  nodes:
+    - id: backend
+      template:
+        apiVersion: kro.run/v1alpha1
+        kind: BackendService
+        metadata:
+          name: backend
+        spec:
+          hostname: backend
+      readyWhen:
+        - ${backend.status.ready}
+    - id: frontend
+      template:
+        apiVersion: kro.run/v1alpha1
+        kind: FrontendService
+        metadata:
+          name: frontend
+        spec:
+          # THE edge: real CEL data flow, no annotation hack.
+          backendRef: ${backend.status.endpoint}
+      readyWhen:
+        - ${frontend.status.ready}

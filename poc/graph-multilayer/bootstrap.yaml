@@ -1,0 +1,28 @@
+# Bootstrap chain, stage 1: Repository -> Component only.
+# The installer Resource+Deployer (installer-deploy.yaml) and the composition
+# Resource+Deployer (composition-deploy.yaml) are applied SEPARATELY and LATER
+# so tests T2/T5 can observe the "product CRDs do not exist yet" window.
+# Applied via: envsubst < bootstrap.yaml | kubectl apply -f -
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Repository
+metadata:
+  name: stack-repository
+spec:
+  repositorySpec:
+    baseUrl: $OCM_REPO
+    type: OCIRegistry
+  interval: 1m
+  ocmConfig:
+    - kind: Secret
+      name: ghcr-secret
+---
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Component
+metadata:
+  name: stack-component
+spec:
+  component: ocm.software/graph-multilayer/stack
+  repositoryRef:
+    name: stack-repository
+  semver: 1.0.1
+  interval: 1m

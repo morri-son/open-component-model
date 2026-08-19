@@ -1,0 +1,7 @@
+# T5 instance of the oldstyle-stack RGD, applied to ns t5 after the RGD goes
+# Active (product CRDs registered by the installer Graph).
+apiVersion: kro.run/v1alpha1
+kind: OldStyleStack
+metadata:
+  name: t5-stack
+  namespace: t5

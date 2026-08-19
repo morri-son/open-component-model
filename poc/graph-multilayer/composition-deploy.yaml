@@ -1,0 +1,28 @@
+# Bootstrap chain, stage 3: Resource + Deployer for the composition Graph blob.
+# Apply ONLY after T2 has answered the late-CRD recovery question (the deployed
+# composition Graph targets ns default where ordering is under our control).
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Resource
+metadata:
+  name: stack-composition-graph
+  namespace: default
+spec:
+  componentRef:
+    name: stack-component
+  resource:
+    byReference:
+      resource:
+        name: composition-graph
+  ocmConfig:
+    - kind: Secret
+      name: ghcr-secret
+---
+apiVersion: delivery.ocm.software/v1alpha1
+kind: Deployer
+metadata:
+  name: stack-composition
+spec:
+  resourceRef:
+    name: stack-composition-graph
+    # Deployer is cluster-scoped; namespace of the referenced Resource is explicit.
+    namespace: default

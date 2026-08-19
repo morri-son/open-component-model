@@ -1,0 +1,30 @@
+components:
+  - name: ocm.software/graph-multilayer/stack
+    version: "1.0.1"
+    provider:
+      name: ocm.software
+    resources:
+      - name: installer-graph
+        type: blob
+        version: "1.0.1"
+        input:
+          type: File/v1
+          path: ./installer-graph.yaml
+      - name: composition-graph
+        type: blob
+        version: "1.0.1"
+        input:
+          type: File/v1
+          path: ./composition-graph.yaml
+      - name: product-a-rgd
+        type: blob
+        version: "1.0.1"
+        input:
+          type: File/v1
+          path: ./product-a-rgd.yaml
+      - name: product-b-rgd
+        type: blob
+        version: "1.0.1"
+        input:
+          type: File/v1
+          path: ./product-b-rgd.yaml

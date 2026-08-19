@@ -1,0 +1,50 @@
+# T5 ONLY: "oldstyle-stack" RGD — a 1:1 miniature of the productive
+# task-center-installer.yaml (2 leaves instead of 3), including the
+# annotation-ordering hack:
+#
+#     annotations:
+#       poc.ocm.software/after-backend: ${string(backend.status.ready)}
+#
+# The reference inside the annotation exists ONLY to make kro derive a
+# topo edge backend -> frontend; it carries no value the template needs.
+# Used to test: does an RGD (on the PR's new rgdadapter engine) still go
+# Inactive + backoff-recover when its referenced CRDs arrive late, and does
+# the annotation hack still order correctly?
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: oldstyle-stack
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: OldStyleStack
+    spec:
+      stackName: string | default="oldstyle"
+    status:
+      ready: ${backend.status.ready && frontend.status.ready}
+  resources:
+    - id: backend
+      template:
+        apiVersion: kro.run/v1alpha1
+        kind: BackendService
+        metadata:
+          name: backend
+          namespace: ${schema.metadata.namespace}
+        spec:
+          hostname: backend
+      readyWhen:
+        - ${backend.status.ready}
+    - id: frontend
+      template:
+        apiVersion: kro.run/v1alpha1
+        kind: FrontendService
+        metadata:
+          name: frontend
+          namespace: ${schema.metadata.namespace}
+          annotations:
+            # The fake topo edge, 1:1 from the productive installer.
+            poc.ocm.software/after-backend: ${string(backend.status.ready)}
+        spec:
+          backendRef: backend
+      readyWhen:
+        - ${frontend.status.ready}
