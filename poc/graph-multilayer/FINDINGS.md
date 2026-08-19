@@ -150,6 +150,27 @@ streak: +150 s. For sub-minute streaks (the realistic fast-install case), the
 lag is seconds — see T1's own compile error recovering within one generation
 bump.
 
+**Post-hoc verification on the healthy cluster (controlled CRD).** To rule out
+that the inotify incident skewed the measurement, a clean-room probe repeated
+the experiment after the fix: Graph `latebind-probe` in a fresh ns t7
+templating `poc.test/v1alpha1, Kind=LateBind` (CRD absent), failures allowed to
+build a 100 s streak, then the CRD registered deliberately BETWEEN two backoff
+boundaries:
+
+| event | timestamp |
+|---|---|
+| Graph applied → `Accepted=False/InvalidGraph` | 13:53:10Z (same second) |
+| compile retry series (kro log) | 13:53:20 → :30 → :51 → 13:54:32 (gaps 10→21→41 s) |
+| CRD `latebinds.poc.test` registered | 13:55:12Z (41 s before the next boundary) |
+| predicted next backoff retry | 13:55:53Z |
+| `Accepted=True` observed | **13:55:55Z** (1 s poll granularity) |
+
+Event-driven recovery would have flipped `Accepted` 1–2 s after CRD
+registration; instead the Graph sat on a resolvable schema for 43 s and
+recovered exactly on the predicted backoff boundary. Zero schema-watcher log
+lines. Same signature as the main T2 run. Probe objects cleaned up afterwards;
+cluster state unchanged.
+
 ### Late CRDs, RGD on the new engine (T5)
 
 `stack-rgd-minimal.yaml` (kind `OldStyleStack`, leaves BackendService +
