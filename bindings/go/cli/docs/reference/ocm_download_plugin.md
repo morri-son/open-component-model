@@ -22,7 +22,7 @@ Resources can be accessed either locally or via a plugin that supports remote fe
 
 A reference can pin the component version with a digest: "{component}[:{version}]@sha256:<hex>" (OCI digest
 of the artifact the component version is stored as, which local resources are then read from) or
-"{component}:{version}@jsonNormalisation.v4alpha1+sha256:<hex>" (normalized: the digest signatures sign).
+"{component}:{version}@jsonNormalisation.v4alpha3+sha256:<hex>" (normalized: the digest signatures sign).
 See "ocm get cv --help" for when to use which. The plugin binary is then verified against its digest in the pinned descriptor.
 
 ```
@@ -80,6 +80,7 @@ ocm download plugin [flags]
       --logformat enum                     set the log output format that is used to print individual logs
                                               json: Output logs in JSON format, suitable for machine processing
                                               text: Output logs in human-readable text format, suitable for console output
+                                              setting this flag disables the interactive progress display so logs are printed in the chosen format
                                            (must be one of [json text]) (default text)
       --loglevel enum                      sets the logging level
                                               debug: Show all logs including detailed debugging information

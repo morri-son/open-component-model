@@ -21,7 +21,7 @@ Verify component version(s) inside an OCM repository based on signatures.
 
 - Prefixes: {component-descriptors|none} (default: "component-descriptors")  
 - Repo types: {OCIRepository|CommonTransportFormat} (short: {OCI|oci|CTF|ctf})
-- Digest: optional pin (see "ocm get cv --help"), "@sha256:<hex>" (OCI digest of the artifact the component version is stored as; the version may be omitted) or "@jsonNormalisation.v4alpha1+sha256:<hex>" (normalized: the digest signatures sign); the command fails unless the component version matches it
+- Digest: optional pin (see "ocm get cv --help"), "@sha256:<hex>" (OCI digest of the artifact the component version is stored as; the version may be omitted) or "@jsonNormalisation.v4alpha3+sha256:<hex>" (normalized: the digest signatures sign); the command fails unless the component version matches it
 
 ## OCM Verification explained in simple steps
 
@@ -277,6 +277,7 @@ verify component-version ghcr.io/open-component-model//ocm.software/cli:0.12.0 -
       --logformat enum                     set the log output format that is used to print individual logs
                                               json: Output logs in JSON format, suitable for machine processing
                                               text: Output logs in human-readable text format, suitable for console output
+                                              setting this flag disables the interactive progress display so logs are printed in the chosen format
                                            (must be one of [json text]) (default text)
       --loglevel enum                      sets the logging level
                                               debug: Show all logs including detailed debugging information

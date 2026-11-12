@@ -101,7 +101,10 @@ add component-version --repository localhost:5000/my-repo --constructor componen
 Specifying repository types explicitly:
 
 add component-version --repository ctf::./local/archive --constructor component-constructor.yaml
-add component-version --repository oci::http://localhost:8080/my-repo --constructor component-constructor.yaml
+add component-version --repository oci::localhost:8080/my-repo --constructor component-constructor.yaml
+
+A registry without TLS needs plainHTTP in the HTTP client configuration; an http:// prefix on the
+repository is deprecated and fails without it (see https://ocm.software/docs/changelog/migrate-from-http-prefixes/).
 
 Using environment variables in "component-constructor" files:
 
@@ -116,7 +119,7 @@ add component-version --repository ./archive --constructor component-constructor
 ```
       --blob-cache-directory string                   path to the blob cache directory (default ".ocm/cache")
       --component-version-conflict-policy enum        policy to apply when a component version already exists in the repository
-                                                      (must be one of [abort-and-fail replace skip]) (default abort-and-fail)
+                                                      (must be one of [abort-and-fail replace skip]) (default replace) (DEPRECATED: existing versions are replaced by default; protect them with registry tag immutability. The flag will be removed)
       --concurrency-limit int                         maximum number of component versions that can be constructed concurrently. (default 4)
   -c, --constructor path                              path to the component constructor file (default component-constructor.yaml)
       --display-mode enum                             static: print the output once the complete component graph is discovered
@@ -159,6 +162,7 @@ add component-version --repository ./archive --constructor component-constructor
       --logformat enum                     set the log output format that is used to print individual logs
                                               json: Output logs in JSON format, suitable for machine processing
                                               text: Output logs in human-readable text format, suitable for console output
+                                              setting this flag disables the interactive progress display so logs are printed in the chosen format
                                            (must be one of [json text]) (default text)
       --loglevel enum                      sets the logging level
                                               debug: Show all logs including detailed debugging information
